@@ -2049,56 +2049,120 @@ summary::after {
     text-shadow: 0 0 5px var(--acento-rosa);
 }
 
-/* --- Botón minimizar: solo visible en celular --- */
-.sidebar-btn-minimizar {
+/* --- Perfil / Panel doctor: en móvil, menú hamburguesa (como index), sidebar oculto --- */
+.perfil-mobile-header {
     display: none;
-    margin: 0 0 12px 0;
-    padding: 8px 12px;
-    width: 100%;
-    min-width: 0;
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 8px;
-    color: var(--blanco);
-    font-size: 0.9rem;
-    cursor: pointer;
-    text-align: center;
 }
-.sidebar-btn-minimizar:hover {
-    background: rgba(255,255,255,0.25);
-}
+.perfil-nav-toggle { position: absolute; opacity: 0; pointer-events: none; }
 
-/* --- Sidebar móvil: botón siempre visible, scroll habilitado --- */
 @media (max-width: 768px) {
-    .sidebar-btn-minimizar {
+    .perfil-mobile-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        background: var(--blanco);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1001;
+    }
+    .perfil-mobile-title {
+        font-weight: 700;
+        color: var(--primario-rosa);
+        font-size: 1.1rem;
+    }
+    .perfil-nav-toggle-label {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+        width: 36px;
+        height: 36px;
+        padding: 6px;
+        cursor: pointer;
+        z-index: 1002;
+    }
+    .perfil-nav-toggle-label span {
         display: block;
-        flex-shrink: 0;
+        height: 3px;
+        background: var(--texto-oscuro);
+        border-radius: 2px;
+        transition: transform 0.3s, opacity 0.3s;
     }
-    .perfil-sidebar {
-        cursor: pointer;
+    .perfil-mobile-header .perfil-nav-toggle:checked ~ .perfil-nav-toggle-label span:nth-child(1) {
+        transform: translateY(9px) rotate(45deg);
+    }
+    .perfil-mobile-header .perfil-nav-toggle:checked ~ .perfil-nav-toggle-label span:nth-child(2) {
+        opacity: 0;
+    }
+    .perfil-mobile-header .perfil-nav-toggle:checked ~ .perfil-nav-toggle-label span:nth-child(3) {
+        transform: translateY(-9px) rotate(-45deg);
+    }
+    .perfil-mobile-nav {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: min(280px, 85vw);
         height: 100vh;
-        max-height: 100vh;
+        background: var(--blanco);
+        box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+        padding: 80px 24px 24px;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
         overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
     }
-    .perfil-layout.sidebar-open .perfil-sidebar {
-        width: 260px;
-        padding: 20px 16px;
+    .perfil-mobile-header .perfil-nav-toggle:checked ~ .perfil-mobile-nav {
+        transform: translateX(0);
     }
-    .perfil-layout.sidebar-open .perfil-sidebar .sidebar-nombre,
-    .perfil-layout.sidebar-open .perfil-sidebar .sidebar-texto,
-    .perfil-layout.sidebar-open .perfil-sidebar .nav-label {
-        opacity: 1;
-        width: auto;
+    .perfil-mobile-nav-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
     }
-    .perfil-layout.sidebar-open .perfil-sidebar .user-avatar {
-        width: 70px;
-        height: 70px;
-        font-size: 1.8rem;
+    .perfil-mobile-nav-list li {
+        border-bottom: 1px solid var(--suave-arena);
     }
-    .perfil-sidebar .sidebar-header {
+    .perfil-mobile-nav-btn,
+    .perfil-mobile-nav-link {
+        display: block;
+        width: 100%;
+        padding: 14px 0;
+        text-align: left;
+        background: none;
+        border: none;
+        font-size: 1rem;
+        color: var(--texto-oscuro);
+        text-decoration: none;
         cursor: pointer;
+        font-family: inherit;
+    }
+    .perfil-mobile-nav-btn:hover,
+    .perfil-mobile-nav-link:hover {
+        color: var(--primario-rosa);
+    }
+    .perfil-mobile-nav-btn.active {
+        font-weight: 700;
+        color: var(--primario-rosa);
+    }
+    .perfil-mobile-logout {
+        color: var(--acento-rosa);
+        font-weight: 600;
+    }
+    .perfil-mobile-header .perfil-nav-toggle:checked ~ .perfil-nav-toggle-label {
+        position: fixed;
+        right: 1rem;
+        top: 1rem;
+    }
+    /* Ocultar sidebar en móvil; el contenido va debajo del header fijo */
+    .perfil-sidebar {
+        display: none !important;
+    }
+    .perfil-main {
+        padding-top: 56px;
     }
 }
 
