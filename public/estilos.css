@@ -1907,7 +1907,7 @@ summary::after {
     height: 100vh;
 }
 
-/* Barra Lateral - Contraíble con hover */
+/* Barra Lateral - Contraíble con hover; scroll para ver todo (p. ej. Cerrar sesión) */
 .perfil-sidebar {
     width: 70px;
     background: #332E2A;
@@ -1916,8 +1916,10 @@ summary::after {
     flex-direction: column;
     padding: 20px 10px;
     border-right: 1px solid var(--suave-arena);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     transition: width 0.25s ease;
+    min-height: 0;
 }
 
 .perfil-sidebar:hover {
@@ -2045,10 +2047,34 @@ summary::after {
     text-shadow: 0 0 5px var(--acento-rosa);
 }
 
-/* --- Sidebar móvil (perfil y panel doctor): barra estrecha, tap en header expande, tap opción contrae --- */
+/* --- Botón minimizar: solo en celular, solo cuando el sidebar está expandido --- */
+.sidebar-btn-minimizar {
+    display: none;
+    margin: 0 0 12px 0;
+    padding: 8px 12px;
+    width: 100%;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    color: var(--blanco);
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-align: left;
+}
+.sidebar-btn-minimizar:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+/* --- Sidebar móvil (perfil y panel doctor): tap header expande, botón Minimizar contrae, scroll --- */
 @media (max-width: 768px) {
     .perfil-sidebar {
         cursor: pointer;
+        max-height: 100vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .perfil-layout.sidebar-open .sidebar-btn-minimizar {
+        display: block;
     }
     .perfil-layout.sidebar-open .perfil-sidebar {
         width: 260px;
