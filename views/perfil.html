@@ -14,6 +14,7 @@
 <body class="perfil-body">
 
     <div class="perfil-layout">
+        <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle" aria-hidden="true">
         <aside class="perfil-sidebar">
             <div class="sidebar-header">
                 <div class="user-avatar" id="avatar-inicial">U</div>
@@ -48,8 +49,9 @@
                 </a>
             </div>
         </aside>
-
+        <label for="sidebar-toggle" class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></label>
         <main class="perfil-main">
+            <label for="sidebar-toggle" class="sidebar-hamburger" aria-label="Abrir menú"><span></span><span></span><span></span></label>
             <div id="seccion-dashboard" class="seccion-panel">
                 <div class="welcome-banner">
                     <h1>Hola, <span id="user-display-name">...</span> 👋</h1>
@@ -284,6 +286,14 @@
     </div>
 
     <script>
+        // Cerrar sidebar en móvil al hacer clic en cualquier opción del menú (enlaces Volver / Logout)
+        document.addEventListener('DOMContentLoaded', function() {
+            var sidebarTogg = document.getElementById('sidebar-toggle');
+            if (!sidebarTogg) return;
+            document.querySelectorAll('.perfil-sidebar .nav-item, .perfil-sidebar .nav-item-link, .perfil-sidebar .btn-logout').forEach(function(el) {
+                el.addEventListener('click', function() { sidebarTogg.checked = false; });
+            });
+        });
         let api = null;
         let miId = null; 
         let psicologoSeleccionadoId = null;
@@ -376,6 +386,9 @@ fetch('/api/quien-soy')
         const cont = document.getElementById('jitsi-container');
         if (cont) cont.innerHTML = '';
     }
+    // 6. En móvil: cerrar el menú lateral al elegir una opción
+    var sidebarTogg = document.getElementById('sidebar-toggle');
+    if (sidebarTogg) sidebarTogg.checked = false;
 }
     
         // 3. LÓGICA DE CONFIGURACIÓN
