@@ -111,6 +111,35 @@ function getEmailTransporter() {
 }
 const transporter = getEmailTransporter();
 
+/** Envía correo: por Resend (API HTTP) si RESEND_API_KEY está definida —evita bloqueo SMTP en Railway—; si no, por Nodemailer (SMTP). */
+async function sendMail(opts) {
+    if (process.env.RESEND_API_KEY) {
+        const from = opts.from || `"Psicólogos en Red" <${process.env.RESEND_FROM || process.env.EMAIL_USER || 'onboarding@resend.dev'}>`;
+        const to = Array.isArray(opts.to) ? opts.to : (opts.to ? [opts.to] : []);
+        const body = {
+            from: from.replace(/^"([^"]*)"\s*<([^>]*)>$/, (_, name, email) => `${name} <${email}>`).trim() || from,
+            to,
+            subject: opts.subject,
+            html: opts.html
+        };
+        if (opts.attachments && opts.attachments.length) {
+            body.attachments = opts.attachments.map(a => ({
+                filename: a.filename,
+                content: (a.content && Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content || a.raw || '')).toString('base64')
+            }));
+        }
+        const res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.message || data.error?.message || data.error || 'Resend error');
+        return data;
+    }
+    return sendMail(opts);
+}
+
 // URL base del sitio (emails, Stripe success/cancel). En producción usar tu dominio HTTPS.
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -265,7 +294,7 @@ async function enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora,
         </div>`;
 
     try {
-        await transporter.sendMail({
+        await sendMail({
             from: '"Psicólogos en Red" <contacto@psicologosenred.com>',
             to: paciente.email,
             bcc: 'contacto@psicologosenred.com',
@@ -277,7 +306,7 @@ async function enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora,
         console.error('Error enviando correo cita al paciente:', paciente.email, e.message);
     }
     try {
-        await transporter.sendMail({
+        await sendMail({
             from: '"Psicólogos en Red" <contacto@psicologosenred.com>',
             to: psicologo.email,
             bcc: 'contacto@psicologosenred.com',
@@ -369,8 +398,8 @@ async function enviarCorreosCitaReagendada(paciente_id, psicologo_id, fecha, hor
             <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red.</p>
         </div>`;
 
-    try { await transporter.sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: paciente.email, bcc: 'contacto@psicologosenred.com', subject: '📅 Cita reagendada - Psicólogos en Red', html: htmlPaciente, attachments: [adjuntoIcs] }); } catch (e) { console.error('Error correo reagendo paciente:', e.message); }
-    try { await transporter.sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: psicologo.email, bcc: 'contacto@psicologosenred.com', subject: '📅 Cita reagendada - Psicólogos en Red', html: htmlPsicologo, attachments: [adjuntoIcs] }); } catch (e) { console.error('Error correo reagendo psicólogo:', e.message); }
+    try { await sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: paciente.email, bcc: 'contacto@psicologosenred.com', subject: '📅 Cita reagendada - Psicólogos en Red', html: htmlPaciente, attachments: [adjuntoIcs] }); } catch (e) { console.error('Error correo reagendo paciente:', e.message); }
+    try { await sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: psicologo.email, bcc: 'contacto@psicologosenred.com', subject: '📅 Cita reagendada - Psicólogos en Red', html: htmlPsicologo, attachments: [adjuntoIcs] }); } catch (e) { console.error('Error correo reagendo psicólogo:', e.message); }
     await enviarWhatsapp(paciente.telefono, `Psicólogos en Red – Cita reagendada: ${fechaStr} ${horaStr} hrs. Iniciar sesión: ${enlaceLogin}`);
     await enviarWhatsapp(psicologo.telefono, `Psicólogos en Red – Cita reagendada con ${paciente.nombre || 'Paciente'}: ${fechaStr} ${horaStr} hrs. Iniciar sesión: ${enlaceLogin}`);
 }
@@ -428,8 +457,8 @@ async function enviarCorreosCitaCancelada(paciente_id, psicologo_id, fecha, hora
             <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red.</p>
         </div>`;
 
-    try { await transporter.sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: psicologo.email, bcc: 'contacto@psicologosenred.com', subject: '❌ Cita cancelada - Psicólogos en Red', html: htmlPsicologo, attachments: [adjuntoIcs] }); } catch (e) { console.error('Error correo cancelación psicólogo:', e.message); }
-    try { await transporter.sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: paciente.email, bcc: 'contacto@psicologosenred.com', subject: 'Cita cancelada - Psicólogos en Red', html: htmlPaciente, attachments: [adjuntoIcs] }); } catch (e) { console.error('Error correo cancelación paciente:', e.message); }
+    try { await sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: psicologo.email, bcc: 'contacto@psicologosenred.com', subject: '❌ Cita cancelada - Psicólogos en Red', html: htmlPsicologo, attachments: [adjuntoIcs] }); } catch (e) { console.error('Error correo cancelación psicólogo:', e.message); }
+    try { await sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: paciente.email, bcc: 'contacto@psicologosenred.com', subject: 'Cita cancelada - Psicólogos en Red', html: htmlPaciente, attachments: [adjuntoIcs] }); } catch (e) { console.error('Error correo cancelación paciente:', e.message); }
     await enviarWhatsapp(psicologo.telefono, `Psicólogos en Red – Cita cancelada: ${fechaStr} ${horaStr} hrs con ${paciente.nombre || 'Paciente'}. Iniciar sesión: ${enlaceLogin}`);
     await enviarWhatsapp(paciente.telefono, `Psicólogos en Red – Tu cita del ${fechaStr} fue cancelada. Puedes agendar otra: ${enlaceCatalogo}`);
 }
@@ -478,10 +507,10 @@ async function enviarCorreosRecordatorioCita(paciente_id, psicologo_id, fecha, h
         </div>`;
 
     try {
-        await transporter.sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: paciente.email, bcc: 'contacto@psicologosenred.com', subject: '⏰ Recordatorio: tu sesión es en 30 min - Psicólogos en Red', html: htmlPaciente });
+        await sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: paciente.email, bcc: 'contacto@psicologosenred.com', subject: '⏰ Recordatorio: tu sesión es en 30 min - Psicólogos en Red', html: htmlPaciente });
     } catch (e) { console.error('Error correo recordatorio paciente:', e.message); }
     try {
-        await transporter.sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: psicologo.email, bcc: 'contacto@psicologosenred.com', subject: '⏰ Recordatorio: sesión en 30 min - Psicólogos en Red', html: htmlPsicologo });
+        await sendMail({ from: '"Psicólogos en Red" <contacto@psicologosenred.com>', to: psicologo.email, bcc: 'contacto@psicologosenred.com', subject: '⏰ Recordatorio: sesión en 30 min - Psicólogos en Red', html: htmlPsicologo });
     } catch (e) { console.error('Error correo recordatorio psicólogo:', e.message); }
     await enviarWhatsapp(paciente.telefono, `Psicólogos en Red – Recordatorio: tu sesión es en 30 min (${fechaStr} ${horaStr} hrs). Iniciar sesión: ${enlaceLogin}`);
     await enviarWhatsapp(psicologo.telefono, `Psicólogos en Red – Recordatorio: sesión en 30 min con ${paciente.nombre || 'Paciente'} (${fechaStr} ${horaStr} hrs). Iniciar sesión: ${enlaceLogin}`);
@@ -527,7 +556,7 @@ async function enviarCorreoNotificacionChatSiAplica(destinatarioId, remitenteId)
             <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red.</p>
         </div>`;
 
-        await transporter.sendMail({
+        await sendMail({
             from: '"Psicólogos en Red" <contacto@psicologosenred.com>',
             to: dest.email,
             bcc: 'contacto@psicologosenred.com',
@@ -788,7 +817,7 @@ app.get('/reenviar-verificacion', async (req, res) => {
         // Enviar email
         const enlaceVerificacion = `${BASE_URL}/verificar-email?token=${tokenVerificacion}`;
         
-        await transporter.sendMail({
+        await sendMail({
             from: '"Psicólogos en Red" <contacto@psicologosenred.com>',
             to: email,
             subject: '✅ Verifica tu cuenta - Psicólogos en Red',
@@ -867,7 +896,7 @@ app.post('/api/aplicacion-trabajo', async (req, res) => {
             <p>${escBr(experiencia)}</p>
             <p style="color:#888;font-size:12px;">Enviado el ${new Date().toLocaleString('es-MX')}</p>
         `;
-        await transporter.sendMail({
+        await sendMail({
             from: '"Psicólogos en Red" <contacto@psicologosenred.com>',
             to: 'contacto@psicologosenred.com',
             replyTo: email,
@@ -903,7 +932,7 @@ app.post('/api/contacto', async (req, res) => {
             <p>${escBr(mensaje)}</p>
             <p style="color:#888;font-size:12px;">Enviado el ${new Date().toLocaleString('es-MX')}</p>
         `;
-        await transporter.sendMail({
+        await sendMail({
             from: '"Psicólogos en Red" <contacto@psicologosenred.com>',
             to: 'contacto@psicologosenred.com',
             replyTo: email,
@@ -1305,15 +1334,19 @@ app.post('/registrar-usuario', async (req, res) => {
             [nombre, email, telefonoNorm, hashedPassword, rol || 'paciente', aceptoTerminos, aceptoPublicidad, false, tokenVerificacion, tokenExpira]
         );
 
-        // Enviar email de verificación (si falla, igual redirigimos para que pueda usar "Reenviar verificación")
+        // Redirigir de inmediato; el correo de verificación se envía en segundo plano (evita timeouts SMTP)
         const enlaceVerificacion = `${BASE_URL}/verificar-email?token=${tokenVerificacion}`;
         const fromEmail = process.env.EMAIL_USER || 'contacto@psicologosenred.com';
-        try {
-            await transporter.sendMail({
-                from: `"Psicólogos en Red" <${fromEmail}>`,
-                to: email,
-                subject: '✅ Verifica tu cuenta - Psicólogos en Red',
-                html: `
+        res.redirect('/registro-exitoso');
+
+        // Enviar email de verificación en segundo plano (si falla, el usuario puede usar "Reenviar verificación")
+        (async () => {
+            try {
+                await sendMail({
+                    from: `"Psicólogos en Red" <${fromEmail}>`,
+                    to: email,
+                    subject: '✅ Verifica tu cuenta - Psicólogos en Red',
+                    html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                         <div style="text-align: center; margin-bottom: 30px;">
                             <h1 style="color: #c9a0dc;">Psicólogos en Red</h1>
@@ -1329,13 +1362,13 @@ app.post('/registrar-usuario', async (req, res) => {
                         <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red. Todos los derechos reservados.</p>
                     </div>
                 `
-            });
-        } catch (errMail) {
-            console.error('Error enviando correo de verificación:', errMail.message);
-            if (errMail.code) console.error('Código:', errMail.code);
-        }
-
-        res.redirect('/registro-exitoso');
+                });
+                console.log('[verificacion] Correo de verificación enviado a:', email);
+            } catch (errMail) {
+                console.error('Error enviando correo de verificación:', errMail.message);
+                if (errMail.code) console.error('Código:', errMail.code);
+            }
+        })();
     } catch (error) {
         console.error('Error en registro:', error);
         res.status(500).send('Error en el registro. Por favor intenta de nuevo.');
@@ -1368,7 +1401,7 @@ app.post('/auth/olvide-password', (req, res) => {
             if (!process.env.EMAIL_USER && !process.env.EMAIL_PASS) {
                 console.warn('[olvide-password] EMAIL_USER o EMAIL_PASS no configurados en env');
             }
-            await transporter.sendMail({
+            await sendMail({
                 from: `"Psicólogos en Red" <${fromEmail}>`,
                 to: email,
                 subject: "Reestablece tu contraseña - Psicólogos en Red 🔐",
