@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Psicólogos en Red</title>
+    <link rel="stylesheet" href="/estilos.css">
+    <style>
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.activo { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            border-top: 6px solid var(--primario-rosa);
+        }
+        .modal-box h3 { margin: 0 0 12px 0; color: var(--primario-rosa); font-size: 1.25rem; }
+        .modal-box p { color: #555; margin: 0 0 16px 0; font-size: 0.95rem; }
+        .modal-box input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--suave-arena); box-sizing: border-box; margin-bottom: 16px; }
+        .modal-box .btn-row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+        .modal-box button, .modal-box .btn-modal {
+            padding: 12px 24px;
+            border-radius: 10px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .modal-box .btn-primary { background: var(--primario-rosa); color: white; }
+        .modal-box .btn-secondary { background: #eee; color: #333; }
+        .modal-box .btn-primary:hover, .modal-box .btn-modal:hover { opacity: 0.9; }
+        .modal-msg .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    </style>
+</head>
+<body class="auth-body" style="background: linear-gradient(135deg, var(--primario-rosa) 0%, var(--suave-arena) 100%);">
+
+    <div class="auth-container">
+        <div class="auth-card" style="border-top: 8px solid var(--primario-rosa);">
+            <div class="auth-header">
+                <h2 style="color: var(--primario-rosa);">Bienvenido de nuevo</h2>
+                <p style="color: var(--texto-oscuro);">Ingresa a tu consultorio virtual</p>
+            </div>
+
+            <form action="/auth/login" method="POST" class="auth-form">
+                <div class="form-group">
+                    <label for="email" style="color: var(--primario-rosa); font-weight: bold;">Correo Electrónico</label>
+                    <input type="email" id="email" name="email" placeholder="ejemplo@correo.com" required style="border-color: var(--suave-arena);">
+                </div>
+
+                <div class="form-group">
+                    <label for="password" style="color: var(--primario-rosa); font-weight: bold;">Contraseña</label>
+                    <div style="position: relative;">
+                        <input type="password" id="password" name="password" placeholder="••••••••" required style="border-color: var(--suave-arena); padding-right: 44px; width: 100%; box-sizing: border-box;">
+                        <button type="button" id="toggle-password-login" aria-label="Mostrar contraseña" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: var(--texto-oscuro); opacity: 0.7; font-size: 1.1rem;">👁</button>
+                    </div>
+                    <div style="text-align: right; margin-top: 5px;">
+                        <a href="#" onclick="event.preventDefault(); abrirModalRecuperar();" style="color: var(--texto-oscuro); font-size: 0.8rem; text-decoration: none;">¿Olvidaste tu contraseña?</a>
+                    </div>
+                </div>
+
+
+                <button type="submit" class="btn-auth" style="background-color: var(--primario-rosa); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px;">Entrar</button>
+            </form>
+
+            <div class="auth-footer">
+                <p style="color: var(--texto-oscuro);">¿No tienes cuenta? <a href="/registro" style="color: var(--primario-rosa); text-decoration: none; font-weight: bold;">Regístrate aquí</a></p>
+                <a href="/" class="back-link" style="color: var(--suave-arena); text-decoration: none; font-size: 0.9rem;">← Volver al inicio</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ingresar correo para recuperar contraseña -->
+    <div id="modal-recuperar" class="modal-overlay" onclick="if(event.target===this) cerrarModalRecuperar();">
+        <div class="modal-box">
+            <h3>¿Olvidaste tu contraseña?</h3>
+            <p>Ingresa tu correo electrónico y te enviaremos un enlace para crear una nueva contraseña.</p>
+            <input type="email" id="modal-email-recuperar" placeholder="ejemplo@correo.com">
+            <div class="btn-row">
+                <button type="button" class="btn-secondary" onclick="cerrarModalRecuperar();">Cancelar</button>
+                <button type="button" class="btn-primary" id="btn-enviar-recuperar">Enviar enlace</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Mensaje después de enviar (éxito o error) -->
+    <div id="modal-mensaje" class="modal-overlay" onclick="if(event.target===this) cerrarModalMensaje();">
+        <div class="modal-box modal-msg">
+            <div class="icon" id="modal-mensaje-icon">📧</div>
+            <h3 id="modal-mensaje-titulo">Mensaje</h3>
+            <p id="modal-mensaje-texto"></p>
+            <div class="btn-row">
+                <button type="button" class="btn-primary btn-modal" onclick="cerrarModalMensaje();">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('toggle-password-login').onclick = function() {
+            var input = document.getElementById('password');
+            var btn = this;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🙈';
+                btn.setAttribute('aria-label', 'Ocultar contraseña');
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁';
+                btn.setAttribute('aria-label', 'Mostrar contraseña');
+            }
+        };
+        function abrirModalRecuperar() {
+            document.getElementById('modal-recuperar').classList.add('activo');
+            document.getElementById('modal-email-recuperar').value = '';
+            document.getElementById('modal-email-recuperar').focus();
+        }
+        function cerrarModalRecuperar() {
+            document.getElementById('modal-recuperar').classList.remove('activo');
+        }
+        function abrirModalMensaje(titulo, texto, icono) {
+            document.getElementById('modal-mensaje-titulo').textContent = titulo || 'Mensaje';
+            document.getElementById('modal-mensaje-texto').textContent = texto || '';
+            document.getElementById('modal-mensaje-icon').textContent = icono || '📧';
+            document.getElementById('modal-mensaje').classList.add('activo');
+        }
+        function cerrarModalMensaje() {
+            document.getElementById('modal-mensaje').classList.remove('activo');
+        }
+
+        document.getElementById('btn-enviar-recuperar').onclick = async function() {
+            const email = document.getElementById('modal-email-recuperar').value.trim();
+            if (!email) {
+                abrirModalMensaje('Campo requerido', 'Ingresa tu correo electrónico.', '⚠️');
+                return;
+            }
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = 'Enviando…';
+            try {
+                const res = await fetch('/auth/olvide-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                cerrarModalRecuperar();
+                abrirModalMensaje('Correo enviado', data.message || 'Si el correo existe en nuestro sistema, recibirás instrucciones pronto.', '📧');
+            } catch (e) {
+                cerrarModalRecuperar();
+                abrirModalMensaje('Error', 'No se pudo procesar la solicitud. Intenta de nuevo.', '❌');
+            }
+            btn.disabled = false;
+            btn.textContent = 'Enviar enlace';
+        };
+    </script>
+
+</body>
+</html>

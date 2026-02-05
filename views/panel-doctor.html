@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Especialista</title>
+    <link rel="stylesheet" href="/estilos.css">
+    <!-- Jitsi script se carga dinámicamente (JaaS o meet.jit.si) al iniciar video -->
+</head>
+<body class="perfil-body">
+
+    <div class="perfil-layout">
+        <aside class="perfil-sidebar">
+            <div class="sidebar-header">
+                <div class="user-avatar" id="avatar-doctor">D</div>
+                <h3 class="sidebar-nombre" id="nombre-doctor">Especialista</h3>
+                <span class="status-badge sidebar-texto">Modo Especialista</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-item active" onclick="mostrarSeccion('dashboard')">
+                    <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('chat'); cargarContactosChat();">
+                    <span class="nav-icon">💬</span><span class="nav-label">Mis Mensajes</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('video')">
+                    <span class="nav-icon">🎥</span><span class="nav-label">Sala de Video</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('documentos'); cargarDocumentos();">
+                    <span class="nav-icon">📄</span><span class="nav-label">Documentos</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('agenda')">
+                    <span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span>
+                </button>
+                <a href="/" class="nav-item-link">
+                    <span class="nav-icon">🌐</span><span class="nav-label">Volver al Sitio</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/logout" class="btn-logout">
+                    <span class="nav-icon">🚪</span><span class="nav-label">Cerrar Sesión</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="perfil-main">
+            <div id="seccion-dashboard" class="seccion-panel">
+                <div class="welcome-banner">
+                    <h1>Panel del Especialista 👋</h1>
+                    <p>Gestiona tus consultas y pacientes.</p>
+                </div>
+            
+                <div class="listas-citas-container">
+                    <!-- Filtros -->
+                    <div class="filtros-citas">
+                        <div class="filtro-item filtro-paciente">
+                            <label>Paciente</label>
+                            <input id="filtro-paciente" type="text" placeholder="Buscar por nombre...">
+                        </div>
+                        <div class="filtro-item">
+                            <label>Desde</label>
+                            <input id="filtro-desde" type="date">
+                        </div>
+                        <div class="filtro-item">
+                            <label>Hasta</label>
+                            <input id="filtro-hasta" type="date">
+                        </div>
+                        <div class="filtro-item filtro-acciones">
+                            <button id="btn-limpiar-filtros" class="btn-cita-secundario" type="button">Limpiar</button>
+                        </div>
+                    </div>
+
+                    <h2 class="titulo-seccion">📅 Próximas Citas</h2>
+                    <div id="contenedor-citas-futuras" class="grid-citas-panel"></div>
+                
+                    <hr style="margin: 40px 0; border: 0; border-top: 1px solid #ddd;">
+                
+                    <h2 class="titulo-seccion" style="color: #888;">⌛ Historial de Sesiones</h2>
+                    <div id="contenedor-citas-pasadas" class="grid-citas-panel historial"></div>
+                    <div id="historial-doctor-cargar-mas-wrap" style="display: none; text-align: center; margin-top: 1rem;">
+                        <button type="button" id="btn-historial-doctor-cargar-mas" class="btn-cita-secundario">Cargar más</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Notas (para historial) -->
+            <div id="modal-notas" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; align-items:center; justify-content:center;">
+                <div style="background:white; padding:30px; border-radius:20px; width:90%; max-width:520px; position:relative;">
+                    <h3 id="modal-notas-titulo" style="margin-top:0; color:var(--primario-rosa);">📝 Notas</h3>
+                    <p id="modal-notas-subtitulo" style="margin-top:0; color:#666; font-size:0.9rem;"></p>
+                    <textarea id="modal-notas-textarea" rows="8" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; resize:vertical;" placeholder="Notas..." ></textarea>
+                    <div style="display:flex; gap:10px; margin-top:10px; justify-content:flex-end;">
+                        <button onclick="cerrarModalNotas()" class="btn-cita-secundario" type="button">Cerrar</button>
+                        <button id="btn-guardar-notas-modal" class="btn-guardar" type="button">Guardar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal general (reemplazo de alert) -->
+            <div id="modal-feedback" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:4000; align-items:center; justify-content:center;">
+                <div style="background:white; padding:26px; border-radius:18px; width:90%; max-width:460px; position:relative;">
+                    <h3 id="modal-feedback-titulo" style="margin-top:0; color:var(--primario-rosa);">Aviso</h3>
+                    <div id="modal-feedback-mensaje" style="color:#444; line-height:1.5;"></div>
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+                        <button onclick="cerrarPopup()" class="btn-cita-secundario" type="button">OK</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="seccion-chat" class="seccion-panel" style="display: none;">
+                <div class="chat-main-container" style="display: flex; background: white; height: 75vh; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); overflow: hidden;">
+                    <aside class="chat-sidebar" style="width: 250px; border-right: 1px solid #eee; padding: 15px; background: #f8fafc;">
+                        <h3>Mis Pacientes</h3>
+                        <div id="lista-contactos-chat"></div>
+                    </aside>
+                    <section class="chat-window" style="flex: 1; display: flex; flex-direction: column;">
+                        <div id="chat-header-info" style="padding: 15px; border-bottom: 1px solid #eee; background: white;">
+                            <h4 id="nombre-paciente-chat" style="margin:0">Selecciona un paciente</h4>
+                        </div>
+                        <div id="chat-messages" style="height: 400px; overflow-y: auto; background: #f9f9f9; display: flex; flex-direction: column; padding: 10px;">
+                        </div>
+                        <div class="chat-input-area" style="padding: 15px; background: white; display: flex; gap: 10px; align-items: center;">
+                            <input type="file" id="input-chat-pdf" accept=".pdf" style="display:none;">
+                            <button type="button" id="btn-adjuntar-pdf-chat" title="Adjuntar PDF" style="padding: 10px 14px; border-radius: 8px; border: 1px solid #ddd; background: white; cursor: pointer;" disabled>📎 PDF</button>
+                            <input type="text" id="input-mensaje" placeholder="Escribe un mensaje..." style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid #ddd;" disabled>
+                            <button id="btn-enviar-chat" class="btn-entrar-sesion" style="width: auto; padding: 0 20px;" disabled>Enviar</button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div id="seccion-video" class="seccion-panel" style="display: none;">
+                <header class="video-header">
+                    <h2 id="info-video-titulo">Sala de Espera</h2>
+                    <p>Inicia la sesión cuando estés listo.</p>
+                </header>
+                <div id="jitsi-container" style="height: 70vh; background: #000; border-radius: 15px;"></div>
+
+                <div class="dash-card" style="margin-top: 15px;">
+                    <h3 style="margin-top:0;">📝 Notas de la sesión</h3>
+                    <p id="nota-ayuda" style="margin-top:0; color:#666; font-size:0.9rem;">Selecciona una cita para escribir notas.</p>
+                    <textarea id="notas-textarea" rows="6" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; resize:vertical;" placeholder="Escribe tus notas aquí..." disabled></textarea>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button id="btn-guardar-notas" class="btn-guardar" style="max-width:220px;" disabled>Guardar notas</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="seccion-documentos" class="seccion-panel" style="display: none;">
+                <div class="documentos-container">
+                    <div class="documentos-header">
+                        <h2>📄 Mis Documentos</h2>
+                        <p>Crea y gestiona tus notas y bitácoras.</p>
+                        <div class="documentos-header-botones">
+                            <input type="file" id="input-subir-doc" accept=".pdf,.doc,.docx" style="display:none;">
+                            <button type="button" class="btn-agregar-bloque btn-subir-archivo" onclick="document.getElementById('input-subir-doc').click()">📤 Subir archivo (Word/PDF)</button>
+                            <button id="btn-nuevo-doc" class="btn-agregar-bloque" onclick="crearDocumento()">+ Nuevo Documento</button>
+                            <button type="button" id="btn-ordenar-docs" class="btn-ordenar-docs" onclick="toggleOrdenarDocumentos()">Ordenar</button>
+                        </div>
+                    </div>
+
+                    <div class="documentos-layout">
+                        <!-- Lista de documentos -->
+                        <aside class="documentos-lista">
+                            <div id="lista-documentos">
+                                <p class="texto-vacio">Cargando documentos...</p>
+                            </div>
+                        </aside>
+
+                        <!-- Editor de documento / Visor PDF -->
+                        <section class="documento-editor">
+                            <div id="editor-vacio" class="editor-placeholder">
+                                <p>📝 Selecciona un documento de la lista o crea uno nuevo</p>
+                            </div>
+                            <div id="editor-activo" style="display: none;">
+                                <div class="editor-toolbar">
+                                    <input type="text" id="doc-titulo" class="input-titulo-doc" placeholder="Título del documento">
+                                    <div class="editor-acciones">
+                                        <a id="doc-link-archivo" href="#" target="_blank" rel="noopener" class="btn-link-archivo" style="display:none;">Abrir archivo</a>
+                                        <button id="btn-guardar-doc" class="btn-guardar-doc" onclick="guardarDocumento()">💾 Guardar</button>
+                                        <button id="btn-eliminar-doc" class="btn-eliminar-doc" onclick="eliminarDocumento()">🗑️ Eliminar</button>
+                                    </div>
+                                </div>
+                                <div id="doc-area-editable" style="display:block;">
+                                    <textarea id="doc-contenido" class="textarea-documento" placeholder="Escribe aquí tu contenido..."></textarea>
+                                </div>
+                                <div id="doc-visor-pdf" style="display:none;">
+                                    <iframe id="iframe-pdf" title="Vista previa PDF" style="width:100%; height:70vh; border:1px solid #ddd; border-radius:8px;"></iframe>
+                                </div>
+                                <p id="doc-estado" class="doc-estado-guardado"></p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <div id="seccion-agenda" class="seccion-panel" style="display: none;">
+                <div class="agenda-container">
+                    <div class="agenda-header">
+                        <h2>🗓️ Configuración de Agenda</h2>
+                        <p>Define tu horario laboral semanal y registra vacaciones/bloqueos de fechas.</p>
+                    </div>
+
+                    <!-- Horario laboral -->
+                    <div class="dash-card agenda-card-responsive">
+                        <h3 style="margin-top:0;">🕒 Horario de trabajo</h3>
+                        <p style="margin:0 0 16px 0; color:#666; font-size:0.95rem;">
+                            Agrega los bloques de tiempo en los que atiendes pacientes cada semana.
+                        </p>
+
+                        <form id="form-horario" class="form-horario-simple">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="hl-dia">Día</label>
+                                    <select id="hl-dia" required>
+                                        <option value="1">Lunes</option>
+                                        <option value="2">Martes</option>
+                                        <option value="3">Miércoles</option>
+                                        <option value="4">Jueves</option>
+                                        <option value="5">Viernes</option>
+                                        <option value="6">Sábado</option>
+                                        <option value="0">Domingo</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="hl-inicio">Desde</label>
+                                    <input type="time" id="hl-inicio" value="09:00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="hl-fin">Hasta</label>
+                                    <input type="time" id="hl-fin" value="13:00" required>
+                                </div>
+                                <button type="submit" class="btn-agregar-bloque">+ Agregar</button>
+                            </div>
+                        </form>
+
+                        <div id="lista-horarios" style="margin-top: 20px;">
+                            <p class="texto-vacio">Cargando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Vacaciones / Bloqueos -->
+                    <div class="dash-card agenda-card-responsive" style="margin-top: 24px;">
+                        <h3 style="margin-top:0;">🏖️ Vacaciones / Bloqueos</h3>
+                        <p style="margin:0 0 16px 0; color:#666; font-size:0.95rem;">
+                            Bloquea días o rangos de fechas donde no estarás disponible.
+                        </p>
+
+                        <form id="form-vacaciones" class="form-horario-simple">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="vac-inicio">Desde</label>
+                                    <input type="date" id="vac-inicio" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="vac-fin">Hasta (opcional)</label>
+                                    <input type="date" id="vac-fin">
+                                </div>
+                                <div class="form-group form-group-motivo">
+                                    <label for="vac-motivo">Motivo (opcional)</label>
+                                    <input type="text" id="vac-motivo" placeholder="Ej: Vacaciones, Congreso...">
+                                </div>
+                                <button type="submit" class="btn-agregar-bloque btn-bloquear">Bloquear</button>
+                            </div>
+                        </form>
+
+                        <div id="lista-vacaciones" style="margin-top: 20px;">
+                            <p class="texto-vacio">Cargando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Editar Perfil -->
+                    <div class="dash-card agenda-card-responsive" style="margin-top: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3 style="margin:0;">👤 Mi Perfil</h3>
+                            <button type="button" id="btn-editar-perfil-doc" onclick="activarEdicionDoc()" class="btn-editar-v2">Editar Perfil</button>
+                        </div>
+
+                        <form id="form-perfil-doctor" class="form-perfil-doctor">
+                            <div class="form-group-perfil">
+                                <label>Nombre (no modificable)</label>
+                                <input type="text" id="doc-nombre" readonly disabled class="input-readonly-doc">
+                            </div>
+
+                            <div class="form-group-perfil">
+                                <label>Correo electrónico (no modificable)</label>
+                                <input type="email" id="doc-email" readonly disabled class="input-readonly-doc">
+                            </div>
+
+                            <div class="form-group-perfil">
+                                <label>Teléfono</label>
+                                <input type="tel" id="doc-telefono" readonly class="input-readonly-doc" placeholder="No registrado">
+                            </div>
+
+                            <div class="form-group-perfil">
+                                <label>Contraseña</label>
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <input type="password" id="doc-password" readonly class="input-readonly-doc" 
+                                           value="********" placeholder="Escribe nueva contraseña para cambiar">
+                                    <button type="button" onclick="togglePasswordDoc()" id="eye-btn-doc" 
+                                            style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; display: none; font-size: 1.2rem;">
+                                        👁️
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="acciones-edicion-doc" style="display: none; margin-top: 16px; gap: 10px;">
+                                <button type="submit" class="btn-agregar-bloque">Guardar Cambios</button>
+                                <button type="button" onclick="cancelarEdicionDoc()" class="btn-agregar-bloque" style="background:#ccc; color:#333;">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal encuesta de satisfacción (6to inicio de sesión) -->
+    <div id="modal-encuesta" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; border-radius: 16px; padding: 28px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); border-top: 6px solid var(--primario-rosa);">
+            <h3 style="margin: 0 0 8px 0; color: var(--primario-rosa);">Encuesta de satisfacción</h3>
+            <p style="color: #666; font-size: 0.95rem; margin-bottom: 20px;">¿Qué tan satisfecho estás con la plataforma?</p>
+            <div style="display: flex; gap: 8px; margin-bottom: 20px; font-size: 1.8rem;" id="encuesta-estrellas">
+                <span data-valor="1" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="2" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="3" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="4" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="5" style="cursor: pointer; opacity: 0.4;">★</span>
+            </div>
+            <textarea id="encuesta-comentario" placeholder="Comentario (opcional)" style="width: 100%; min-height: 80px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 16px; box-sizing: border-box; resize: vertical;"></textarea>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" id="encuesta-cerrar-sin-enviar" style="padding: 10px 20px; background: #eee; border: none; border-radius: 10px; cursor: pointer;">Cerrar</button>
+                <button type="button" id="encuesta-enviar" style="padding: 10px 24px; background: var(--primario-rosa); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+        let api = null;
+        let miIdUsuario = null;    // ID de la tabla 'usuarios' (ej. 6)
+        let miIdProfesional = null; // ID de la tabla 'psicologos' (ej. 1)
+        let pacienteSeleccionadoId = null;
+        let intervaloChat = null;
+        let citasDoctorOriginales = [];
+        let citaActualId = null;
+        const notasDrafts = new Map(); // citaId -> string
+
+// --- POPUP (reemplazo de alert) ---
+function mostrarPopup(mensaje, titulo = 'Aviso') {
+    const t = document.getElementById('modal-feedback-titulo');
+    const m = document.getElementById('modal-feedback-mensaje');
+    if (t) t.innerText = titulo;
+    if (m) m.innerText = mensaje;
+    document.getElementById('modal-feedback').style.display = 'flex';
+}
+
+function cerrarPopup() {
+    document.getElementById('modal-feedback').style.display = 'none';
+}
+
+async function fetchJsonSafe(url, options) {
+    const res = await fetch(url, options);
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+    let data = null;
+    let text = '';
+    if (contentType.includes('application/json')) {
+        data = await res.json().catch(() => null);
+    } else {
+        text = await res.text().catch(() => '');
+    }
+    return { res, data, text };
+}
+
+// Pedir mi ID al cargar la página
+fetch('/api/quien-soy')
+    .then(res => res.json())
+    .then(data => {
+        miIdUsuario = data.id;
+        console.log("Identificado como usuario:", miIdUsuario);
+    })
+    .catch(err => console.error("Error al identificarse:", err));
+
+        // 1. CARGA INICIAL
+        fetch('/api/user-data')
+            .then(res => res.json())
+            .then(data => {
+                // Guardamos los dos IDs que nos manda el servidor
+                miIdUsuario = data.id; 
+                miIdProfesional = data.psicologo_id; 
+                
+                document.getElementById('nombre-doctor').innerText = data.nombre;
+                document.getElementById('avatar-doctor').innerText = data.nombre.charAt(0).toUpperCase();
+                
+                console.log("Sesión: Usuario ID", miIdUsuario, "Profesional ID", miIdProfesional);
+                cargarCitasDoctor();
+            })
+            .catch(err => console.error("Error cargando user-data:", err));
+
+        // Encuesta de satisfacción (6to inicio de sesión)
+        fetch('/api/encuesta-satisfaccion/estado').then(r => r.json()).then(data => {
+            if (!data.mostrarEncuesta) return;
+            const modal = document.getElementById('modal-encuesta');
+            const estrellas = document.querySelectorAll('#encuesta-estrellas span');
+            let valoracion = 0;
+            estrellas.forEach((s, i) => {
+                s.addEventListener('mouseenter', () => {
+                    estrellas.forEach((e, j) => { e.style.opacity = j <= i ? '1' : '0.4'; });
+                });
+                s.addEventListener('click', () => { valoracion = i + 1; });
+            });
+            document.getElementById('encuesta-estrellas').addEventListener('mouseleave', () => {
+                estrellas.forEach((e, j) => { e.style.opacity = j < valoracion ? '1' : '0.4'; });
+            });
+            const cerrarYMarcar = () => {
+                fetch('/api/encuesta-satisfaccion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valoracion: valoracion || null, comentario: document.getElementById('encuesta-comentario').value.trim() }) }).catch(() => {});
+                modal.style.display = 'none';
+            };
+            document.getElementById('encuesta-enviar').onclick = cerrarYMarcar;
+            document.getElementById('encuesta-cerrar-sin-enviar').onclick = cerrarYMarcar;
+            modal.style.display = 'flex';
+        }).catch(() => {});
+
+        // 2. NAVEGACIÓN
+        function mostrarSeccion(seccionId) {
+    // 1. Ocultar todas las secciones
+    document.querySelectorAll('.seccion-panel').forEach(sec => {
+        sec.style.display = 'none';
+    });
+
+    // 2. Mostrar la sección seleccionada
+    const seleccionada = document.getElementById('seccion-' + seccionId);
+    if (seleccionada) {
+        seleccionada.style.display = 'block';
+    }
+
+    // 3. ¡EL TRUCO AQUÍ!: Si vuelve al dashboard, refrescamos las listas
+    if (seccionId === 'dashboard') {
+        cargarCitasDoctor();
+    }
+
+    // Si abre la agenda, cargamos horarios y vacaciones
+    if (seccionId === 'agenda') {
+        cargarHorarioLaboral();
+        cargarVacaciones();
+        cargarPerfilDoctor();
+    }
+
+    // 4. Al salir de video, cerrar Jitsi o quitar iframe de Zoho
+    if (seccionId !== 'video') {
+        if (api) { api.dispose(); api = null; }
+        const cont = document.getElementById('jitsi-container');
+        if (cont) cont.innerHTML = '';
+    }
+
+    // 5. Actualizar botones del sidebar (opcional pero recomendado)
+    document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+    // Si tienes el evento, marcamos el botón como activo
+    if (window.event && window.event.currentTarget) {
+        window.event.currentTarget.classList.add('active');
+    }
+}
+
+// --- HORARIO LABORAL (simple) ---
+const DIAS_SEMANA = {
+    0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles',
+    4: 'Jueves', 5: 'Viernes', 6: 'Sábado'
+};
+
+async function cargarHorarioLaboral() {
+    const cont = document.getElementById('lista-horarios');
+    if (!cont) return;
+    cont.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+
+    try {
+        const { res, data } = await fetchJsonSafe('/api/horario-laboral');
+        if (!res.ok) {
+            cont.innerHTML = '<p class="texto-vacio">Error al cargar horarios.</p>';
+            return;
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+            cont.innerHTML = '<p class="texto-vacio">No tienes horarios definidos aún.</p>';
+            return;
+        }
+
+        // Agrupar por día
+        const porDia = {};
+        for (const row of data) {
+            const d = Number(row.dia_semana);
+            if (!porDia[d]) porDia[d] = [];
+            porDia[d].push(row);
+        }
+
+        // Ordenar días (Lun..Dom)
+        const ordenDias = [1, 2, 3, 4, 5, 6, 0];
+        let html = '';
+
+        for (const dia of ordenDias) {
+            if (!porDia[dia]) continue;
+            const bloques = porDia[dia].sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+
+            html += `<div class="horario-dia">
+                <div class="horario-dia__nombre">${DIAS_SEMANA[dia]}</div>
+                <div class="horario-dia__bloques">`;
+
+            for (const b of bloques) {
+                const ini = String(b.hora_inicio).slice(0, 5);
+                const fin = String(b.hora_fin).slice(0, 5);
+                html += `
+                    <div class="bloque-horario">
+                        <span>${ini} – ${fin}</span>
+                        <button type="button" class="btn-quitar" onclick="eliminarHorario(${b.id})" title="Eliminar">×</button>
+                    </div>`;
+            }
+
+            html += `</div></div>`;
+        }
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<p class="texto-vacio">Error de conexión.</p>';
+    }
+}
+
+async function eliminarHorario(id) {
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/horario-laboral/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || 'Error al eliminar');
+            return mostrarPopup(msg, 'Horario');
+        }
+        cargarHorarioLaboral();
+    } catch (e) {
+        mostrarPopup('Error de conexión.', 'Horario');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('form-horario');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const dia_semana = Number(document.getElementById('hl-dia').value);
+            const hora_inicio = document.getElementById('hl-inicio').value;
+            const hora_fin = document.getElementById('hl-fin').value;
+
+            if (!hora_inicio || !hora_fin) {
+                return mostrarPopup('Completa ambas horas.', 'Horario');
+            }
+            if (hora_fin <= hora_inicio) {
+                return mostrarPopup('La hora de fin debe ser mayor a la de inicio.', 'Horario');
+            }
+
+            try {
+                const { res, data, text } = await fetchJsonSafe('/api/horario-laboral', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dia_semana, hora_inicio, hora_fin })
+                });
+                if (!res.ok) {
+                    const msg = (data && data.error) ? data.error : (text || 'Error al guardar');
+                    return mostrarPopup(msg, 'Horario');
+                }
+                mostrarPopup('Bloque agregado.', 'Horario');
+                cargarHorarioLaboral();
+            } catch (err) {
+                mostrarPopup('Error de conexión.', 'Horario');
+            }
+        });
+    }
+    // --- VACACIONES ---
+    const formVac = document.getElementById('form-vacaciones');
+    if (formVac) {
+        formVac.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fecha_inicio = document.getElementById('vac-inicio').value;
+            const fecha_fin = document.getElementById('vac-fin').value || fecha_inicio;
+            const motivo = document.getElementById('vac-motivo').value.trim();
+
+            if (!fecha_inicio) {
+                return mostrarPopup('Selecciona una fecha de inicio.', 'Vacaciones');
+            }
+            if (fecha_fin < fecha_inicio) {
+                return mostrarPopup('La fecha de fin no puede ser anterior a la de inicio.', 'Vacaciones');
+            }
+
+            try {
+                const { res, data, text } = await fetchJsonSafe('/api/vacaciones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fecha_inicio, fecha_fin, motivo: motivo || null })
+                });
+                if (!res.ok) {
+                    const msg = (data && data.error) ? data.error : (text || 'Error al guardar');
+                    return mostrarPopup(msg, 'Vacaciones');
+                }
+                mostrarPopup('Bloqueo guardado.', 'Vacaciones');
+                document.getElementById('vac-inicio').value = '';
+                document.getElementById('vac-fin').value = '';
+                document.getElementById('vac-motivo').value = '';
+                cargarVacaciones();
+            } catch (err) {
+                mostrarPopup('Error de conexión.', 'Vacaciones');
+            }
+        });
+    }
+});
+
+// --- VACACIONES (lista) ---
+async function cargarVacaciones() {
+    const cont = document.getElementById('lista-vacaciones');
+    if (!cont) return;
+    cont.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+
+    try {
+        const { res, data } = await fetchJsonSafe('/api/vacaciones');
+        if (!res.ok) {
+            cont.innerHTML = '<p class="texto-vacio">Error al cargar bloqueos.</p>';
+            return;
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+            cont.innerHTML = '<p class="texto-vacio">No tienes bloqueos registrados.</p>';
+            return;
+        }
+
+        // Ordenar por fecha_inicio
+        data.sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
+
+        let html = '';
+        for (const row of data) {
+            const ini = new Date(row.fecha_inicio).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+            const fin = new Date(row.fecha_fin).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+            const rango = (row.fecha_inicio === row.fecha_fin) ? ini : `${ini} → ${fin}`;
+            const motivo = row.motivo ? `<span class="bloqueo-motivo">${row.motivo}</span>` : '';
+
+            html += `
+                <div class="bloqueo-item">
+                    <div class="bloqueo-info">
+                        <span class="bloqueo-fechas">${rango}</span>
+                        ${motivo}
+                    </div>
+                    <button type="button" class="btn-quitar" onclick="eliminarVacacion(${row.id})" title="Eliminar">×</button>
+                </div>`;
+        }
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<p class="texto-vacio">Error de conexión.</p>';
+    }
+}
+
+async function eliminarVacacion(id) {
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/vacaciones/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || 'Error al eliminar');
+            return mostrarPopup(msg, 'Vacaciones');
+        }
+        cargarVacaciones();
+    } catch (e) {
+        mostrarPopup('Error de conexión.', 'Vacaciones');
+    }
+}
+
+// ============================
+// DOCUMENTOS
+// ============================
+let documentoActualId = null;
+
+let documentosOrdenando = false;
+
+async function cargarDocumentos() {
+    const lista = document.getElementById('lista-documentos');
+    lista.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+    try {
+        const { res, data } = await fetchJsonSafe('/api/documentos');
+        if (!res.ok || !data) {
+            lista.innerHTML = '<p class="texto-vacio">Error al cargar documentos</p>';
+            return;
+        }
+        if (data.length === 0) {
+            lista.innerHTML = '<p class="texto-vacio">No tienes documentos. Crea uno nuevo.</p>';
+            return;
+        }
+        const tipoLabel = (t) => (!t || t === 'texto' ? 'Texto' : t === 'pdf' ? 'PDF' : 'Word');
+        lista.innerHTML = data.map(doc => {
+            const fecha = new Date(doc.updated_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+            const tipo = (doc.tipo || 'texto').toLowerCase();
+            const badge = `<span class="doc-item-tipo doc-item-tipo-${tipo}">${tipoLabel(doc.tipo)}</span>`;
+            return `
+                <div class="doc-item ${doc.id === documentoActualId ? 'doc-item-activo' : ''}" 
+                     data-doc-id="${doc.id}" 
+                     onclick="if(!documentosOrdenando) abrirDocumento(${doc.id})">
+                    ${badge}
+                    <span class="doc-item-titulo">${(doc.titulo || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+                    <span class="doc-item-fecha">${fecha}</span>
+                </div>
+            `;
+        }).join('');
+        if (documentosOrdenando) activarDragDocumentos();
+    } catch (e) {
+        lista.innerHTML = '<p class="texto-vacio">Error de conexión</p>';
+    }
+}
+
+function toggleOrdenarDocumentos() {
+    documentosOrdenando = !documentosOrdenando;
+    const btn = document.getElementById('btn-ordenar-docs');
+    const lista = document.getElementById('lista-documentos');
+    if (documentosOrdenando) {
+        btn.textContent = 'Finalizar';
+        lista.classList.add('documentos-ordenando');
+        activarDragDocumentos();
+    } else {
+        btn.textContent = 'Ordenar';
+        lista.classList.remove('documentos-ordenando');
+        finalizarOrdenDocumentos();
+    }
+}
+
+function activarDragDocumentos() {
+    const items = document.querySelectorAll('#lista-documentos .doc-item');
+    items.forEach(el => {
+        el.setAttribute('draggable', 'true');
+        el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', el.dataset.docId); e.dataTransfer.effectAllowed = 'move'; };
+        el.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('doc-item-drag-over'); };
+        el.ondragleave = () => el.classList.remove('doc-item-drag-over');
+        el.ondrop = (e) => {
+            e.preventDefault();
+            el.classList.remove('doc-item-drag-over');
+            const id = e.dataTransfer.getData('text/plain');
+            const dragEl = document.querySelector(`[data-doc-id="${id}"]`);
+            if (dragEl && dragEl !== el) {
+                const parent = el.parentNode;
+                const all = [...parent.querySelectorAll('.doc-item')];
+                const idxEl = all.indexOf(el);
+                const idxDrag = all.indexOf(dragEl);
+                if (idxDrag < idxEl) parent.insertBefore(dragEl, el.nextSibling);
+                else parent.insertBefore(dragEl, el);
+            }
+        };
+    });
+}
+
+async function finalizarOrdenDocumentos() {
+    const items = document.querySelectorAll('#lista-documentos .doc-item');
+    const ids = [...items].map(el => parseInt(el.dataset.docId, 10)).filter(n => !isNaN(n));
+    if (ids.length === 0) return;
+    try {
+        const { res } = await fetchJsonSafe('/api/documentos/orden', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+        if (!res.ok) mostrarPopup('Error al guardar el orden', 'Documentos');
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+    const items2 = document.querySelectorAll('#lista-documentos .doc-item');
+    items2.forEach(el => { el.removeAttribute('draggable'); el.ondragstart = el.ondragover = el.ondragleave = el.ondrop = null; });
+}
+
+async function crearDocumento() {
+    try {
+        const { res, data } = await fetchJsonSafe('/api/documentos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ titulo: 'Nuevo documento', contenido: '' })
+        });
+        if (!res.ok) {
+            return mostrarPopup('Error al crear documento', 'Documentos');
+        }
+        await cargarDocumentos();
+        abrirDocumento(data.id);
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+}
+
+async function abrirDocumento(id) {
+    documentoActualId = id;
+    try {
+        const { res, data } = await fetchJsonSafe(`/api/documentos/${id}`);
+        if (!res.ok || !data) {
+            return mostrarPopup('Error al abrir documento', 'Documentos');
+        }
+        document.getElementById('editor-vacio').style.display = 'none';
+        document.getElementById('editor-activo').style.display = 'block';
+        document.getElementById('doc-titulo').value = data.titulo || '';
+        document.getElementById('doc-contenido').value = data.contenido || '';
+        document.getElementById('doc-estado').innerText = '';
+
+        const tipo = (data.tipo || 'texto').toLowerCase();
+        const areaEditable = document.getElementById('doc-area-editable');
+        const visorPdf = document.getElementById('doc-visor-pdf');
+        const iframePdf = document.getElementById('iframe-pdf');
+        const linkArchivo = document.getElementById('doc-link-archivo');
+        const btnGuardar = document.getElementById('btn-guardar-doc');
+
+        if (tipo === 'pdf') {
+            areaEditable.style.display = 'none';
+            visorPdf.style.display = 'block';
+            btnGuardar.style.display = 'none';
+            document.getElementById('doc-titulo').readOnly = true;
+            iframePdf.src = '/api/documentos/' + id + '/archivo';
+            linkArchivo.href = '/api/documentos/' + id + '/archivo';
+            linkArchivo.style.display = 'inline-block';
+        } else {
+            areaEditable.style.display = 'block';
+            visorPdf.style.display = 'none';
+            iframePdf.src = 'about:blank';
+            btnGuardar.style.display = 'inline-block';
+            document.getElementById('doc-titulo').readOnly = false;
+            if (data.ruta_archivo) {
+                linkArchivo.href = '/api/documentos/' + id + '/archivo';
+                linkArchivo.style.display = 'inline-block';
+            } else {
+                linkArchivo.style.display = 'none';
+            }
+        }
+        cargarDocumentos();
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+}
+
+async function guardarDocumento() {
+    if (!documentoActualId) return;
+    const titulo = document.getElementById('doc-titulo').value.trim() || 'Sin título';
+    const contenido = document.getElementById('doc-contenido').value;
+    const estado = document.getElementById('doc-estado');
+    estado.innerText = 'Guardando...';
+    estado.style.color = '#999';
+    try {
+        const { res, data } = await fetchJsonSafe(`/api/documentos/${documentoActualId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ titulo, contenido })
+        });
+        if (!res.ok) {
+            estado.innerText = 'Error al guardar';
+            estado.style.color = '#e74c3c';
+            return;
+        }
+        estado.innerText = 'Guardado ✓';
+        estado.style.color = '#27ae60';
+        cargarDocumentos();
+    } catch (e) {
+        estado.innerText = 'Error de conexión';
+        estado.style.color = '#e74c3c';
+    }
+}
+
+async function eliminarDocumento() {
+    if (!documentoActualId) return;
+    if (!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
+    try {
+        const { res } = await fetchJsonSafe(`/api/documentos/${documentoActualId}`, { method: 'DELETE' });
+        if (!res.ok) {
+            return mostrarPopup('Error al eliminar documento', 'Documentos');
+        }
+        documentoActualId = null;
+        document.getElementById('editor-activo').style.display = 'none';
+        document.getElementById('editor-vacio').style.display = 'block';
+        cargarDocumentos();
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+}
+
+document.getElementById('input-subir-doc').addEventListener('change', async function() {
+    const file = this.files && this.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('archivo', file);
+    try {
+        const res = await fetch('/api/documentos/upload', { method: 'POST', body: formData, credentials: 'same-origin' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            mostrarPopup(data.error || 'Error al subir', 'Documentos');
+            return;
+        }
+        this.value = '';
+        await cargarDocumentos();
+        abrirDocumento(data.id);
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+});
+
+// --- PERFIL DEL DOCTOR ---
+async function cargarPerfilDoctor() {
+    try {
+        const { res, data } = await fetchJsonSafe('/api/user-data');
+        if (!res.ok || !data) return;
+
+        document.getElementById('doc-nombre').value = data.nombre || '';
+        document.getElementById('doc-email').value = data.email || '';
+        document.getElementById('doc-telefono').value = data.telefono || '';
+        document.getElementById('doc-password').value = '********';
+    } catch (e) {
+        console.error('Error cargando perfil:', e);
+    }
+}
+
+function activarEdicionDoc() {
+    // Habilitar campos editables
+    document.getElementById('doc-telefono').removeAttribute('readonly');
+    document.getElementById('doc-telefono').classList.remove('input-readonly-doc');
+
+    const passInput = document.getElementById('doc-password');
+    passInput.removeAttribute('readonly');
+    passInput.classList.remove('input-readonly-doc');
+    passInput.value = '';
+    passInput.placeholder = 'Escribe nueva contraseña para cambiar';
+
+    // Mostrar botón del ojo y acciones
+    document.getElementById('eye-btn-doc').style.display = 'block';
+    document.getElementById('acciones-edicion-doc').style.display = 'flex';
+    document.getElementById('btn-editar-perfil-doc').style.display = 'none';
+}
+
+function cancelarEdicionDoc() {
+    // Recargar para restaurar estado
+    cargarPerfilDoctor();
+    
+    // Volver a modo solo lectura
+    document.getElementById('doc-telefono').setAttribute('readonly', true);
+    document.getElementById('doc-telefono').classList.add('input-readonly-doc');
+
+    const passInput = document.getElementById('doc-password');
+    passInput.setAttribute('readonly', true);
+    passInput.classList.add('input-readonly-doc');
+    passInput.value = '********';
+    passInput.type = 'password';
+
+    // Ocultar botón del ojo y acciones
+    document.getElementById('eye-btn-doc').style.display = 'none';
+    document.getElementById('acciones-edicion-doc').style.display = 'none';
+    document.getElementById('btn-editar-perfil-doc').style.display = 'inline-block';
+}
+
+function togglePasswordDoc() {
+    const passInput = document.getElementById('doc-password');
+    const eyeBtn = document.getElementById('eye-btn-doc');
+    passInput.type = (passInput.type === 'password') ? 'text' : 'password';
+    eyeBtn.innerText = (passInput.type === 'password') ? '👁️' : '🔒';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const formPerfil = document.getElementById('form-perfil-doctor');
+    if (formPerfil) {
+        formPerfil.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const telefono = document.getElementById('doc-telefono').value.trim();
+            const password = document.getElementById('doc-password').value;
+
+            // Necesitamos enviar el nombre aunque no cambie (el endpoint lo requiere)
+            const nombre = document.getElementById('doc-nombre').value;
+
+            try {
+                const { res, data, text } = await fetchJsonSafe('/api/update-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, telefono, password: password || '********' })
+                });
+
+                if (!res.ok) {
+                    const msg = (data && data.error) ? data.error : (text || 'Error al guardar');
+                    return mostrarPopup(msg, 'Perfil');
+                }
+
+                mostrarPopup('¡Cambios guardados!', 'Perfil');
+                cancelarEdicionDoc();
+            } catch (err) {
+                mostrarPopup('Error de conexión.', 'Perfil');
+            }
+        });
+    }
+});
+
+        // 3. CARGAR CITAS Y CONTACTOS
+        function cargarCitasDoctor() {
+    fetch('/api/mis-citas-doctor')
+        .then(res => res.json())
+        .then(citas => {
+            citasDoctorOriginales = Array.isArray(citas) ? citas : [];
+            aplicarFiltrosYRenderizarCitasDoctor();
+        })
+        .catch(err => console.error("Error cargando citas:", err));
+}
+
+function getCitaDateTimeDoctor(c) {
+    const fechaCita = new Date(c.fecha);
+    const [horas, minutos] = (c.hora || "00:00:00").split(':');
+    fechaCita.setHours(parseInt(horas, 10), parseInt(minutos, 10), 0, 0);
+    return fechaCita;
+}
+
+function aplicarFiltrosYRenderizarCitasDoctor() {
+    const futurasDiv = document.getElementById('contenedor-citas-futuras');
+    const pasadasDiv = document.getElementById('contenedor-citas-pasadas');
+
+    const filtroPaciente = (document.getElementById('filtro-paciente')?.value || '').trim().toLowerCase();
+    const desde = document.getElementById('filtro-desde')?.value || '';
+    const hasta = document.getElementById('filtro-hasta')?.value || '';
+
+    const desdeDate = desde ? new Date(`${desde}T00:00:00`) : null;
+    const hastaDate = hasta ? new Date(`${hasta}T23:59:59.999`) : null;
+
+    const filtradas = citasDoctorOriginales.filter(c => {
+        const nombre = (c.paciente_nombre || '').toString().toLowerCase();
+        if (filtroPaciente && !nombre.includes(filtroPaciente)) return false;
+
+        const dt = getCitaDateTimeDoctor(c);
+        if (desdeDate && dt < desdeDate) return false;
+        if (hastaDate && dt > hastaDate) return false;
+
+        return true;
+    });
+
+    const ahora = new Date();
+    const noCancelada = c => (c.estado || '').toLowerCase() !== 'cancelada';
+    const futuras = filtradas.filter(c => getCitaDateTimeDoctor(c) >= ahora && noCancelada(c));
+    // Historial: citas pasadas O citas canceladas
+    const pasadas = filtradas.filter(c => getCitaDateTimeDoctor(c) < ahora || !noCancelada(c));
+
+    // Render Futuras
+    futurasDiv.innerHTML = futuras.length
+        ? futuras.map(c => generarTarjetaCita(c, true)).join('')
+        : `<p class="vacio">No hay próximas citas con esos filtros.</p>`;
+
+    // Render Historial: por defecto solo las de este mes; "Cargar más" muestra todas
+    const historialCargarMasWrap = document.getElementById('historial-doctor-cargar-mas-wrap');
+    const btnHistorialCargarMas = document.getElementById('btn-historial-doctor-cargar-mas');
+    if (pasadas.length === 0) {
+        pasadasDiv.innerHTML = '<p class="vacio">No hay historial con esos filtros.</p>';
+        if (historialCargarMasWrap) historialCargarMasWrap.style.display = 'none';
+    } else {
+        const mesActual = ahora.getMonth();
+        const anioActual = ahora.getFullYear();
+        const pasadasEsteMes = pasadas.filter(c => {
+            const d = new Date(c.fecha);
+            return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+        });
+        const citasIniciales = pasadasEsteMes.length > 0 ? pasadasEsteMes : pasadas.slice(0, 1);
+        const hayMas = pasadas.length > citasIniciales.length;
+
+        pasadasDiv.innerHTML = citasIniciales.map(c => generarTarjetaCita(c, false)).join('');
+
+        if (historialCargarMasWrap && btnHistorialCargarMas) {
+            if (hayMas) {
+                historialCargarMasWrap.style.display = 'block';
+                btnHistorialCargarMas.onclick = function() {
+                    pasadasDiv.innerHTML = pasadas.map(c => generarTarjetaCita(c, false)).join('');
+                    historialCargarMasWrap.style.display = 'none';
+                };
+            } else {
+                historialCargarMasWrap.style.display = 'none';
+            }
+        }
+    }
+}
+
+// Listeners de filtros (dashboard)
+document.addEventListener('DOMContentLoaded', () => {
+    const paciente = document.getElementById('filtro-paciente');
+    const desde = document.getElementById('filtro-desde');
+    const hasta = document.getElementById('filtro-hasta');
+    const limpiar = document.getElementById('btn-limpiar-filtros');
+
+    const onChange = () => aplicarFiltrosYRenderizarCitasDoctor();
+    if (paciente) paciente.addEventListener('input', onChange);
+    if (desde) desde.addEventListener('change', onChange);
+    if (hasta) hasta.addEventListener('change', onChange);
+    if (limpiar) limpiar.addEventListener('click', () => {
+        if (paciente) paciente.value = '';
+        if (desde) desde.value = '';
+        if (hasta) hasta.value = '';
+        aplicarFiltrosYRenderizarCitasDoctor();
+    });
+});
+
+// Función auxiliar para no repetir código de diseño
+function generarTarjetaCita(cita, esFutura) {
+    const fechaFormateada = new Date(cita.fecha).toLocaleDateString('es-MX', { 
+        weekday: 'long', day: 'numeric', month: 'long' 
+    });
+
+    return `
+        <div class="cita-card ${esFutura ? 'border-dorado' : 'grisaceo'}">
+            <div class="cita-info">
+                <h4>${cita.paciente_nombre}</h4>
+                <span>${fechaFormateada} | ${cita.hora.slice(0,5)}</span>
+                <p><strong>Motivo:</strong> ${cita.motivo || 'No especificado'}</p>
+            </div>
+            <div class="cita-acciones">
+                ${esFutura 
+                    ? (() => { const escJs = (s) => (s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r/g,'').replace(/\n/g,' '); return `<button onclick="iniciarVideo('${escJs(cita.link_sesion || '')}', '${escJs(cita.paciente_nombre || '')}', ${cita.cita_id})" class="btn-entrar">🎥 Iniciar Sesión</button>`; })()
+                    : (() => { const e = (cita.estado || 'pendiente').toLowerCase(); const esCancelada = e === 'cancelada'; const esRealizada = e === 'realizada'; return `<span class="badge-${esCancelada ? 'cancelada' : esRealizada ? 'finalizada' : 'no-realizada'}">${esCancelada ? 'Cancelada' : esRealizada ? 'Realizada' : 'No realizada'}</span>`; })()
+                }
+                ${esFutura
+                    ? `<button onclick="abrirNotasEnVideo(${cita.cita_id}, '${cita.paciente_nombre}')" class="btn-chat-icon">📝</button>`
+                    : `<button onclick="abrirModalNotas(${cita.cita_id}, '${cita.paciente_nombre}', '${new Date(cita.fecha).toISOString()}', '${cita.hora}')" class="btn-chat-icon">📝</button>`
+                }
+            </div>
+        </div>
+    `;
+}
+
+function cargarContactosChat() {
+    fetch('/api/mis-citas-doctor')
+        .then(res => res.json())
+        .then(citas => {
+            console.log("Citas recibidas para procesar:", citas);
+            const lista = document.getElementById('lista-contactos-chat');
+            
+            if (!Array.isArray(citas) || citas.length === 0) {
+                lista.innerHTML = "<p style='padding:10px; color:#666;'>No hay pacientes con citas programadas.</p>";
+                return;
+            }
+
+            // 1. Usamos un Map para filtrar pacientes únicos
+            const mapaPacientes = new Map();
+            
+            citas.forEach(cita => {
+                // PRIORIDAD: id_para_chat (el ID de usuario que pusimos en el AS del SQL)
+                const id = cita.id_para_chat || cita.paciente_id || cita.id;
+                const nombre = cita.paciente_nombre || cita.nombre;
+
+                if (id && nombre) {
+                    // Si el ID ya existe en el Map, no se crea uno nuevo, solo se actualiza.
+                    // Esto es lo que elimina los duplicados.
+                    mapaPacientes.set(id, nombre);
+                }
+            });
+
+            if (mapaPacientes.size === 0) {
+                lista.innerHTML = "<p style='padding:10px; color:red;'>Error: No se detectó el ID del usuario paciente.</p>";
+                return;
+            }
+
+            // 2. Renderizamos la lista limpia
+            let html = "";
+            mapaPacientes.forEach((nombre, id) => {
+                html += `
+                    <div class="contacto-item" 
+                         onclick="abrirChat(${id}, '${nombre}')" 
+                         style="padding: 15px; cursor: pointer; border-bottom: 1px solid #eee; background: white; 
+                                margin-bottom: 5px; border-radius: 8px; transition: background 0.2s; border-left: 4px solid #2563eb;">
+                        <strong style="display: block; color: #1e40af;">${nombre}</strong>
+                        <small style="color: #64748b;">Paciente ID: ${id}</small>
+                    </div>`;
+            });
+            
+            lista.innerHTML = html;
+        })
+        .catch(err => {
+            console.error("Error en cargarContactosChat:", err);
+            document.getElementById('lista-contactos-chat').innerHTML = "<p>Error de conexión.</p>";
+        });
+}
+
+        // 4. FUNCIONES DE VIDEO
+        function loadJitsiScript(appId) {
+            const url = appId
+                ? `https://8x8.vc/${encodeURIComponent(appId)}/external_api.js`
+                : 'https://meet.jit.si/external_api.js';
+            if (window.JitsiMeetExternalAPI) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = url;
+                s.onload = () => resolve();
+                s.onerror = () => reject(new Error('No se pudo cargar el script de video (revise conexión o App ID en .env)'));
+                document.head.appendChild(s);
+            });
+        }
+
+        async function iniciarVideo(url, nombre, citaId) {
+    if (!url || url === "" || url === "null") {
+        mostrarPopup("Esta cita no tiene un enlace de video asignado. Puedes escribir notas de todos modos.", "Sin enlace de sesión");
+        mostrarSeccion('video');
+        document.getElementById('info-video-titulo').innerText = "Sesión con " + nombre;
+        if (citaId) seleccionarCitaParaNotas(citaId, nombre);
+        return;
+    }
+
+    let roomSlugClean = (url.includes('/') ? url.split('/').pop() : url).split('?')[0].trim();
+    if (!roomSlugClean || ['perfil', 'n', 'panel-doctor', 'catalogo', 'login'].indexOf(roomSlugClean) >= 0) {
+        const match = url.match(/[?&]sala=([^&]+)/);
+        roomSlugClean = (match && match[1]) ? match[1] : ('sesion-' + (citaId || Date.now()));
+    }
+    roomSlugClean = (roomSlugClean || '').replace(/[^a-zA-Z0-9\-_]/g, '') || ('sesion-' + (citaId || Date.now()));
+
+    mostrarSeccion('video');
+    document.getElementById('info-video-titulo').innerText = "Sesión con " + nombre;
+
+    const cont = document.getElementById('jitsi-container');
+    if (cont) cont.innerHTML = '';
+    if (api) api.dispose();
+
+    try {
+        const configRes = await fetch('/api/jaas-config');
+        const data = await configRes.json();
+        const appId = (data.appId || '').replace(/\s+/g, '').trim();
+        await loadJitsiScript(appId);
+        if (!window.JitsiMeetExternalAPI) {
+            throw new Error('No se cargó el script de Jitsi. Revisa la consola (F12).');
+        }
+        const domain = appId ? '8x8.vc' : 'meet.jit.si';
+        const roomName = appId ? (appId + '/' + roomSlugClean) : roomSlugClean;
+        const displayName = document.getElementById('nombre-doctor').innerText || "Doctora Lucy";
+        let jwtToken = null;
+        if (appId) {
+            try {
+                const jwtRes = await fetch(`/api/jaas-jwt?roomName=${encodeURIComponent(roomName)}&displayName=${encodeURIComponent(displayName)}&moderator=true`);
+                if (jwtRes.ok) {
+                    const jwtData = await jwtRes.json();
+                    jwtToken = jwtData.jwt || null;
+                }
+            } catch (_) {}
+        }
+        const options = {
+            roomName,
+            width: "100%",
+            height: "100%",
+            parentNode: document.querySelector('#jitsi-container'),
+            userInfo: { displayName },
+            interfaceConfigOverwrite: {
+                TOOLBAR_BUTTONS: [
+                    'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                    'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+                    'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                    'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                    'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone'
+                ],
+            }
+        };
+        if (jwtToken && typeof jwtToken === 'string') options.jwt = jwtToken;
+        api = new JitsiMeetExternalAPI(domain, options);
+        if (citaId) {
+            api.addEventListener('videoConferenceJoined', () => {
+                fetch(`/api/citas/${citaId}/registrar-entrada`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rol: 'psicologo' })
+                }).catch(() => {});
+            });
+            seleccionarCitaParaNotas(citaId, nombre);
+        }
+    } catch (e) {
+        console.error('Error videollamada:', e);
+        mostrarPopup("Error al cargar la videollamada: " + (e.message || 'Intenta de nuevo.'), "Error");
+    }
+}
+
+// --- NOTAS ---
+let modalNotasCitaId = null;
+
+function abrirModalNotas(citaId, pacienteNombre, fechaISO, hora) {
+    modalNotasCitaId = citaId;
+
+    const fechaFormateada = new Date(fechaISO).toLocaleDateString('es-MX', {
+        weekday:'long', day:'numeric', month:'long', year:'numeric'
+    });
+
+    document.getElementById('modal-notas-titulo').innerText = `📝 Notas (Cita #${citaId})`;
+    document.getElementById('modal-notas-subtitulo').innerText = `Paciente: ${pacienteNombre} — ${fechaFormateada} ${hora.slice(0,5)}`;
+
+    const textarea = document.getElementById('modal-notas-textarea');
+    const btn = document.getElementById('btn-guardar-notas-modal');
+    textarea.value = 'Cargando...';
+    textarea.disabled = true;
+    btn.disabled = true;
+
+    document.getElementById('modal-notas').style.display = 'flex';
+
+    // Cargar notas
+    fetchJsonSafe(`/api/citas/${citaId}/notas`)
+        .then(({ res, data, text }) => {
+            if (!res.ok) {
+                const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+                throw new Error(msg);
+            }
+            textarea.value = (data && data.notas) ? data.notas : '';
+            textarea.disabled = false;
+            btn.disabled = false;
+        })
+        .catch(err => {
+            textarea.value = '';
+            mostrarPopup(err.message || 'No se pudieron cargar las notas.', 'Notas');
+        });
+}
+
+function cerrarModalNotas() {
+    document.getElementById('modal-notas').style.display = 'none';
+    modalNotasCitaId = null;
+}
+
+async function seleccionarCitaParaNotas(citaId, pacienteNombre) {
+    // Guardar draft de la cita anterior antes de cambiar
+    const textareaPrev = document.getElementById('notas-textarea');
+    if (citaActualId && textareaPrev) {
+        notasDrafts.set(citaActualId, textareaPrev.value || '');
+    }
+
+    citaActualId = citaId;
+    const textarea = document.getElementById('notas-textarea');
+    const btnGuardar = document.getElementById('btn-guardar-notas');
+    const ayuda = document.getElementById('nota-ayuda');
+
+    ayuda.innerText = `Cita #${citaId} - Paciente: ${pacienteNombre}`;
+    // Permitir escribir de inmediato, aunque esté cargando (mejor UX)
+    textarea.disabled = false;
+    btnGuardar.disabled = false;
+    textarea.placeholder = 'Escribe tus notas aquí...';
+    textarea.value = notasDrafts.get(citaId) || '';
+
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/citas/${citaId}/notas`);
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+            console.error(msg);
+            return mostrarPopup('No se pudieron cargar las notas. Puedes escribir y guardar de todas formas.', 'Notas');
+        }
+        // Solo aplicar lo de servidor si no hay draft local
+        if (!notasDrafts.has(citaId) || !textarea.value) {
+            textarea.value = (data && data.notas) ? data.notas : '';
+        }
+    } catch (e) {
+        mostrarPopup('Error de conexión al cargar notas. Puedes escribir y guardar de todas formas.', 'Notas');
+    }
+}
+
+document.getElementById('btn-guardar-notas').onclick = async () => {
+    if (!citaActualId) return;
+    const textarea = document.getElementById('notas-textarea');
+    const notas = textarea.value;
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/citas/${citaActualId}/notas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notas })
+        });
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+            return mostrarPopup(msg, 'Notas');
+        }
+        notasDrafts.set(citaActualId, notas || '');
+        mostrarPopup('Notas guardadas.', 'Notas');
+    } catch (e) {
+        mostrarPopup('Error de conexión al guardar notas.', 'Notas');
+    }
+};
+
+document.getElementById('btn-guardar-notas-modal').onclick = async () => {
+    if (!modalNotasCitaId) return;
+    const textarea = document.getElementById('modal-notas-textarea');
+    const notas = textarea.value;
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/citas/${modalNotasCitaId}/notas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notas })
+        });
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+            return mostrarPopup(msg, 'Notas');
+        }
+        mostrarPopup('Notas guardadas.', 'Notas');
+    } catch (e) {
+        mostrarPopup('Error de conexión al guardar notas.', 'Notas');
+    }
+};
+
+function abrirNotasEnVideo(citaId, pacienteNombre) {
+    mostrarSeccion('video');
+    seleccionarCitaParaNotas(citaId, pacienteNombre);
+}
+
+        // 5. CHAT
+        function abrirChat(id, nombre) {
+    pacienteSeleccionadoId = id; 
+    document.getElementById('nombre-paciente-chat').innerText = nombre;
+    
+    document.getElementById('input-mensaje').disabled = false;
+    document.getElementById('btn-enviar-chat').disabled = false;
+    const btnPdfChat = document.getElementById('btn-adjuntar-pdf-chat');
+    if (btnPdfChat) btnPdfChat.disabled = false;
+    document.getElementById('input-mensaje').focus();
+
+    // 1. LIMPIEZA: Si Lucy cambia de paciente, detenemos el reloj del paciente anterior
+    if (intervaloChat) clearInterval(intervaloChat);
+
+    // 2. CARGA INICIAL: Traemos los mensajes de inmediato para que no se vea vacío
+    cargarMensajes(id);
+
+    // 3. RELOJ (Polling): Preguntamos al servidor por mensajes nuevos cada 3 segundos
+    intervaloChat = setInterval(() => {
+        console.log("Actualizando chat automáticamente...");
+        cargarMensajes(id);
+    }, 3000); 
+}
+
+function cargarMensajes(idSocio) {
+    if (!idSocio || idSocio === 'undefined') return;
+
+    fetch(`/api/mensajes/${idSocio}`)
+        .then(res => res.json())
+        .then(data => {
+            // data es el objeto { mensajes: [...], miId: X } que viene del servidor
+            const mensajes = data.mensajes || [];
+            const miId = data.miId; 
+
+            const contenedor = document.getElementById('chat-messages');
+            
+            if (!contenedor) {
+                console.warn("ADVERTENCIA: No encontré el elemento 'chat-messages' en el HTML.");
+                return;
+            }
+
+            // Si no hay mensajes, limpiamos el contenedor o ponemos un aviso
+            if (mensajes.length === 0) {
+                contenedor.innerHTML = "<p style='text-align:center; color:gray; padding:20px;'>No hay mensajes en esta conversación.</p>";
+                return;
+            }
+
+            contenedor.innerHTML = mensajes.map(m => {
+                const soyYo = m.remitente_id == miId;
+                const adjunto = (m.ruta_adjunto && m.nombre_adjunto)
+                    ? `<a href="/api/chat/archivo/${m.id}" target="_blank" rel="noopener" style="display:block; margin-bottom:4px; text-decoration:underline;">📎 ${(m.nombre_adjunto || 'documento.pdf').replace(/</g, '&lt;')}</a>`
+                    : '';
+                const texto = (m.contenido || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return `
+                    <div style="
+                        padding: 10px 15px; 
+                        margin: 5px; 
+                        border-radius: 15px; 
+                        max-width: 75%;
+                        word-wrap: break-word;
+                        font-family: sans-serif;
+                        ${soyYo 
+                            ? 'background: #007bff; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px;' 
+                            : 'background: #e9e9eb; color: black; align-self: flex-start; border-bottom-left-radius: 2px;'}">
+                        ${adjunto}
+                        ${texto ? '<span>' + texto + '</span>' : ''}
+                    </div>`;
+            }).join('');
+            
+            // Auto-scroll al final
+            contenedor.scrollTop = contenedor.scrollHeight;
+        })
+        .catch(err => console.error("Error al cargar mensajes:", err));
+}
+
+        // Listener infalible para el botón de enviar
+// 1. La función que hace el trabajo sucio
+async function enviarMensaje() {
+    const input = document.getElementById('input-mensaje');
+    const contenido = input.value.trim();
+    
+    if (!contenido || !pacienteSeleccionadoId) return;
+
+    try {
+        const res = await fetch('/api/enviar-mensaje', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                destinatarioId: pacienteSeleccionadoId, 
+                contenido: contenido 
+            })
+        });
+        
+        if (res.ok) {
+            input.value = '';
+            cargarMensajes(pacienteSeleccionadoId); // Refresca los globos
+        }
+    } catch (error) { 
+        console.error("Error al enviar:", error); 
+    }
+}
+
+document.getElementById('btn-enviar-chat').onclick = enviarMensaje;
+
+document.getElementById('input-mensaje').onkeydown = (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        enviarMensaje();
+    }
+};
+
+document.getElementById('btn-adjuntar-pdf-chat').onclick = () => document.getElementById('input-chat-pdf').click();
+document.getElementById('input-chat-pdf').addEventListener('change', async function() {
+    const file = this.files && this.files[0];
+    if (!file || !pacienteSeleccionadoId) return;
+    const formData = new FormData();
+    formData.append('archivo', file);
+    formData.append('destinatarioId', pacienteSeleccionadoId);
+    try {
+        const res = await fetch('/api/chat/adjunto', { method: 'POST', body: formData, credentials: 'same-origin' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { mostrarPopup(data.error || 'Error al enviar el PDF', 'Chat'); return; }
+        this.value = '';
+        cargarMensajes(pacienteSeleccionadoId);
+    } catch (e) { mostrarPopup('Error de conexión', 'Chat'); }
+});
+
+        // Refresco automático del chat cada 3 segundos
+        setInterval(() => {
+            const seccionChat = document.getElementById('seccion-chat');
+            if(pacienteSeleccionadoId && seccionChat && seccionChat.style.display !== 'none') {
+                cargarMensajes(pacienteSeleccionadoId);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

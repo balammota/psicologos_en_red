@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Exitoso - Psicólogos en Red</title>
+    <link rel="stylesheet" href="/estilos.css">
+    <style>
+        .success-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f5f0fa 0%, #e8f4fc 100%);
+            padding: 20px;
+        }
+        
+        .success-card {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        
+        .success-card h1 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 28px;
+        }
+        
+        .success-card p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .email-info {
+            background: linear-gradient(135deg, #c9a0dc20 0%, #a0c4e820 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 25px 0;
+        }
+        
+        .email-info p {
+            margin: 0;
+            color: #555;
+        }
+        
+        .steps-list {
+            text-align: left;
+            margin: 25px 0;
+        }
+        
+        .steps-list li {
+            color: #666;
+            margin-bottom: 12px;
+            padding-left: 10px;
+        }
+        
+        .btn-login {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #c9a0dc 0%, #a0c4e8 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(201, 160, 220, 0.4);
+        }
+        
+        .spam-note {
+            font-size: 14px;
+            color: #999;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-card">
+            <div class="success-icon">📧</div>
+            <h1>¡Registro casi completo!</h1>
+            <p>Hemos enviado un correo de verificación a tu dirección de email.</p>
+            
+            <div class="email-info">
+                <p><strong>Por favor revisa tu bandeja de entrada</strong> y haz clic en el enlace de verificación para activar tu cuenta.</p>
+            </div>
+            
+            <h3 style="color: #333; margin-bottom: 15px;">Siguientes pasos:</h3>
+            <ol class="steps-list">
+                <li>Abre tu correo electrónico</li>
+                <li>Busca el correo de <strong>Psicólogos en Red</strong></li>
+                <li>Haz clic en el botón "Verificar mi cuenta"</li>
+                <li>¡Listo! Ya podrás iniciar sesión</li>
+            </ol>
+            
+            <a href="/login" class="btn-login">Ir al Login</a>
+            
+            <p class="spam-note">
+                ¿No encuentras el correo? Revisa tu carpeta de spam o correo no deseado.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

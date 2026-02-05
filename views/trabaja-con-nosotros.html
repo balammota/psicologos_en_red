@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trabaja con Nosotros - Psicólogos en Red</title>
+    <link rel="stylesheet" href="/estilos.css">
+    <style>
+        .trabaja-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 80px 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .trabaja-hero h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+        }
+
+        .trabaja-hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        .trabaja-container {
+            max-width: 1100px;
+            margin: -60px auto 60px;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 30px;
+        }
+
+        .trabaja-beneficios {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .trabaja-beneficios h2 {
+            color: #764ba2;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+        }
+
+        .beneficio-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 18px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+            border-radius: 14px;
+            transition: transform 0.2s ease;
+        }
+
+        .beneficio-item:hover {
+            transform: translateX(5px);
+        }
+
+        .beneficio-icon {
+            font-size: 2rem;
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 14px;
+            flex-shrink: 0;
+        }
+
+        .beneficio-content h3 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 1.05rem;
+        }
+
+        .beneficio-content p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .trabaja-form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .trabaja-form-card h2 {
+            color: #764ba2;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+
+        .trabaja-form-card .subtitulo {
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 0 4px rgba(118, 75, 162, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .btn-enviar-aplicacion {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-enviar-aplicacion:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(118, 75, 162, 0.4);
+        }
+
+        /* Modal de éxito */
+        .modal-exito-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 5000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-exito-content {
+            background: white;
+            padding: 50px 40px;
+            border-radius: 24px;
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-exito-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .modal-exito-content h3 {
+            color: #764ba2;
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+        }
+
+        .modal-exito-content p {
+            color: #666;
+            margin: 0 0 25px 0;
+            line-height: 1.6;
+        }
+
+        .btn-cerrar-modal {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cerrar-modal:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(118, 75, 162, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .trabaja-container {
+                grid-template-columns: 1fr;
+                margin-top: -40px;
+            }
+
+            .trabaja-hero h1 {
+                font-size: 2rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .trabaja-beneficios,
+            .trabaja-form-card {
+                padding: 25px;
+            }
+
+            .modal-exito-content {
+                padding: 35px 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        <a href="/" class="logo" style="color: var(--primario-rosa); text-decoration: none; display: flex; align-items: center; gap: 10px;">
+            <img src="/images/logo.png" alt="Logo" style="height: 40px; width: auto;">
+            <span>Psicólogos en Red</span>
+        </a>
+        <nav>
+            <ul style="display: flex; list-style: none; gap: 25px; align-items: center;">
+                <li><a href="/" data-i18n="nav_inicio" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Inicio</a></li>
+                <li><a href="/catalogo" data-i18n="nav_psicologos" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Psicólogos</a></li>
+                <li><a href="/academia" data-i18n="nav_academia" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Academia</a></li>
+                <li><a href="/perfil" class="btn-perfil" data-i18n="nav_mi_perfil" style="background: var(--primario-rosa); color: white; padding: 8px 18px; border-radius: 20px; text-decoration: none;">Mi Perfil</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Modal de éxito -->
+    <div id="modal-exito" class="modal-exito-overlay">
+        <div class="modal-exito-content">
+            <div class="modal-exito-icon">🎉</div>
+            <h3>¡Gracias por tu interés!</h3>
+            <p>Muchas gracias por tu interés en trabajar con nosotros. Nosotros te contactaremos a la brevedad.</p>
+            <button class="btn-cerrar-modal" onclick="cerrarModalExito()">Entendido</button>
+        </div>
+    </div>
+
+    <section class="trabaja-hero">
+        <h1>Únete a Nuestro Equipo</h1>
+        <p>Forma parte de una comunidad de profesionales comprometidos con la salud mental. ¡Estamos buscando talento como el tuyo!</p>
+    </section>
+
+    <div class="trabaja-container">
+        <div class="trabaja-beneficios">
+            <h2>¿Por qué trabajar con nosotros?</h2>
+            
+            <div class="beneficio-item">
+                <div class="beneficio-icon">🌐</div>
+                <div class="beneficio-content">
+                    <h3>Trabaja desde cualquier lugar</h3>
+                    <p>Modalidad 100% remota. Atiende a tus pacientes desde la comodidad de tu espacio.</p>
+                </div>
+            </div>
+
+            <div class="beneficio-item">
+                <div class="beneficio-icon">📅</div>
+                <div class="beneficio-content">
+                    <h3>Horarios flexibles</h3>
+                    <p>Tú defines tu disponibilidad y gestionas tu agenda como mejor te convenga.</p>
+                </div>
+            </div>
+
+            <div class="beneficio-item">
+                <div class="beneficio-icon">💰</div>
+                <div class="beneficio-content">
+                    <h3>Ingresos competitivos</h3>
+                    <p>Recibe pagos puntuales y transparentes por cada sesión realizada.</p>
+                </div>
+            </div>
+
+            <div class="beneficio-item">
+                <div class="beneficio-icon">🚀</div>
+                <div class="beneficio-content">
+                    <h3>Crecimiento profesional</h3>
+                    <p>Acceso a capacitaciones, supervisión y una comunidad de colegas.</p>
+                </div>
+            </div>
+
+            <div class="beneficio-item">
+                <div class="beneficio-icon">🛡️</div>
+                <div class="beneficio-content">
+                    <h3>Plataforma segura</h3>
+                    <p>Tecnología confiable para videollamadas y gestión de expedientes.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="trabaja-form-card">
+            <h2>Envía tu solicitud</h2>
+            <p class="subtitulo">Completa el formulario y nos pondremos en contacto contigo.</p>
+
+            <form id="form-aplicacion">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nombre">Nombre completo *</label>
+                        <input type="text" id="nombre" name="nombre" required placeholder="Tu nombre completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="telefono">Teléfono *</label>
+                        <input type="tel" id="telefono" name="telefono" required placeholder="+52 55 1234 5678">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Correo electrónico *</label>
+                        <input type="email" id="email" name="email" required placeholder="tu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="pais">País de origen *</label>
+                        <select id="pais" name="pais" required>
+                            <option value="" disabled selected>Selecciona tu país</option>
+                            <option value="México">México</option>
+                            <option value="Argentina">Argentina</option>
+                            <option value="Colombia">Colombia</option>
+                            <option value="Chile">Chile</option>
+                            <option value="Perú">Perú</option>
+                            <option value="España">España</option>
+                            <option value="Ecuador">Ecuador</option>
+                            <option value="Venezuela">Venezuela</option>
+                            <option value="Guatemala">Guatemala</option>
+                            <option value="Costa Rica">Costa Rica</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="razones">¿Por qué quieres trabajar con Psicólogos en Red? *</label>
+                    <textarea id="razones" name="razones" required placeholder="Cuéntanos qué te motiva a unirte a nuestro equipo..."></textarea>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="experiencia">Experiencia previa *</label>
+                    <textarea id="experiencia" name="experiencia" required placeholder="Describe tu formación académica, especializaciones y experiencia profesional..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-enviar-aplicacion">
+                    <span>Enviar solicitud</span>
+                    <span>📨</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/api/estado-sesion')
+                .then(res => res.json())
+                .then(data => {
+                    const btnPerfil = document.querySelector('.btn-perfil') || document.querySelector('a[href="/perfil"]');
+                    
+                    if (data.autenticado && btnPerfil) {
+                        const primerNombre = data.nombre.split(' ')[0];
+                        btnPerfil.innerHTML = `<span>👤 Sitio de ${primerNombre}</span>`;
+                        btnPerfil.href = (data.rol === 'psicologo') ? "/panel-doctor" : "/perfil";
+                    }
+                })
+                .catch(err => console.log("Error verificando sesión:", err));
+
+            // Manejar envío del formulario
+            document.getElementById('form-aplicacion').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    nombre: document.getElementById('nombre').value,
+                    telefono: document.getElementById('telefono').value,
+                    email: document.getElementById('email').value,
+                    pais: document.getElementById('pais').value,
+                    razones: document.getElementById('razones').value,
+                    experiencia: document.getElementById('experiencia').value
+                };
+
+                try {
+                    const res = await fetch('/api/aplicacion-trabajo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (res.ok) {
+                        document.getElementById('modal-exito').style.display = 'flex';
+                        this.reset();
+                    } else {
+                        alert('Hubo un error al enviar tu solicitud. Intenta de nuevo.');
+                    }
+                } catch (error) {
+                    alert('Error de conexión. Intenta de nuevo.');
+                }
+            });
+        });
+
+        function cerrarModalExito() {
+            document.getElementById('modal-exito').style.display = 'none';
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('modal-exito').addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModalExito();
+            }
+        });
+    </script>
+
+    <footer class="main-footer" style="background: #332E2A; border-top: 4px solid var(--primario-rosa);">
+        <div class="footer-container">
+            <div class="footer-col">
+                <h3 style="color: var(--primario-rosa);">Psicólogos en Red</h3>
+                <p>Conectando salud mental con tecnología humana. Tu bienestar es nuestra prioridad.</p>
+                <div class="redes-sociales">
+                    <a href="https://www.facebook.com/profile.php?id=100063577030818" target="_blank" rel="noopener noreferrer" title="Facebook"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+                    <a href="https://www.instagram.com/psicologos_en_red" target="_blank" rel="noopener noreferrer" title="Instagram"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>
+                    <a href="https://www.tiktok.com/@psicologos_en_red_" target="_blank" rel="noopener noreferrer" title="TikTok"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
+                </div>
+            </div>
+    
+            <div class="footer-col">
+                <h4 style="color: var(--acento-dorado);" data-i18n="footer_enlaces_rapidos">Enlaces Rápidos</h4>
+                <ul style="list-style: none; padding: 0;">
+                    <li><a href="/" style="color: var(--suave-arena); text-decoration: none;" data-i18n="footer_inicio">Inicio</a></li>
+                    <li><a href="/registro" style="color: var(--suave-arena); text-decoration: none;" data-i18n="footer_registro">Registro</a></li>
+                    <li><a href="/login" style="color: var(--suave-arena); text-decoration: none;" data-i18n="footer_iniciar_sesion">Iniciar Sesión</a></li>
+                    <li><a href="/terminos-condiciones" style="color: var(--suave-arena); text-decoration: none;" data-i18n="footer_terminos">Términos y Condiciones</a></li>
+                    <li><a href="/aviso-privacidad" style="color: var(--suave-arena); text-decoration: none;" data-i18n="footer_aviso_privacidad">Aviso de Privacidad</a></li>
+                    <li><a href="/contacto" style="color: var(--suave-arena); text-decoration: none;">Contacto</a></li>
+                    <li><a href="/trabaja-con-nosotros" style="color: var(--suave-arena); text-decoration: none;" data-i18n="footer_trabaja">Trabaja con Nosotros</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4 style="color: var(--acento-dorado);" data-i18n="footer_contacto">Contacto</h4>
+                <p>📍 Ciudad de México, México</p>
+                <p>📧 contacto@psicologosenred.com</p>
+                <p>📞 +52 55 3077 6194</p>
+            </div>
+        </div>
+    
+        <div class="footer-bottom">
+            <p style="color: var(--suave-arena); opacity: 0.7;">&copy; 2026 Psicólogos en Red. <span data-i18n="footer_derechos">Todos los derechos reservados.</span></p>
+        </div>
+    </footer>
+    <script src="/i18n.js"></script>
+</body>
+</html>

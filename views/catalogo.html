@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Especialistas - Psicólogos en Red</title>
+    <link rel="stylesheet" href="/estilos.css">
+    <!-- Flatpickr para calendario con fechas deshabilitadas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+</head>
+<body>
+
+    <header class="main-header">
+        <a href="/" class="logo" style="color: var(--primario-rosa); text-decoration: none; display: flex; align-items: center; gap: 10px;">
+            <img src="/images/logo.png" alt="Logo" style="height: 40px; width: auto;">
+            <span>Psicólogos en Red</span>
+        </a>
+        <nav>
+            <ul style="display: flex; list-style: none; gap: 25px; align-items: center;">
+                <li><a href="/" data-i18n="nav_inicio" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Inicio</a></li>
+                <li><a href="/catalogo" data-i18n="nav_psicologos" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Psicólogos</a></li>
+                <li><a href="/academia" data-i18n="nav_academia" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Academia</a></li>
+                <li><a href="/perfil" class="btn-perfil" data-i18n="nav_mi_perfil" style="background: var(--primario-rosa); color: white; padding: 8px 18px; border-radius: 20px; text-decoration: none;">Mi Perfil</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero estilo index -->
+    <section class="catalogo-hero">
+        <div class="catalogo-hero-content">
+            <h1 class="catalogo-hero-title">Encuentra tu <span class="text-gradient">bienestar</span></h1>
+            <p class="catalogo-hero-subtitle">Explora nuestro catálogo de especialistas certificados y agenda una sesión hoy mismo.</p>
+            <div class="catalogo-hero-stats">
+                <span>✅ Especialistas verificados</span>
+                <span>🔒 Sesiones privadas</span>
+                <span>⭐ Reseñas reales</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filtros: dropdowns con flecha y checkboxes -->
+    <style>
+        .dropdown-filtro-wrap { position: relative; }
+        .dropdown-filtro-wrap label.filtro-label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--texto-oscuro); margin-bottom: 5px; }
+        .dropdown-filtro { position: relative; width: 100%; }
+        .dropdown-filtro-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--suave-arena); border-radius: 8px; background: white; cursor: pointer; min-height: 36px; font-size: 0.85rem; }
+        .dropdown-filtro-trigger:hover { border-color: var(--primario-rosa); }
+        .dropdown-filtro-burbujas { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; min-height: 18px; align-items: center; color: #888; }
+        .dropdown-filtro-burbujas .filtro-burbuja { background: #fdf2f7; color: var(--texto-oscuro); border: 1px solid var(--primario-rosa); padding: 4px 10px; border-radius: 16px; font-size: 0.7rem; font-weight: 500; }
+        .dropdown-filtro-flecha { flex-shrink: 0; color: var(--primario-rosa); font-size: 0.6rem; transition: transform 0.2s ease; }
+        .dropdown-filtro.abierto .dropdown-filtro-flecha { transform: rotate(180deg); }
+        .dropdown-filtro-panel { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 1px solid var(--suave-arena); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.1); z-index: 200; max-height: 240px; overflow-y: auto; padding: 8px; display: none; }
+        .dropdown-filtro.abierto .dropdown-filtro-panel { display: block; }
+        .dropdown-filtro-panel label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; border-radius: 8px; font-size: 0.85rem; }
+        .dropdown-filtro-panel label:hover { background: #fdf2f7; }
+        .dropdown-filtro-panel input[type="checkbox"], .dropdown-filtro-panel input[type="radio"] { width: 16px; height: 16px; accent-color: var(--primario-rosa); cursor: pointer; }
+        .filtro-accion { padding-top: 17px; display: flex; align-items: center; }
+        .filtro-accion .btn-limpiar { padding: 8px 14px; border: 1px solid var(--suave-arena); background: white; border-radius: 8px; font-weight: 600; font-size: 0.8rem; cursor: pointer; color: var(--texto-oscuro); min-height: 36px; box-sizing: border-box; }
+        .filtro-accion .btn-limpiar:hover { border-color: var(--primario-rosa); color: var(--primario-rosa); }
+    </style>
+    <section class="catalogo-section-wrap">
+        <h2 class="catalogo-section-title">Nuestros especialistas</h2>
+        <p class="catalogo-section-desc">Filtra por especialidad, áreas de atención o tipo de servicio.</p>
+        <div class="catalogo-filtros-modern">
+            <div class="filtros-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; align-items: start;">
+                <div class="filtro-grupo dropdown-filtro-wrap">
+                    <label class="filtro-label">Especialidad</label>
+                    <div class="dropdown-filtro" id="dd-especialidad" data-filtro="especialidad">
+                        <div class="dropdown-filtro-trigger">
+                            <span class="dropdown-filtro-burbujas" id="trigger-especialidad-text">Todas</span>
+                            <span class="dropdown-filtro-flecha">▼</span>
+                        </div>
+                        <div class="dropdown-filtro-panel" id="panel-especialidad">
+                            <!-- Opciones se llenan por JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="filtro-grupo dropdown-filtro-wrap">
+                    <label class="filtro-label">Áreas de atención</label>
+                    <div class="dropdown-filtro" id="dd-problemas" data-filtro="problemas">
+                        <div class="dropdown-filtro-trigger">
+                            <span class="dropdown-filtro-burbujas" id="trigger-problemas-text">Elegir áreas...</span>
+                            <span class="dropdown-filtro-flecha">▼</span>
+                        </div>
+                        <div class="dropdown-filtro-panel" id="panel-problemas"></div>
+                    </div>
+                </div>
+                <div class="filtro-grupo dropdown-filtro-wrap">
+                    <label class="filtro-label">Servicios</label>
+                    <div class="dropdown-filtro" id="dd-servicios" data-filtro="servicios">
+                        <div class="dropdown-filtro-trigger">
+                            <span class="dropdown-filtro-burbujas" id="trigger-servicios-text">Elegir servicios...</span>
+                            <span class="dropdown-filtro-flecha">▼</span>
+                        </div>
+                        <div class="dropdown-filtro-panel" id="panel-servicios">
+                            <!-- Opciones se llenan por JS desde columna servicios de psicologos -->
+                        </div>
+                    </div>
+                </div>
+                <div class="filtro-accion">
+                    <button type="button" id="btn-limpiar-filtros" class="btn-limpiar">Limpiar</button>
+                </div>
+            </div>
+            <p id="filtros-resultado" style="font-size: 0.8rem; color: #666; margin-top: 8px;"></p>
+        </div>
+        <div class="catalogo-grid-modern" id="contenedor-psicologos"></div>
+    </section>
+
+    <main style="min-height: 200px;">
+        </main>
+
+    <div id="modal-agenda" class="modal">
+        <div class="modal-content" style="border-top: 8px solid var(--primario-rosa);">
+            <span class="close-modal" onclick="cerrarModal()">&times;</span>
+            <div class="modal-header-pico">
+                <div class="calendar-icon" style="color: var(--primario-rosa);">📅</div>
+                <h2 id="modal-titulo" style="color: var(--primario-rosa);">Agendar Cita</h2>
+                <p style="color: var(--secundario-azul);">Selecciona el mejor momento para tu sesión</p>
+            </div>
+            
+            <form id="form-agendar">
+                <input type="hidden" id="psico-id-input">
+                
+                <div class="form-group">
+                    <label for="fecha-cita" style="color: var(--texto-oscuro); font-weight: bold;">Selecciona el día en el calendario:</label>
+                    <input type="text" id="fecha-cita" class="input-calendario" required placeholder="-- / -- / ----" readonly style="border: 2px solid var(--suave-arena); border-radius: 10px; padding: 10px; width: 100%; cursor: pointer;">
+                </div>
+                
+                <div class="form-group" style="margin-top: 16px;">
+                    <label for="hora-cita" style="color: var(--texto-oscuro); font-weight: bold;">Horarios disponibles:</label>
+                    <div class="select-wrapper">
+                        <select id="hora-cita" required style="border: 2px solid var(--suave-arena); border-radius: 10px; padding: 10px; width: 100%;">
+                            <option value="" disabled selected>Primero selecciona una fecha...</option>
+                        </select>
+                    </div>
+                    <p id="mensaje-horarios" style="font-size: 0.85rem; color: #888; margin-top: 8px;"></p>
+                </div>
+                
+                <div class="form-group" style="margin-top: 16px;">
+                    <label for="servicio-interes" style="color: var(--texto-oscuro); font-weight: bold;">Servicio de interés:</label>
+                    <select id="servicio-interes" required style="border: 2px solid var(--suave-arena); border-radius: 10px; padding: 10px; width: 100%;">
+                        <option value="" disabled selected>Elige el tipo de servicio</option>
+                    </select>
+                    <p id="modal-precio-sesion" style="font-size: 0.9rem; color: var(--primario-rosa); font-weight: 600; margin-top: 8px;"></p>
+                </div>
+                
+                <button type="submit" class="btn-confirmar" style="background-color: var(--primario-rosa);">Confirmar Reservación</button>
+                <p class="nota-seguridad" style="color: var(--suave-arena);">🔒 Tu información está protegida por cifrado de extremo a extremo.</p>
+            </form>
+        </div>
+    </div>
+    <div id="modalCita" class="modal-cita">
+        <div class="modal-content">
+            <span class="close-modal" onclick="cerrarModal()">&times;</span>
+            <h3 id="modalPsicologoNombre" style="color: var(--primario-rosa);">Agendar mi Cita</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 20px;">Crea tu cuenta para gestionar tus citas y acceder a la videollamada.</p>
+            
+            <form id="formRegistroCita">
+                <input type="hidden" id="psicologoId">
+                
+                <div class="input-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="nombrePaciente" required placeholder="Ej. Juan Pérez">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="input-group">
+                        <label>WhatsApp</label>
+                        <input type="tel" id="whatsappPaciente" required placeholder="5512345678">
+                    </div>
+                    <div class="input-group">
+                        <label>Correo</label>
+                        <input type="email" id="emailPaciente" required placeholder="tu@correo.com">
+                    </div>
+                </div>
+    
+                <div class="input-group">
+                    <label>Crea una Contraseña</label>
+                    <input type="password" id="passPaciente" required placeholder="Mínimo 6 caracteres">
+                </div>
+    
+                <div class="input-group">
+                    <label>Motivo de la consulta</label>
+                    <textarea id="motivoConsulta" required placeholder="Cuéntanos brevemente qué te motiva a iniciar este proceso..." 
+                    style="width: 100%; border-radius: 8px; border: 1px solid var(--suave-arena); padding: 10px; font-family: inherit; height: 80px;"></textarea>
+                </div>
+    
+                <button type="submit" class="btn-confirmar-cita">Apartar Cita y Crear Cuenta</button>
+            </form>
+        </div>
+    </div>
+    <div id="modal-perfil" class="modal-overlay" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center;">
+        <div class="perfil-card-detalle" style="background:white; width:90%; max-width:500px; border-radius:20px; position:relative; max-height:85vh; display:flex; flex-direction:column;">
+            <button onclick="cerrarPerfil()" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#888; z-index:10;">&times;</button>
+            
+            <div class="perfil-scroll-content" style="padding:30px; overflow-y:auto;">
+                <header style="text-align:center; margin-bottom:20px;">
+                    <div id="det-avatar" style="width:100px; height:100px; background:var(--primario-rosa); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 10px; font-weight:bold; background-size: cover; background-position: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+                    
+                    <h2 id="det-nombre" style="margin:0; color:var(--texto-oscuro); font-size: 1.5rem;"></h2>
+                    <p id="det-especialidad" style="color:var(--primario-rosa); font-weight:bold; margin-top:5px; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px;"></p>
+                    <div style="color:var(--acento-dorado); margin-top:5px; font-weight: bold;">⭐ <span id="det-rating">5.0</span></div>
+                </header>
+    
+                <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+    
+                <section style="margin-bottom:20px;">
+                    <h3 style="font-size:1rem; color:var(--texto-oscuro);">📜 Sobre mí</h3>
+                    <p id="det-biografia" style="font-size:0.9rem; color:#666; line-height:1.5;"></p>
+                </section>
+    
+                <section style="margin-bottom:20px;">
+                    <h3 style="font-size:1rem; color:var(--texto-oscuro); text-transform: uppercase; letter-spacing: 1px;">🎯 Áreas de especialidad</h3>
+                    <div id="det-tags-enfoque" style="display:flex; flex-wrap:wrap; gap:8px; margin-top: 10px;">
+                        </div>
+                </section>
+    
+                <section style="margin-bottom:20px;">
+                    <h3 style="font-size:1rem; color:var(--texto-oscuro); text-transform: uppercase; letter-spacing: 1px;">🩺 Servicios</h3>
+                    <div id="det-tags-servicios" style="display:flex; flex-wrap:wrap; gap:8px; margin-top: 10px;"></div>
+                </section>
+    
+                <section>
+                    <h3 style="font-size:1rem; color:var(--texto-oscuro);">💬 Opiniones</h3>
+                    <div id="det-opiniones" style="background:#f9f9f9; padding:15px; border-radius:12px; font-size:0.85rem; color:#555;"></div>
+                </section>
+    
+                <button id="btn-agendar-desde-perfil" style="width:100%; background:var(--primario-rosa); color:white; border:none; padding:15px; border-radius:12px; font-weight:bold; margin-top:25px; cursor:pointer;">
+                    Agendar Sesión Ahora
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Mensaje al volver de Stripe tras pago exitoso
+        if (new URLSearchParams(window.location.search).get('pago') === 'exito') {
+            alert('¡Pago realizado! Tu cita ha sido agendada. Revisa tu perfil para ver el detalle.');
+            history.replaceState({}, '', window.location.pathname);
+        }
+
+        // Estado global: lista completa y precio (para filtrado y re-render)
+        let listaPsicologosCompleta = [];
+        let precioAmount = 500;
+        let precioCurrency = 'MXN';
+
+        function renderCards(psicologos, amount, currency) {
+            const contenedor = document.getElementById('contenedor-psicologos');
+            contenedor.innerHTML = '';
+                const amt = amount ?? precioAmount;
+                const cur = currency ?? precioCurrency;
+                psicologos.forEach(psico => {
+                    const pi = psico.precio_terapia_individual != null ? Number(psico.precio_terapia_individual) : amt;
+                    const pp = psico.precio_terapia_pareja != null ? Number(psico.precio_terapia_pareja) : pi;
+                    const pc = psico.precio_asesoria_crianza != null ? Number(psico.precio_asesoria_crianza) : pi;
+                    const precioDesde = Math.min(pi, pp, pc);
+                    const problemasHTML = (psico.problemas_principales && Array.isArray(psico.problemas_principales))
+                        ? psico.problemas_principales.map(p => `
+                        <span class="tag-problema" style="background: #fdf2f7; color: var(--texto-oscuro); border: 1px solid var(--primario-rosa); padding: 5px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; display: inline-block;">
+                            ${p}
+                        </span>`).join('')
+                    : '';
+                    const serviciosHTML = (psico.servicios && Array.isArray(psico.servicios) && psico.servicios.length > 0)
+                        ? psico.servicios.map(s => `
+                        <span class="tag-servicio" style="background: #e8f4f8; color: var(--texto-oscuro); border: 1px solid var(--secundario-azul); padding: 4px 10px; border-radius: 14px; font-size: 0.7rem; font-weight: 500; display: inline-block;">
+                            ${s}
+                        </span>`).join('')
+                    : '';
+
+                const avatarStyle = psico.imagen_url ? `background-image: url('${psico.imagen_url.replace(/'/g, "\\'")}'); background-color: transparent;` : 'background-color: #fdf2f7;';
+                const inicial = (psico.nombre || '').charAt(0).toUpperCase() || '?';
+                contenedor.innerHTML += `
+                    <article class="psico-card-modern">
+                        <div class="psico-card-header">
+                            <div class="psico-card-avatar" style="${avatarStyle}">${psico.imagen_url ? '' : inicial}</div>
+                            <div>
+                                <h3 class="psico-card-name">${psico.nombre || '—'}</h3>
+                                <div class="psico-card-especialidad">${psico.especialidad || ''}</div>
+                                <div class="psico-card-meta">Cédula ${psico.cedula || '—'} · ${psico.pais_origen || ''}</div>
+                            </div>
+                        </div>
+                        <div class="psico-card-body">
+                            <p class="psico-card-tags-label">Áreas de especialidad</p>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem;">${problemasHTML}</div>
+                            <p class="psico-card-tags-label">Servicios</p>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">${serviciosHTML}</div>
+                            <div class="psico-card-footer">
+                                <span class="psico-card-rating">⭐ ${psico.rating != null ? psico.rating : '—'}</span>
+                                <span class="psico-card-precio">Desde $${precioDesde} <small>${cur} /sesión</small></span>
+                            </div>
+                            <div class="psico-card-actions">
+                                <button type="button" onclick="verDetallesPsicologo(${psico.id})" class="psico-card-btn psico-card-btn-outline">Ver perfil</button>
+                                <button type="button" onclick="abrirModal('${psico.id}', '${(psico.nombre || '').replace(/'/g, "\\'")}')" class="psico-card-btn psico-card-btn-primary">Agendar cita</button>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            });
+        }
+
+        function getEspecialidadSeleccionada() {
+            const r = document.querySelector('input[name="filtro-especialidad"]:checked');
+            return r ? r.value : '';
+        }
+        function getProblemasSeleccionados() {
+            return Array.from(document.querySelectorAll('input[name="filtro-problemas-cb"]:checked')).map(cb => cb.value);
+        }
+        function getServiciosSeleccionados() {
+            return Array.from(document.querySelectorAll('input[name="filtro-servicios-cb"]:checked')).map(cb => cb.value);
+        }
+
+        function actualizarTriggerEspecialidad() {
+            const v = getEspecialidadSeleccionada();
+            const el = document.getElementById('trigger-especialidad-text');
+            if (!el) return;
+            el.innerHTML = '';
+            if (v) {
+                el.style.color = '';
+                const burbuja = document.createElement('span');
+                burbuja.className = 'filtro-burbuja';
+                burbuja.textContent = v;
+                el.appendChild(burbuja);
+            } else {
+                el.textContent = 'Todas';
+                el.style.color = '#888';
+            }
+        }
+        function actualizarTriggerProblemas() {
+            const vals = getProblemasSeleccionados();
+            const el = document.getElementById('trigger-problemas-text');
+            if (!el) return;
+            el.innerHTML = '';
+            if (vals.length === 0) { el.textContent = 'Elegir áreas...'; el.style.color = '#888'; return; }
+            el.style.color = '';
+            vals.forEach(v => {
+                const b = document.createElement('span');
+                b.className = 'filtro-burbuja';
+                b.textContent = v;
+                el.appendChild(b);
+            });
+        }
+        function actualizarTriggerServicios() {
+            const vals = getServiciosSeleccionados();
+            const el = document.getElementById('trigger-servicios-text');
+            if (!el) return;
+            el.innerHTML = '';
+            if (vals.length === 0) { el.textContent = 'Elegir servicios...'; el.style.color = '#888'; return; }
+            el.style.color = '';
+            vals.forEach(v => {
+                const b = document.createElement('span');
+                b.className = 'filtro-burbuja';
+                b.textContent = v;
+                el.appendChild(b);
+            });
+        }
+
+        function aplicarFiltros() {
+            const especialidad = getEspecialidadSeleccionada();
+            const problemasSeleccionados = getProblemasSeleccionados();
+            const serviciosSeleccionados = getServiciosSeleccionados();
+
+            let filtrados = listaPsicologosCompleta.filter(psico => {
+                if (especialidad && (psico.especialidad || '') !== especialidad) return false;
+                if (problemasSeleccionados.length > 0) {
+                    const problemas = (psico.problemas_principales && Array.isArray(psico.problemas_principales)) ? psico.problemas_principales : [];
+                    const tieneAlguno = problemasSeleccionados.some(p => problemas.includes(p));
+                    if (!tieneAlguno) return false;
+                }
+                if (serviciosSeleccionados.length > 0) {
+                    const servicios = (psico.servicios && Array.isArray(psico.servicios)) ? psico.servicios : [];
+                    const tieneAlguno = serviciosSeleccionados.some(s => servicios.includes(s));
+                    if (!tieneAlguno) return false;
+                }
+                return true;
+            });
+
+            renderCards(filtrados, precioAmount, precioCurrency);
+            const msg = document.getElementById('filtros-resultado');
+            if (msg) msg.textContent = filtrados.length === listaPsicologosCompleta.length ? '' : 'Mostrando ' + filtrados.length + ' de ' + listaPsicologosCompleta.length + ' especialistas.';
+        }
+
+        function llenarOpcionesFiltros(psicologos) {
+            const especialidades = [...new Set(psicologos.map(p => (p.especialidad || '').trim()).filter(Boolean))].sort();
+            const panelEsp = document.getElementById('panel-especialidad');
+            if (panelEsp) {
+                const frag = document.createDocumentFragment();
+                const radioTodas = document.createElement('label');
+                radioTodas.innerHTML = '<input type="radio" name="filtro-especialidad" value=""> Todas';
+                frag.appendChild(radioTodas);
+                especialidades.forEach(esp => {
+                    const label = document.createElement('label');
+                    label.innerHTML = '<input type="radio" name="filtro-especialidad" value="' + esp.replace(/"/g, '&quot;') + '"> ' + esp;
+                    frag.appendChild(label);
+                });
+                panelEsp.innerHTML = '';
+                panelEsp.appendChild(frag);
+                const primera = panelEsp.querySelector('input[name="filtro-especialidad"][value=""]');
+                if (primera) primera.checked = true;
+            }
+            const problemasSet = new Set();
+            psicologos.forEach(p => {
+                if (p.problemas_principales && Array.isArray(p.problemas_principales))
+                    p.problemas_principales.forEach(pr => problemasSet.add(pr));
+            });
+            const problemas = [...problemasSet].sort();
+            const panelProb = document.getElementById('panel-problemas');
+            if (panelProb) {
+                panelProb.innerHTML = '';
+                problemas.forEach(pr => {
+                    const label = document.createElement('label');
+                    label.innerHTML = '<input type="checkbox" name="filtro-problemas-cb" value="' + pr.replace(/"/g, '&quot;') + '"> ' + pr;
+                    panelProb.appendChild(label);
+                });
+            }
+            const serviciosSet = new Set();
+            psicologos.forEach(p => {
+                if (p.servicios && Array.isArray(p.servicios))
+                    p.servicios.forEach(s => serviciosSet.add(s));
+            });
+            const servicios = [...serviciosSet].sort();
+            const panelServ = document.getElementById('panel-servicios');
+            if (panelServ) {
+                panelServ.innerHTML = '';
+                servicios.forEach(s => {
+                    const label = document.createElement('label');
+                    label.innerHTML = '<input type="checkbox" name="filtro-servicios-cb" value="' + s.replace(/"/g, '&quot;') + '"> ' + s;
+                    panelServ.appendChild(label);
+                });
+            }
+            actualizarTriggerEspecialidad();
+            actualizarTriggerProblemas();
+            actualizarTriggerServicios();
+        }
+
+        function limpiarFiltros() {
+            document.querySelectorAll('input[name="filtro-especialidad"]').forEach(r => { r.checked = (r.value === ''); });
+            document.querySelectorAll('input[name="filtro-problemas-cb"]').forEach(cb => { cb.checked = false; });
+            document.querySelectorAll('input[name="filtro-servicios-cb"]').forEach(cb => { cb.checked = false; });
+            actualizarTriggerEspecialidad();
+            actualizarTriggerProblemas();
+            actualizarTriggerServicios();
+            aplicarFiltros();
+            const msg = document.getElementById('filtros-resultado');
+            if (msg) msg.textContent = '';
+            document.querySelectorAll('.dropdown-filtro').forEach(dd => dd.classList.remove('abierto'));
+        }
+
+        function setupDropdowns() {
+            document.querySelectorAll('.dropdown-filtro').forEach(dd => {
+                const trigger = dd.querySelector('.dropdown-filtro-trigger');
+                const panel = dd.querySelector('.dropdown-filtro-panel');
+                if (!trigger || !panel) return;
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const abierto = dd.classList.toggle('abierto');
+                    document.querySelectorAll('.dropdown-filtro').forEach(other => { if (other !== dd) other.classList.remove('abierto'); });
+                });
+                panel.addEventListener('click', (e) => e.stopPropagation());
+            });
+            document.addEventListener('click', () => document.querySelectorAll('.dropdown-filtro').forEach(dd => dd.classList.remove('abierto')));
+
+            document.querySelectorAll('input[name="filtro-especialidad"]').forEach(r => {
+                r.addEventListener('change', () => { actualizarTriggerEspecialidad(); aplicarFiltros(); });
+            });
+            document.getElementById('panel-especialidad') && document.getElementById('panel-especialidad').addEventListener('change', () => {
+                const el = document.getElementById('panel-especialidad');
+                if (el && el.closest('.dropdown-filtro')) el.closest('.dropdown-filtro').classList.remove('abierto');
+            });
+            document.getElementById('panel-problemas') && document.getElementById('panel-problemas').addEventListener('change', () => {
+                actualizarTriggerProblemas();
+                aplicarFiltros();
+            });
+            document.getElementById('panel-servicios') && document.getElementById('panel-servicios').addEventListener('change', () => {
+                actualizarTriggerServicios();
+                aplicarFiltros();
+            });
+        }
+
+        // Cargar psicólogos y montar filtros
+        Promise.all([fetch('/api/psicologos').then(r => r.json()), fetch('/api/precio-region').then(r => r.json())])
+            .then(([psicologos, precioRegion]) => {
+                listaPsicologosCompleta = Array.isArray(psicologos) ? psicologos : [];
+                precioAmount = precioRegion.amount ?? 500;
+                precioCurrency = precioRegion.currency ?? 'MXN';
+                llenarOpcionesFiltros(listaPsicologosCompleta);
+                setupDropdowns();
+                aplicarFiltros();
+                // Si se llegó con ?corriente=X (encuesta de bienvenida), aplicar filtro de especialidad
+                const params = new URLSearchParams(window.location.search);
+                const corriente = (params.get('corriente') || '').trim();
+                if (corriente) {
+                    var especialidadesDisponibles = [...new Set(listaPsicologosCompleta.map(function(p) { return (p.especialidad || '').trim(); }).filter(Boolean))];
+                    var normalizar = function(s) { return (s || '').toLowerCase().normalize('NFD').replace(/\u0307/g, '').replace(/[\u0300-\u036f]/g, ''); };
+                    var match = null;
+                    if (corriente === 'TCC') {
+                        match = especialidadesDisponibles.find(function(e) {
+                            var n = normalizar(e);
+                            return n.indexOf('cognitivo') !== -1 || n.indexOf('conductual') !== -1 || n.indexOf('tcc') !== -1;
+                        });
+                    } else if (corriente === 'Psicoanalisis') {
+                        match = especialidadesDisponibles.find(function(e) {
+                            var n = normalizar(e);
+                            return n.indexOf('psicoanalisis') !== -1 || n.indexOf('psicodinamica') !== -1;
+                        });
+                    } else if (corriente === 'Sistemica') {
+                        match = especialidadesDisponibles.find(function(e) { return normalizar(e).indexOf('sistemica') !== -1; });
+                    } else if (corriente === 'Humanista') {
+                        match = especialidadesDisponibles.find(function(e) { return normalizar(e).indexOf('humanista') !== -1; });
+                    }
+                    if (match) {
+                        document.querySelectorAll('input[name="filtro-especialidad"]').forEach(function(radio) {
+                            if (radio.value === match) radio.checked = true;
+                        });
+                        actualizarTriggerEspecialidad();
+                        aplicarFiltros();
+                    }
+                }
+                // Si se llegó desde index (equipo) con ?ver=id, abrir modal de perfil de ese psicólogo
+                const verId = params.get('ver');
+                if (verId) {
+                    verDetallesPsicologo(parseInt(verId, 10));
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+                    }
+                }
+                // Si se llegó con ?servicio=X (ej. Asesoría de crianza), marcar ese servicio en el filtro
+                const servicioParam = (params.get('servicio') || '').trim();
+                if (servicioParam) {
+                    var serviciosCbs = document.querySelectorAll('input[name="filtro-servicios-cb"]');
+                    var decoded = decodeURIComponent(servicioParam);
+                    var norm = function(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
+                    var normDecoded = norm(decoded);
+                    serviciosCbs.forEach(function(cb) {
+                        var val = (cb.value || '').trim();
+                        if (!val) return;
+                        if (val === decoded || norm(val).indexOf(normDecoded) !== -1 || normDecoded.indexOf(norm(val)) !== -1) cb.checked = true;
+                    });
+                    actualizarTriggerServicios();
+                    aplicarFiltros();
+                }
+            })
+            .catch(err => {
+                console.error('Error cargando catálogo o precio:', err);
+                fetch('/api/psicologos').then(r => r.json()).then(psicologos => {
+                    listaPsicologosCompleta = Array.isArray(psicologos) ? psicologos : [];
+                    llenarOpcionesFiltros(listaPsicologosCompleta);
+                    setupDropdowns();
+                    renderCards(listaPsicologosCompleta, 500, 'MXN');
+                });
+            });
+
+        document.getElementById('btn-limpiar-filtros').addEventListener('click', limpiarFiltros);
+        
+            async function verDetallesPsicologo(id) {
+    const modal = document.getElementById('modal-perfil');
+    modal.style.display = 'flex'; 
+
+    try {
+        const res = await fetch(`/api/psicologo/${id}`);
+        const data = await res.json();
+        const p = data.datos;
+
+        // 1. Manejo del Avatar (Foto o Inicial)
+        const avatarElem = document.getElementById('det-avatar');
+        if (p.imagen_url) {
+            avatarElem.style.backgroundImage = `url('${p.imagen_url}')`;
+            avatarElem.innerText = ""; // Borramos la inicial si hay foto
+        } else {
+            avatarElem.style.backgroundImage = "none";
+            avatarElem.innerText = p.nombre ? p.nombre.charAt(0).toUpperCase() : "?";
+        }
+
+        // 2. Información Básica
+        document.getElementById('det-nombre').innerText = p.nombre;
+        document.getElementById('det-especialidad').innerText = p.especialidad;
+        document.getElementById('det-biografia').innerText = p.biografia || "Especialista comprometido con el bienestar emocional y el desarrollo personal.";
+        document.getElementById('det-rating').innerText = p.rating || "5.0";
+
+        // 3. Áreas de Especialidad (con el diseño de óvalos rosa)
+        const enfoqueHTML = (p.problemas_principales || []).map(area => `
+            <span class="tag-problema" style="background: #fdf2f7; color: var(--texto-oscuro); border: 1px solid var(--primario-rosa); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; display: inline-block;">
+                ${area}
+            </span>
+        `).join('');
+        document.getElementById('det-tags-enfoque').innerHTML = enfoqueHTML;
+
+        // 3b. Servicios (desde columna servicios)
+        const serviciosHTML = (p.servicios && Array.isArray(p.servicios) && p.servicios.length > 0)
+            ? p.servicios.map(s => `
+                <span class="tag-servicio" style="background: #e8f4f8; color: var(--texto-oscuro); border: 1px solid var(--secundario-azul); padding: 6px 14px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; display: inline-block;">
+                    ${s}
+                </span>
+            `).join('')
+            : '<span style="color:#888; font-size:0.9rem;">Sin servicios definidos.</span>';
+        document.getElementById('det-tags-servicios').innerHTML = serviciosHTML;
+
+        // 4. Opiniones de Pacientes (espaciadas, con estrellas y fecha)
+        const estrellasStr = (n) => { const num = parseInt(n, 10) || 0; return '⭐'.repeat(Math.min(5, Math.max(0, num))); };
+        const fechaOpinion = (f) => {
+            if (!f) return '';
+            const d = new Date(f);
+            return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+        };
+        const iniciales = (nombre) => {
+            if (!nombre || !nombre.trim()) return '—';
+            const partes = nombre.trim().split(/\s+/);
+            if (partes.length >= 2) return (partes[0][0] + '.' + partes[partes.length - 1][0]).toUpperCase();
+            return (partes[0].slice(0, 2)).toUpperCase();
+        };
+        const opinionesHTML = data.opiniones && data.opiniones.length > 0 
+            ? data.opiniones.map(o => `
+                <div class="det-opinion-item">
+                    <div class="det-opinion-meta">
+                        <strong style="color: var(--texto-oscuro);">${iniciales(o.paciente_nombre)}</strong>
+                        <span class="det-opinion-estrellas">${estrellasStr(o.estrellas)}</span>
+                        <span class="det-opinion-fecha">${fechaOpinion(o.fecha)}</span>
+                    </div>
+                    <p class="det-opinion-comentario">${(o.comentario || '').replace(/</g, '&lt;')}</p>
+                </div>`).join('')
+            : "<p style='color: #aaa; font-size: 0.9rem;'>Este especialista aún no tiene reseñas.</p>";
+        
+        document.getElementById('det-opiniones').innerHTML = opinionesHTML;
+
+        // 5. Botón de Agendar (Vinculado a tu función abrirModal)
+        document.getElementById('btn-agendar-desde-perfil').onclick = () => {
+            cerrarPerfil();
+            abrirModal(p.id, p.nombre); 
+        };
+
+    } catch (err) {
+        console.error("Error al cargar detalles:", err);
+        alert("Hubo un error al cargar el perfil. Por favor, intenta de nuevo.");
+    }
+}
+
+    function cerrarPerfil() {
+        document.getElementById('modal-perfil').style.display = 'none';
+    }
+    // --- FIN DEL PUNTO 3 ---
+
+// PEGA ESTO EN SU LUGAR:
+async function abrirModal(id, nombre) {
+    try {
+        // Le preguntamos al servidor si hay alguien logueado
+        const respuesta = await fetch('/api/estado-sesion');
+        const sesion = await respuesta.json();
+
+        if (!sesion.autenticado) {
+            // Si el servidor dice que no, lo mandamos a loguearse
+            alert("Para agendar una cita, primero debes iniciar sesión o registrarte.");
+            window.location.href = "/perfil"; 
+            return;
+        }
+
+        // Si el servidor dice que sí, mostramos el formulario de la cita
+        document.getElementById('modal-agenda').style.display = 'block';
+        document.getElementById('modal-titulo').innerText = 'Cita con ' + nombre;
+        document.getElementById('psico-id-input').value = id;
+        
+        // Resetear campos
+        document.getElementById('hora-cita').innerHTML = '<option value="" disabled selected>Primero selecciona una fecha...</option>';
+        document.getElementById('mensaje-horarios').innerText = '';
+        const servicioInteres = document.getElementById('servicio-interes');
+        const precioSesionEl = document.getElementById('modal-precio-sesion');
+        if (precioSesionEl) precioSesionEl.textContent = '';
+        
+        // Rellenar Servicio de interés solo con los servicios que ofrece este psicólogo
+        const psico = typeof listaPsicologosCompleta !== 'undefined' && listaPsicologosCompleta.find(p => p.id === parseInt(id, 10));
+        if (servicioInteres) {
+            servicioInteres.innerHTML = '<option value="" disabled selected>Elige el tipo de servicio</option>';
+            const servicios = (psico && psico.servicios && Array.isArray(psico.servicios) && psico.servicios.length > 0) ? psico.servicios : [];
+            servicios.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                servicioInteres.appendChild(opt);
+            });
+            if (servicios.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.disabled = true;
+                opt.textContent = 'Sin servicios definidos';
+                servicioInteres.appendChild(opt);
+            }
+            servicioInteres.value = '';
+        }
+        
+        // Inicializar Flatpickr con fechas deshabilitadas
+        await inicializarCalendario(id);
+        
+        // Actualizar precio al cambiar servicio de interés
+        if (servicioInteres) {
+            servicioInteres.onchange = function () {
+                const psicoId = parseInt(document.getElementById('psico-id-input').value, 10);
+                const psico = typeof listaPsicologosCompleta !== 'undefined' && listaPsicologosCompleta.find(p => p.id === psicoId);
+                const sel = document.getElementById('servicio-interes').value;
+                if (!psico || !sel) { if (precioSesionEl) precioSesionEl.textContent = ''; return; }
+                const pi = Number(psico.precio_terapia_individual) || 500;
+                const pp = Number(psico.precio_terapia_pareja) ?? pi;
+                const pc = Number(psico.precio_asesoria_crianza) ?? pi;
+                let monto = pi;
+                const svc = (sel || '').toLowerCase();
+                if (svc.indexOf('pareja') !== -1) monto = pp; else if (svc.indexOf('crianza') !== -1) monto = pc;
+                precioSesionEl.textContent = 'Precio de esta sesión: $' + monto + ' MXN';
+            };
+        }
+
+    } catch (error) {
+        console.error("Error al verificar sesión:", error);
+        alert("Ocurrió un error de conexión. Inténtalo de nuevo.");
+    }
+}
+
+// Variable para almacenar la instancia de Flatpickr
+let calendarioCita = null;
+
+async function inicializarCalendario(psicologoId) {
+    // Destruir instancia anterior si existe
+    if (calendarioCita) {
+        calendarioCita.destroy();
+    }
+
+    try {
+        // Obtener disponibilidad del psicólogo
+        const res = await fetch(`/api/disponibilidad-calendario/${psicologoId}`);
+        const disponibilidad = await res.json();
+
+        const diasNoLaborales = disponibilidad.diasNoLaborales || [];
+        const fechasBloqueadas = disponibilidad.fechasBloqueadas || [];
+
+        // Inicializar Flatpickr
+        calendarioCita = flatpickr('#fecha-cita', {
+            locale: 'es',
+            dateFormat: 'Y-m-d',
+            minDate: 'today',
+            maxDate: new Date().fp_incr(90), // Máximo 90 días adelante
+            disable: [
+                // Deshabilitar días de la semana que no trabaja
+                function(date) {
+                    return diasNoLaborales.includes(date.getDay());
+                },
+                // Deshabilitar fechas específicas bloqueadas
+                ...fechasBloqueadas
+            ],
+            onChange: function(selectedDates, dateStr) {
+                if (dateStr) {
+                    cargarHorariosDisponibles(dateStr, psicologoId);
+                }
+            },
+            onReady: function() {
+                // Limpiar valor anterior
+                this.clear();
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al cargar disponibilidad:', error);
+        // Fallback: usar input date normal
+        const inputFecha = document.getElementById('fecha-cita');
+        inputFecha.type = 'date';
+        inputFecha.min = new Date().toISOString().split('T')[0];
+    }
+}
+
+async function cargarHorariosDisponibles(fecha, psicologoId) {
+    const selectHora = document.getElementById('hora-cita');
+    const mensajeHorarios = document.getElementById('mensaje-horarios');
+    
+    selectHora.innerHTML = '<option value="" disabled selected>Cargando horarios...</option>';
+    mensajeHorarios.innerText = '';
+    
+    try {
+        const res = await fetch(`/api/horarios-disponibles/${psicologoId}?fecha=${fecha}`);
+        const data = await res.json();
+        
+        if (!data.disponible || data.horarios.length === 0) {
+            selectHora.innerHTML = '<option value="" disabled selected>No hay horarios disponibles</option>';
+            mensajeHorarios.innerText = data.mensaje || 'No hay horarios disponibles para esta fecha.';
+            mensajeHorarios.style.color = '#e74c3c';
+            return;
+        }
+        
+        // Formatear horarios
+        selectHora.innerHTML = '<option value="" disabled selected>Elige una hora...</option>';
+        data.horarios.forEach(hora => {
+            const h = parseInt(hora.split(':')[0], 10);
+            const periodo = h < 12 ? 'AM' : 'PM';
+            const hora12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+            selectHora.innerHTML += `<option value="${hora}">${String(hora12).padStart(2, '0')}:00 ${periodo}</option>`;
+        });
+        mensajeHorarios.innerText = `${data.horarios.length} horario(s) disponible(s)`;
+        mensajeHorarios.style.color = '#27ae60';
+        
+    } catch (error) {
+        console.error('Error al cargar horarios:', error);
+        selectHora.innerHTML = '<option value="" disabled selected>Error al cargar</option>';
+        mensajeHorarios.innerText = 'Error de conexión';
+        mensajeHorarios.style.color = '#e74c3c';
+    }
+}
+
+
+        function cerrarModal() {
+            document.getElementById('modal-agenda').style.display = 'none';
+        }
+
+        document.getElementById('form-agendar').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                psicologo_id: parseInt(document.getElementById('psico-id-input').value, 10),
+                fecha: document.getElementById('fecha-cita').value,
+                hora: document.getElementById('hora-cita').value,
+                servicio_interes: document.getElementById('servicio-interes').value || null
+            };
+
+            const res = await fetch('/api/crear-sesion-pago', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            const json = await res.json().catch(() => ({}));
+            if (res.ok && json.url) {
+                cerrarModal();
+                window.location.href = json.url;
+                return;
+            }
+            alert(json.error || 'No se pudo iniciar el pago. Intenta de nuevo.');
+        };
+
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('modal-agenda')) {
+                cerrarModal();
+            }
+        }
+
+        document.getElementById('formRegistroCita').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const datos = {
+        psicologoId: document.getElementById('psicologoId').value,
+        nombre: document.getElementById('nombrePaciente').value,
+        email: document.getElementById('emailPaciente').value,
+        whatsapp: document.getElementById('whatsappPaciente').value,
+        password: document.getElementById('passPaciente').value,
+        motivo: document.getElementById('motivoConsulta').value,
+        fecha: "2026-02-01", // Aquí deberías pasar la fecha que el usuario eligió en el calendario
+        hora: "10:00"        // Y la hora
+    };
+
+    try {
+        const respuesta = await fetch('/api/agendar-y-registrar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+        });
+
+        if (respuesta.ok) {
+            alert("¡Cita agendada con éxito! Ya puedes iniciar sesión con tu correo.");
+            window.location.href = "/perfil"; // Lo mandamos a su nuevo perfil
+        } else {
+            alert("Hubo un error. Es posible que el correo ya esté registrado.");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Preguntamos al servidor por la sesión
+    fetch('/api/estado-sesion')
+        .then(res => res.json())
+        .then(data => {
+            // Buscamos el botón de Mi Perfil en el menú
+            const btnPerfil = document.querySelector('.btn-perfil') || document.querySelector('a[href="/perfil"]');
+            
+            if (data.autenticado && btnPerfil) {
+                // 2. Si está logueado, cambiamos el texto por su nombre
+                const primerNombre = data.nombre.split(' ')[0];
+                btnPerfil.innerHTML = `<span>👤 Sitio de ${primerNombre}</span>`;
+                
+                // 3. Redirigimos según su rol (Psicólogo o Paciente)
+                btnPerfil.href = (data.rol === 'psicologo') ? "/panel-doctor" : "/perfil";
+            }
+        })
+        .catch(err => console.log("Error verificando sesión:", err));
+});
+    </script>
+
+<footer class="main-footer" style="background: #332E2A; border-top: 4px solid var(--primario-rosa);">
+    <div class="footer-container">
+        <div class="footer-col">
+            <h3 style="color: var(--primario-rosa);">Psicólogos en Red</h3>
+            <p data-i18n="footer_tagline">Conectando salud mental con tecnología humana. Tu bienestar es nuestra prioridad.</p>
+            <div class="redes-sociales">
+                <a href="https://www.facebook.com/profile.php?id=100063577030818" target="_blank" rel="noopener noreferrer" title="Facebook"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+                <a href="https://www.instagram.com/psicologos_en_red" target="_blank" rel="noopener noreferrer" title="Instagram"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>
+                <a href="https://www.tiktok.com/@psicologos_en_red_" target="_blank" rel="noopener noreferrer" title="TikTok"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
+            </div>
+        </div>
+
+        <div class="footer-col">
+            <h4 style="color: var(--acento-dorado);">Enlaces Rápidos</h4>
+            <ul style="list-style: none; padding: 0;">
+                <li><a href="/" style="color: var(--suave-arena); text-decoration: none;">Inicio</a></li>
+                <li><a href="/registro" style="color: var(--suave-arena); text-decoration: none;">Registro</a></li>
+                <li><a href="/login" style="color: var(--suave-arena); text-decoration: none;">Iniciar Sesión</a></li>
+                <li><a href="/terminos-condiciones" style="color: var(--suave-arena); text-decoration: none;">Términos y Condiciones</a></li>
+                <li><a href="/aviso-privacidad" style="color: var(--suave-arena); text-decoration: none;">Aviso de Privacidad</a></li>
+                <li><a href="/contacto" style="color: var(--suave-arena); text-decoration: none;">Contacto</a></li>
+                <li><a href="/trabaja-con-nosotros" style="color: var(--suave-arena); text-decoration: none;">Trabaja con Nosotros</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h4 style="color: var(--acento-dorado);">Contacto</h4>
+            <p>📍 Ciudad de México, México</p>
+            <p>📧 contacto@psicologosenred.com</p>
+            <p>📞 +52 55 3077 6194</p>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <p style="color: var(--suave-arena); opacity: 0.7;">&copy; 2026 Psicólogos en Red. <span data-i18n="footer_derechos">Todos los derechos reservados.</span></p>
+    </div>
+</footer>
+<script src="/i18n.js"></script>
+</body>
+</html>

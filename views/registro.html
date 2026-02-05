@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Cuenta - Psicólogos en Red</title>
+    <link rel="stylesheet" href="/estilos.css">
+</head>
+<body class="auth-body" style="background: linear-gradient(135deg, var(--primario-rosa) 0%, var(--suave-arena) 100%);">
+
+    <div class="auth-container">
+        <div class="auth-card" style="border-top: 8px solid var(--primario-rosa);">
+            <div class="auth-header">
+                <h2 style="color: var(--primario-rosa);">Únete a nuestra Red</h2>
+                <p style="color: var(--texto-oscuro);">Crea tu cuenta y comienza tu camino al bienestar</p>
+            </div>
+
+            <form action="/registrar-usuario" method="POST" class="auth-form">
+                
+                <div class="form-group">
+                    <label for="nombre" style="color: var(--primario-rosa); font-weight: bold;">Nombre Completo</label>
+                    <input type="text" id="nombre" name="nombre" placeholder="Juan Pérez" required style="border-color: var(--suave-arena);">
+                </div>
+
+                <div class="form-group">
+                    <label for="email" style="color: var(--primario-rosa); font-weight: bold;">Correo Electrónico</label>
+                    <input type="email" id="email" name="email" placeholder="tu@correo.com" required style="border-color: var(--suave-arena);">
+                </div>
+
+                <div class="form-group">
+                    <label style="color: var(--primario-rosa); font-weight: bold;">Teléfono (con código de país)</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="codigo_pais" name="codigo_pais" style="border: 2px solid var(--suave-arena); border-radius: 8px; padding: 10px 8px; font-size: 0.95rem; width: 100px; max-width: 100px; flex-shrink: 0; background: white;">
+                            <option value="+52" selected>+52 MX</option>
+                            <option value="+1">+1</option>
+                            <option value="+57">+57</option>
+                            <option value="+34">+34</option>
+                            <option value="+54">+54</option>
+                            <option value="+51">+51</option>
+                            <option value="+56">+56</option>
+                            <option value="+58">+58</option>
+                            <option value="+593">+593</option>
+                            <option value="+595">+595</option>
+                            <option value="+598">+598</option>
+                            <option value="+591">+591</option>
+                            <option value="+503">+503</option>
+                            <option value="+502">+502</option>
+                            <option value="+504">+504</option>
+                            <option value="+505">+505</option>
+                            <option value="+506">+506</option>
+                            <option value="+507">+507</option>
+                            <option value="+55">+55</option>
+                        </select>
+                        <input type="tel" id="numero_telefono" name="numero_telefono" placeholder="55 1234 5678" required style="border: 2px solid var(--suave-arena); border-radius: 8px; padding: 12px 14px; font-size: 1rem; flex: 1; min-width: 0; width: 100%; box-sizing: border-box;" inputmode="numeric" pattern="[0-9\s]+">
+                    </div>
+                    <input type="hidden" name="telefono" id="telefono">
+                    <small style="color: var(--suave-arena); font-size: 0.75rem;">Incluye código de país para poder enviarte recordatorios por WhatsApp.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" style="color: var(--primario-rosa); font-weight: bold;">Contraseña</label>
+                    <div style="position: relative;">
+                        <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required style="border-color: var(--suave-arena); padding-right: 44px; width: 100%; box-sizing: border-box;">
+                        <button type="button" id="toggle-password-registro" aria-label="Mostrar contraseña" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: var(--texto-oscuro); opacity: 0.7; font-size: 1.1rem;">👁</button>
+                    </div>
+                    <small style="color: var(--suave-arena); font-size: 0.75rem;">Usa una clave segura.</small>
+                </div>
+
+                <input type="hidden" name="rol" value="paciente">
+
+                <div class="form-group" style="margin-top: 15px;">
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.85rem; color: var(--texto-oscuro); font-weight: 300;">
+                        <input type="checkbox" name="acepto_terminos" required style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primario-rosa); cursor: pointer;">
+                        <span>He leído y acepto los <a href="/terminos-condiciones" target="_blank" style="color: var(--primario-rosa); text-decoration: underline;">Términos y Condiciones</a> y el <a href="/aviso-privacidad" target="_blank" style="color: var(--primario-rosa); text-decoration: underline;">Aviso de Privacidad</a></span>
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-top: 10px;">
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.85rem; color: var(--texto-oscuro); font-weight: 300;">
+                        <input type="checkbox" name="acepto_publicidad" style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primario-rosa); cursor: pointer;">
+                        <span>Deseo recibir correos con información publicitaria y propaganda</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-auth" style="background-color: var(--primario-rosa); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 15px;">Crear Cuenta</button>
+            </form>
+
+            <div class="auth-footer">
+                <p style="color: var(--texto-oscuro);">¿Ya tienes una cuenta? <a href="/login" style="color: var(--primario-rosa); text-decoration: none; font-weight: bold;">Inicia sesión aquí</a></p>
+                <a href="/" class="back-link" style="color: var(--suave-arena); text-decoration: none; font-size: 0.9rem;">← Volver al inicio</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('toggle-password-registro').onclick = function() {
+            var input = document.getElementById('password');
+            var btn = this;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🙈';
+                btn.setAttribute('aria-label', 'Ocultar contraseña');
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁';
+                btn.setAttribute('aria-label', 'Mostrar contraseña');
+            }
+        };
+
+        document.querySelector('.auth-form').addEventListener('submit', function() {
+            var codigo = document.getElementById('codigo_pais').value.replace(/\D/g, '');
+            var numero = (document.getElementById('numero_telefono').value || '').replace(/\D/g, '');
+            document.getElementById('telefono').value = '+' + codigo + numero;
+        });
+    </script>
+</body>
+</html>

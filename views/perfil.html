@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultorio Virtual - Psicólogos en Red</title>
+    <link rel="stylesheet" href="/estilos.css">
+    <!-- Jitsi script se carga dinámicamente (JaaS o meet.jit.si) al iniciar video -->
+    <!-- Flatpickr para calendario con fechas deshabilitadas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+</head>
+<body class="perfil-body">
+
+    <div class="perfil-layout">
+        <aside class="perfil-sidebar">
+            <div class="sidebar-header">
+                <div class="user-avatar" id="avatar-inicial">U</div>
+                <h3 class="sidebar-nombre" id="bienvenida-nombre">Usuario</h3>
+                <span class="status-badge sidebar-texto">Paciente</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-item active" onclick="mostrarSeccion('dashboard')">
+                    <span class="nav-icon">🏠</span><span class="nav-label">Inicio</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('citas')">
+                    <span class="nav-icon">📅</span><span class="nav-label">Mis Citas</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('video')">
+                    <span class="nav-icon">🎥</span><span class="nav-label">Sesión de Video</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('chat')">
+                    <span class="nav-icon">💬</span><span class="nav-label">Chat Privado</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('config')">
+                    <span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span>
+                </button>
+                <a href="/" class="nav-item-link">
+                    <span class="nav-icon">🌐</span><span class="nav-label">Volver al Sitio</span>
+                </a>
+            </nav>
+        
+            <div class="sidebar-footer">
+                <a href="/logout" class="btn-logout">
+                    <span class="nav-icon">🚪</span><span class="nav-label">Cerrar Sesión</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="perfil-main">
+            <div id="seccion-dashboard" class="seccion-panel">
+                <div class="welcome-banner">
+                    <h1>Hola, <span id="user-display-name">...</span> 👋</h1>
+                    <p>Hoy es un buen día para cuidar de tu salud mental.</p>
+                </div>
+            
+                <div class="resumen-inicio-simple">
+                    <div class="proxima-cita-destacada">
+                        <h3>Tu próxima sesión</h3>
+                        <div id="resumen-proxima-cita">
+                            <p style="color: #888;">No tienes citas pendientes para hoy.</p>
+                        </div>
+                        <div id="cta-agendar-primera-vez" class="cta-agendar-wrap" style="display: none;">
+                            <a href="/catalogo" class="btn-agendar-cta">Agendar Cita</a>
+                        </div>
+                        <button onclick="mostrarSeccion('citas')" class="btn-ver-todas">Ver mi agenda completa</button>
+                    </div>
+                </div>
+            </div>
+        
+            <div id="seccion-citas" class="seccion-panel" style="display: none;">
+                <header class="video-header">
+                    <h2>📅 Mis Citas</h2>
+                    <p>Aquí puedes ver todas tus sesiones programadas y tu historial.</p>
+                </header>
+
+                <div class="citas-secciones-container">
+                    <section class="citas-proximas">
+                        <h3>Próximas Sesiones</h3>
+                        <div id="contenedor-citas-proximas" class="grid-citas-panel">
+                            <p style="padding:20px;">Cargando próximas citas...</p>
+                        </div>
+                    </section>
+
+                    <hr style="margin: 40px 0; border: 0; border-top: 1px solid #ddd;">
+
+                    <section class="citas-pasadas">
+                        <h3>Historial de Sesiones</h3>
+                        <div id="contenedor-citas-pasadas" class="grid-citas-panel historial">
+                            <p style="padding:20px;">Cargando historial de citas...</p>
+                        </div>
+                        <div id="historial-cargar-mas-wrap" style="display: none; text-align: center; margin-top: 1rem;">
+                            <button type="button" id="btn-historial-cargar-mas" class="btn-cita-secundario">Cargar más</button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div id="modal-opinion" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; align-items:center; justify-content:center;">
+                <div style="background:white; padding:30px; border-radius:20px; width:90%; max-width:400px; position:relative;">
+                    <h3 style="margin-top:0; color:var(--primario-rosa);">Califica tu experiencia</h3>
+                    <p id="opinar-sobre-nombre" style="font-size:0.9rem; color:#666;"></p>
+                    
+                    <div style="margin:20px 0;">
+                        <label style="display:block; margin-bottom:8px; font-weight:bold;">¿Cuántas estrellas le das?</label>
+                        <select id="opinion-estrellas" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                            <option value="5">⭐⭐⭐⭐⭐ (Excelente)</option>
+                            <option value="4">⭐⭐⭐⭐ (Muy bueno)</option>
+                            <option value="3">⭐⭐⭐ (Bueno)</option>
+                            <option value="2">⭐⭐ (Regular)</option>
+                            <option value="1">⭐ (Malo)</option>
+                        </select>
+                    </div>
+            
+                    <div style="margin:20px 0;">
+                        <label style="display:block; margin-bottom:8px; font-weight:bold;">Tu comentario:</label>
+                        <textarea id="opinion-comentario" rows="4" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; resize:none;" placeholder="¿Cómo te sentiste en la sesión?"></textarea>
+                    </div>
+            
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="cerrarModalOpinion()" style="flex:1; padding:12px; border-radius:10px; border:none; cursor:pointer;">Cancelar</button>
+                        <button onclick="enviarOpinion()" style="flex:2; padding:12px; border-radius:10px; border:none; background:var(--primario-rosa); color:white; font-weight:bold; cursor:pointer;">Publicar Opinión</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal para agendar/reagendar cita -->
+            <div id="modal-gestion-cita" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; align-items:center; justify-content:center;">
+                <div style="background:white; padding:30px; border-radius:20px; width:90%; max-width:420px; position:relative;">
+                    <h3 id="gestion-cita-titulo" style="margin-top:0; color:var(--primario-rosa);">Agendar cita</h3>
+                    <p id="gestion-cita-subtitulo" style="font-size:0.9rem; color:#666;"></p>
+
+                    <div style="display:grid; gap:12px; margin:20px 0;">
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:bold;">Fecha</label>
+                            <input id="gestion-cita-fecha" type="text" placeholder="-- / -- / ----" readonly style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; cursor:pointer; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:6px; font-weight:bold;">Hora</label>
+                            <select id="gestion-cita-hora" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;">
+                                <option value="" disabled selected>Primero selecciona una fecha...</option>
+                            </select>
+                            <p id="gestion-mensaje-horarios" style="font-size:0.8rem; margin-top:6px; color:#888;"></p>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="cerrarModalGestionCita()" style="flex:1; padding:12px; border-radius:10px; border:none; cursor:pointer;">Cancelar</button>
+                        <button onclick="confirmarGestionCita()" style="flex:2; padding:12px; border-radius:10px; border:none; background:var(--primario-rosa); color:white; font-weight:bold; cursor:pointer;">Guardar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de detalles de cita -->
+            <div id="modal-detalle-cita" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; align-items:center; justify-content:center;">
+                <div style="background:white; padding:30px; border-radius:20px; width:90%; max-width:520px; position:relative;">
+                    <h3 id="detalle-cita-titulo" style="margin-top:0; color:var(--primario-rosa);">Detalle de cita</h3>
+                    <div id="detalle-cita-body" style="display:grid; gap:8px; margin:15px 0; color:#444; font-size:0.95rem;"></div>
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button onclick="cerrarModalDetalleCita()" style="flex:1; padding:12px; border-radius:10px; border:none; cursor:pointer;">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal general (reemplazo de alert) -->
+            <div id="modal-feedback" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:4000; align-items:center; justify-content:center;">
+                <div style="background:white; padding:26px; border-radius:18px; width:90%; max-width:460px; position:relative;">
+                    <h3 id="modal-feedback-titulo" style="margin-top:0; color:var(--primario-rosa);">Aviso</h3>
+                    <div id="modal-feedback-mensaje" style="color:#444; line-height:1.5;"></div>
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+                        <button onclick="cerrarPopup()" class="btn-cita-secundario" type="button">OK</button>
+                    </div>
+                </div>
+            </div>
+        
+            <div id="seccion-video" class="seccion-panel" style="display: none;">
+                <header class="video-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2>Sesión en Vivo</h2>
+                        <p id="info-sesion">Conéctate a tu sesión programada.</p>
+                    </div>
+                </header>
+                <div id="jitsi-container" style="height: 80vh;"></div>
+            </div>
+
+            <div id="seccion-chat" class="seccion-panel" style="display: none;">
+                <div class="chat-main-container" style="display: flex; background: white; height: 75vh; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); overflow: hidden;">
+                    <aside class="chat-sidebar" style="width: 250px; border-right: 1px solid #eee; padding: 15px; background: #f8fafc;">
+                        <h3>Mis Especialistas</h3>
+                        <div id="lista-contactos-chat">
+                            <p style="font-size: 0.8rem; color: #888; padding: 10px;">Cargando contactos...</p>
+                        </div>
+                    </aside>
+            
+                    <section class="chat-window" style="flex: 1; display: flex; flex-direction: column;">
+                        <div id="chat-header-info" style="padding: 15px; border-bottom: 1px solid #eee; background: white;">
+                            <h4 id="nombre-psicologo-chat" style="margin:0">Selecciona un especialista</h4>
+                        </div>
+                        <div id="chat-messages" style="height: 400px; overflow-y: auto; background: #f9f9f9; display: flex; flex-direction: column; padding: 10px;">
+                            <p style="text-align: center; color: #ccc; margin-top: 20%;">Bienvenido a tu chat privado.</p>
+                        </div>
+                        <div class="chat-input-area" style="padding: 15px; background: white; display: flex; gap: 10px; align-items: center;">
+                            <input type="file" id="input-chat-pdf" accept=".pdf" style="display:none;">
+                            <button type="button" id="btn-adjuntar-pdf-chat" title="Adjuntar PDF" style="padding: 10px 14px; border-radius: 8px; border: 1px solid #ddd; background: white; cursor: pointer;" disabled>📎 PDF</button>
+                            <input type="text" id="input-mensaje" placeholder="Escribe un mensaje..." style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid #ddd;" disabled>
+                            <button id="btn-enviar-chat" class="btn-entrar-sesion" style="width: auto; padding: 0 20px;" disabled>Enviar</button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        
+            <div id="seccion-config" class="seccion-panel" style="display: none;">
+                <header class="video-header">
+                    <h2>Configuración de Cuenta</h2>
+                    <p>Administra tu información personal y seguridad.</p>
+                </header>
+            
+                <div class="config-grid">
+                    <div class="config-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="margin:0;">👤 Datos de la Cuenta</h3>
+                            <button id="btn-editar-toggle" onclick="activarEdicion()" class="btn-editar-v2">Editar Perfil</button>
+                        </div>
+            
+                        <form id="form-configuracion">
+                            <div class="form-group-config">
+                                <label>Nombre Completo</label>
+                                <input type="text" id="config-nombre" class="input-readonly" readonly>
+                            </div>
+            
+                            <div class="form-group-config">
+                                <label>Correo Electrónico (No modificable)</label>
+                                <input type="email" id="config-email" class="input-readonly" readonly style="background: #f0f0f0; cursor: not-allowed;">
+                            </div>
+            
+                            <div class="form-group-config">
+                                <label>Número de Teléfono</label>
+                                <input type="tel" id="config-tel" class="input-readonly" readonly placeholder="No registrado">
+                            </div>
+            
+                            <div class="form-group-config">
+                                <label>Contraseña</label>
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <input type="password" id="config-pass" class="input-readonly" readonly 
+                                           value="********" placeholder="Escribe nueva contraseña para cambiar">
+                                    <button type="button" onclick="togglePassword()" id="eye-btn" 
+                                            style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; display: none; font-size: 1.2rem;">
+                                        👁️
+                                    </button>
+                                </div>
+                            </div>
+            
+                            <div id="acciones-edicion" style="display: none; margin-top: 20px; gap: 10px;">
+                                <button type="submit" class="btn-config-save">Guardar Cambios</button>
+                                <button type="button" onclick="cancelarEdicion()" class="btn-config-save outline">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal encuesta de satisfacción (se muestra la 6ta vez que inicia sesión) -->
+    <div id="modal-encuesta" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; border-radius: 16px; padding: 28px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); border-top: 6px solid var(--primario-rosa);">
+            <h3 style="margin: 0 0 8px 0; color: var(--primario-rosa);">Encuesta de satisfacción</h3>
+            <p style="color: #666; font-size: 0.95rem; margin-bottom: 20px;">¿Qué tan satisfecho estás con la plataforma?</p>
+            <div style="display: flex; gap: 8px; margin-bottom: 20px; font-size: 1.8rem;" id="encuesta-estrellas">
+                <span data-valor="1" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="2" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="3" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="4" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="5" style="cursor: pointer; opacity: 0.4;">★</span>
+            </div>
+            <textarea id="encuesta-comentario" placeholder="Comentario (opcional)" style="width: 100%; min-height: 80px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 16px; box-sizing: border-box; resize: vertical;"></textarea>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" id="encuesta-cerrar-sin-enviar" style="padding: 10px 20px; background: #eee; border: none; border-radius: 10px; cursor: pointer;">Cerrar</button>
+                <button type="button" id="encuesta-enviar" style="padding: 10px 24px; background: var(--primario-rosa); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let api = null;
+        let miId = null; 
+        let psicologoSeleccionadoId = null;
+        let intervaloChat = null;
+        let miIdUsuario = null;
+
+// Pedir mi ID al cargar la página
+fetch('/api/quien-soy')
+    .then(res => res.json())
+    .then(data => {
+        miIdUsuario = data.id;
+        console.log("Identificado como usuario:", miIdUsuario);
+    })
+    .catch(err => console.error("Error al identificarse:", err));
+    
+        // 1. CARGAR DATOS INICIALES
+        fetch('/api/user-data')
+            .then(res => res.json())
+            .then(user => {
+                miId = user.id; // Guardamos el ID para el chat
+                document.getElementById('bienvenida-nombre').innerText = user.nombre;
+                document.getElementById('avatar-inicial').innerText = user.nombre[0].toUpperCase();
+                
+                if(document.getElementById('user-display-name')) {
+                    document.getElementById('user-display-name').innerText = user.nombre;
+                }
+    
+                // Llenar campos de configuración
+                if(document.getElementById('config-nombre')) document.getElementById('config-nombre').value = user.nombre;
+                if(document.getElementById('config-email')) document.getElementById('config-email').value = user.email;
+                if(document.getElementById('config-tel')) document.getElementById('config-tel').value = user.telefono || '';
+                
+                cargarCitas();
+            })
+            .catch(err => console.error("Error cargando datos de usuario:", err));
+
+        // Encuesta de satisfacción (6to inicio de sesión)
+        fetch('/api/encuesta-satisfaccion/estado').then(r => r.json()).then(data => {
+            if (!data.mostrarEncuesta) return;
+            const modal = document.getElementById('modal-encuesta');
+            const estrellas = document.querySelectorAll('#encuesta-estrellas span');
+            let valoracion = 0;
+            estrellas.forEach((s, i) => {
+                s.addEventListener('mouseenter', () => {
+                    estrellas.forEach((e, j) => { e.style.opacity = j <= i ? '1' : '0.4'; });
+                });
+                s.addEventListener('click', () => { valoracion = i + 1; });
+            });
+            document.getElementById('encuesta-estrellas').addEventListener('mouseleave', () => {
+                estrellas.forEach((e, j) => { e.style.opacity = j < valoracion ? '1' : '0.4'; });
+            });
+            const cerrarYMarcar = () => {
+                fetch('/api/encuesta-satisfaccion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valoracion: valoracion || null, comentario: document.getElementById('encuesta-comentario').value.trim() }) }).catch(() => {});
+                modal.style.display = 'none';
+            };
+            document.getElementById('encuesta-enviar').onclick = cerrarYMarcar;
+            document.getElementById('encuesta-cerrar-sin-enviar').onclick = cerrarYMarcar;
+            modal.style.display = 'flex';
+        }).catch(() => {});
+    
+        // 2. NAVEGACIÓN ÚNICA (CORREGIDA)
+        function mostrarSeccion(seccionId) {
+    // 1. Ocultar todas las secciones
+    document.querySelectorAll('.seccion-panel').forEach(sec => {
+        sec.style.display = 'none';
+    });
+
+    // 2. Mostrar la sección seleccionada (Sin bloqueos)
+    const seleccionada = document.getElementById('seccion-' + seccionId);
+    if (seleccionada) {
+        seleccionada.style.display = 'block';
+    }
+
+    // 3. Cargar contactos si entra al chat
+    if (seccionId === 'chat') {
+        cargarContactosChat();
+    }
+
+    // 4. Actualizar botones del sidebar
+    document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+    
+    // El 'window.event' es para cuando haces clic directo en el menú
+    if(window.event && window.event.currentTarget && window.event.currentTarget.classList) {
+        window.event.currentTarget.classList.add('active');
+    }
+
+    // 5. Cerrar Jitsi o quitar iframe de Zoho si salimos de video
+    if (seccionId !== 'video') {
+        if (api) { api.dispose(); api = null; }
+        const cont = document.getElementById('jitsi-container');
+        if (cont) cont.innerHTML = '';
+    }
+}
+    
+        // 3. LÓGICA DE CONFIGURACIÓN
+        function activarEdicion() {
+            document.getElementById('acciones-edicion').style.display = 'flex';
+            document.getElementById('btn-editar-toggle').style.display = 'none';
+            document.getElementById('eye-btn').style.display = 'block';
+    
+            const inputs = ['config-nombre', 'config-tel', 'config-pass'];
+            inputs.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.readOnly = false;
+                    el.classList.add('input-editable');
+                    el.classList.remove('input-readonly');
+                    if(id === 'config-pass') el.value = ''; 
+                }
+            });
+        }
+    
+        function cancelarEdicion() { location.reload(); }
+    
+        function togglePassword() {
+            const passInput = document.getElementById('config-pass');
+            const eyeBtn = document.getElementById('eye-btn');
+            passInput.type = (passInput.type === "password") ? "text" : "password";
+            eyeBtn.innerText = (passInput.type === "password") ? "👁️" : "🔒";
+        }
+    
+        document.getElementById('form-configuracion').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                nombre: document.getElementById('config-nombre').value,
+                telefono: document.getElementById('config-tel').value,
+                password: document.getElementById('config-pass').value
+            };
+            try {
+                const res = await fetch('/api/update-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) { mostrarPopup('¡Cambios guardados!', 'Listo'); location.reload(); }
+            } catch (error) { mostrarPopup('Error al guardar', 'Error'); }
+        });
+    
+        // 4. GESTIÓN DE CITAS
+        function cargarCitas() {
+            fetch('/api/mis-citas-paciente')
+                .then(res => res.json())
+                .then(citas => {
+                    const resumenDiv = document.getElementById('resumen-proxima-cita');
+                    const contenedorCitasProximas = document.getElementById('contenedor-citas-proximas');
+                    const contenedorCitasPasadas = document.getElementById('contenedor-citas-pasadas');
+                    const ahora = new Date();
+
+                    function getCitaDateTime(cita) {
+                        const [horas, minutos] = (cita.hora || "00:00:00").split(':');
+                        const fechaCita = new Date(cita.fecha);
+                        fechaCita.setHours(parseInt(horas, 10), parseInt(minutos, 10), 0, 0);
+                        return fechaCita;
+                    }
+
+                    // Filtrar y ordenar citas futuras
+                    const citasFuturas = citas.filter(cita => {
+                        // Las canceladas las mandamos al historial
+                        if (cita.estado === 'cancelada') return false;
+                        return getCitaDateTime(cita) > ahora;
+                    }).sort((a, b) => {
+                        return getCitaDateTime(a) - getCitaDateTime(b);
+                    });
+
+                    // Filtrar y ordenar citas pasadas
+                    const citasPasadas = citas.filter(cita => {
+                        if (cita.estado === 'cancelada') return true;
+                        return getCitaDateTime(cita) <= ahora;
+                    }).sort((a, b) => {
+                        return getCitaDateTime(b) - getCitaDateTime(a); // más recientes primero
+                    });
+
+                    // 0. Si nunca ha tenido cita, mostrar CTA "Agendar Cita" (lleva a la encuesta en inicio)
+                    const ctaAgendar = document.getElementById('cta-agendar-primera-vez');
+                    if (ctaAgendar) {
+                        ctaAgendar.style.display = (citas.length === 0) ? 'block' : 'none';
+                    }
+
+                    // 1. Actualizar Dashboard con la primera cita futura
+                    if (resumenDiv) {
+                        if (citasFuturas.length > 0) {
+                            const proxima = citasFuturas[0];
+                            resumenDiv.innerHTML = `<strong>Sesión con ${proxima.psicologo_nombre}</strong><br>
+                                ${new Date(proxima.fecha).toLocaleDateString()} - ${proxima.hora.slice(0,5)}`;
+                        } else {
+                            resumenDiv.innerHTML = `<p style=\"color: #888;\">No tienes citas pendientes.</p>`;
+                        }
+                    }
+
+                    // 2. Renderizar PRÓXIMAS CITAS en su contenedor
+                    if (contenedorCitasProximas) {
+                        if (citasFuturas.length === 0) {
+                            contenedorCitasProximas.innerHTML = `<p style=\"padding:20px;\">No tienes próximas citas programadas.</p>`;
+                        } else {
+                            contenedorCitasProximas.innerHTML = citasFuturas.map(cita => generarTarjetaCita(cita, true)).join('');
+                        }
+                    }
+
+                    // 3. Renderizar HISTORIAL DE CITAS: por defecto solo las de este mes, o si no hay, la última; "Cargar más" muestra todas
+                    const historialCargarMasWrap = document.getElementById('historial-cargar-mas-wrap');
+                    const btnHistorialCargarMas = document.getElementById('btn-historial-cargar-mas');
+                    if (contenedorCitasPasadas) {
+                        if (citasPasadas.length === 0) {
+                            contenedorCitasPasadas.innerHTML = `<p style=\"padding:20px;\">No hay historial de citas.</p>`;
+                            if (historialCargarMasWrap) historialCargarMasWrap.style.display = 'none';
+                        } else {
+                            const ahora = new Date();
+                            const mesActual = ahora.getMonth();
+                            const anioActual = ahora.getFullYear();
+                            const citasEsteMes = citasPasadas.filter(c => {
+                                const d = new Date(c.fecha);
+                                return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+                            });
+                            const citasIniciales = citasEsteMes.length > 0 ? citasEsteMes : citasPasadas.slice(0, 1);
+                            const idsIniciales = new Set(citasIniciales.map(c => c.id));
+                            const hayMas = citasPasadas.some(c => !idsIniciales.has(c.id));
+
+                            contenedorCitasPasadas.innerHTML = citasIniciales.map(cita => generarTarjetaCita(cita, false)).join('');
+
+                            if (historialCargarMasWrap && btnHistorialCargarMas) {
+                                if (hayMas) {
+                                    historialCargarMasWrap.style.display = 'block';
+                                    btnHistorialCargarMas.onclick = function() {
+                                        contenedorCitasPasadas.innerHTML = citasPasadas.map(cita => generarTarjetaCita(cita, false)).join('');
+                                        historialCargarMasWrap.style.display = 'none';
+                                    };
+                                } else {
+                                    historialCargarMasWrap.style.display = 'none';
+                                }
+                            }
+                        }
+                    }
+
+                    // Asegurarse de que generarTarjetaCita esté definida y funcione correctamente
+                    function generarTarjetaCita(cita, esFutura) {
+                        const fechaFormateada = new Date(cita.fecha).toLocaleDateString('es-MX', {
+                            weekday: 'long', day: 'numeric', month: 'long'
+                        });
+
+                        const hoursUntil = (getCitaDateTime(cita) - ahora) / 3600000;
+
+                        const puedeCancelar = esFutura
+                            && (cita.estado === 'pendiente' || cita.estado === 'confirmada')
+                            && hoursUntil >= 36;
+
+                        const puedeReagendar = esFutura
+                            && (cita.estado === 'pendiente' || cita.estado === 'confirmada')
+                            && hoursUntil >= 24;
+
+                        const puedeAgendarOtra = true;
+
+                        const estadoTexto = (cita.estado || '').toString();
+                        const estadoClass = estadoTexto.toLowerCase().replace(/\s+/g, '-');
+
+                        const escJs = (s) => (s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r/g,'').replace(/\n/g,' ');
+                        const botonPrincipal = esFutura
+                            ? `
+                                <button onclick="iniciarVideo('${escJs(cita.link_sesion || '')}', '${escJs(cita.psicologo_nombre || '')}', ${cita.id})" class="btn-entrar-sesion">
+                                    🎥 Unirse
+                                </button>
+                              `
+                            : `
+                                <button onclick="abrirModalDetalleCita('${encodeURIComponent(cita.psicologo_nombre)}','${new Date(cita.fecha).toISOString()}','${cita.hora}','${encodeURIComponent(estadoTexto)}','${encodeURIComponent(cita.link_sesion || '')}',${cita.id})" class="btn-entrar-sesion">
+                                    📄 Ver detalles
+                                </button>
+                              `;
+
+                        return `
+                            <div class="cita-card-panel cita-card-v2">
+                                <div class="cita-card-header">
+                                    <h4 class="cita-card-title">Sesión con ${cita.psicologo_nombre}</h4>
+                                    <span class="cita-estado-pill ${estadoClass}">${estadoTexto}</span>
+                                </div>
+
+                                <div class="cita-card-meta">
+                                    <span>📅 ${fechaFormateada}</span>
+                                    <span>⏰ ${cita.hora.slice(0,5)}</span>
+                                </div>
+
+                                <div class="cita-card-actions">
+                                    ${botonPrincipal}
+
+                                    ${puedeAgendarOtra ? `
+                                        <button onclick="abrirModalGestionCita('agendar', null, ${cita.psicologo_id}, '${encodeURIComponent(cita.psicologo_nombre)}')" class="btn-cita-secundario btn-agendar-otra">
+                                            ➕ Agendar otra
+                                        </button>
+                                    ` : ''}
+
+                                    ${puedeReagendar ? `
+                                        <button onclick="abrirModalGestionCita('reagendar', ${cita.id}, ${cita.psicologo_id}, '${encodeURIComponent(cita.psicologo_nombre)}', '${new Date(cita.fecha).toISOString()}', '${cita.hora}')" class="btn-cita-secundario">
+                                            🔁 Reagendar
+                                        </button>
+                                    ` : ''}
+
+                                    ${puedeCancelar ? `
+                                        <button onclick="cancelarCita(${cita.id})" class="btn-cita-danger">
+                                            ❌ Cancelar
+                                        </button>
+                                    ` : ''}
+
+                                    ${cita.estado === 'realizada' ? `
+                                        <button onclick="abrirModalOpinion(${cita.psicologo_id}, '${encodeURIComponent(cita.psicologo_nombre)}')" class="btn-opinar-cita">
+                                            ⭐ Opinar
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>`;
+                    }
+
+                })
+                .catch(err => console.error("Error cargando citas:", err));
+        }
+    
+        function loadJitsiScript(appId) {
+            const url = appId
+                ? `https://8x8.vc/${encodeURIComponent(appId)}/external_api.js`
+                : 'https://meet.jit.si/external_api.js';
+            if (window.JitsiMeetExternalAPI) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = url;
+                s.onload = () => resolve();
+                s.onerror = () => reject(new Error('No se pudo cargar el script de video (revise conexión o App ID en .env)'));
+                document.head.appendChild(s);
+            });
+        }
+
+        async function iniciarVideo(urlSesion, doctorNombre, citaId) {
+            if (!urlSesion) {
+                mostrarPopup("Esta cita no tiene enlace de video.", "No se puede iniciar sesión");
+                return;
+            }
+            let roomSlug = (urlSesion.split('/').pop() || '').split('?')[0].trim();
+            if (!roomSlug || ['perfil', 'n', 'panel-doctor', 'catalogo', 'login'].indexOf(roomSlug) >= 0) {
+                const match = urlSesion.match(/[?&]sala=([^&]+)/);
+                roomSlug = (match && match[1]) ? match[1] : ('sesion-' + (citaId || Date.now()));
+            }
+            roomSlug = (roomSlug || '').replace(/[^a-zA-Z0-9\-_]/g, '') || ('sesion-' + (citaId || Date.now()));
+            const cont = document.getElementById('jitsi-container');
+            if (cont) cont.innerHTML = '';
+            if (api) { api.dispose(); api = null; }
+            mostrarSeccion('video');
+            document.getElementById('info-sesion').innerText = "Sesión con: " + doctorNombre;
+            try {
+                const configRes = await fetch('/api/jaas-config');
+                const data = await configRes.json();
+                const appId = (data.appId || '').replace(/\s+/g, '').trim();
+                await loadJitsiScript(appId);
+                const domain = appId ? '8x8.vc' : 'meet.jit.si';
+                const roomName = appId ? (appId + '/' + roomSlug) : roomSlug;
+                if (!window.JitsiMeetExternalAPI) {
+                    throw new Error('No se cargó el script de Jitsi. Revisa la consola (F12).');
+                }
+                let jwtToken = null;
+                if (appId) {
+                    try {
+                        const jwtRes = await fetch(`/api/jaas-jwt?roomName=${encodeURIComponent(roomName)}&moderator=false`);
+                        if (jwtRes.ok) {
+                            const jwtData = await jwtRes.json();
+                            jwtToken = jwtData.jwt || null;
+                        }
+                    } catch (_) {}
+                }
+                const options = {
+                    roomName,
+                    width: "100%",
+                    height: "100%",
+                    parentNode: document.querySelector('#jitsi-container')
+                };
+                if (jwtToken && typeof jwtToken === 'string') options.jwt = jwtToken;
+                api = new JitsiMeetExternalAPI(domain, options);
+                if (citaId) {
+                    api.addEventListener('videoConferenceJoined', () => {
+                        fetch(`/api/citas/${citaId}/registrar-entrada`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ rol: 'paciente' })
+                        }).catch(() => {});
+                    });
+                }
+            } catch (e) {
+                console.error('Error videollamada:', e);
+                mostrarPopup("Error al cargar la videollamada: " + (e.message || 'Intenta de nuevo.'), "Error");
+            }
+        }
+    
+        // 5. CHAT
+        function cargarContactosChat() {
+            fetch('/api/mis-psicologos-contacto')
+                .then(res => res.json())
+                .then(contactos => {
+                    const lista = document.getElementById('lista-contactos-chat');
+                    const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    lista.innerHTML = contactos.map(p => {
+                        const nombre = p.nombre || '';
+                        return `<div class="contacto-item contacto-item-psicologo" 
+                             data-nombre="${esc(nombre)}" 
+                             onclick="abrirChat(${p.id}, this.getAttribute('data-nombre'), ${p.usuario_id})">
+                            <strong class="contacto-item-nombre">${esc(nombre)}</strong>
+                        </div>`;
+                    }).join('');
+                });
+        }
+
+function abrirChat(psicologoTablaId, nombre, psicologoUsuarioId) {
+    // IMPORTANTE: 'psicologoUsuarioId' es el ID de usuario del psicólogo (el que va en los mensajes)
+    psicologoSeleccionadoId = psicologoUsuarioId; 
+    
+    const titulo = document.getElementById('nombre-psicologo-chat');
+    const input = document.getElementById('input-mensaje');
+    const boton = document.getElementById('btn-enviar-chat');
+
+    if (titulo) titulo.innerText = nombre;
+    
+    const btnPdf = document.getElementById('btn-adjuntar-pdf-chat');
+    if (input && boton) {
+        input.disabled = false;
+        boton.disabled = false;
+        if (btnPdf) btnPdf.disabled = false;
+        input.focus();
+    }
+
+    // 1. Limpiar intervalo previo
+    if (intervaloChat) clearInterval(intervaloChat);
+
+    // 2. Carga inicial
+    cargarMensajes(psicologoUsuarioId);
+
+    // 3. Reloj de actualización cada 3 segundos
+    intervaloChat = setInterval(() => {
+        cargarMensajes(psicologoUsuarioId);
+    }, 3000);
+}
+
+function cargarMensajes(destinatarioId) {
+    if (!destinatarioId || destinatarioId === 'undefined') return;
+
+    fetch(`/api/mensajes/${destinatarioId}`)
+        .then(res => res.json())
+        .then(data => {
+            // Extraemos los datos del objeto { mensajes, miId }
+            const mensajes = data.mensajes || [];
+            const miIdDesdeServidor = data.miId; 
+
+            const contenedor = document.getElementById('chat-messages');
+            if (!contenedor) return;
+
+            contenedor.innerHTML = mensajes.map(m => {
+                const soyYo = m.remitente_id == miIdDesdeServidor;
+                const clase = soyYo ? 'enviado' : 'recibido';
+                const adjunto = (m.ruta_adjunto && m.nombre_adjunto)
+                    ? `<a href="/api/chat/archivo/${m.id}" target="_blank" rel="noopener" class="msg-adjunto-pdf">📎 ${(m.nombre_adjunto || 'documento.pdf').replace(/</g, '&lt;')}</a>`
+                    : '';
+                const texto = (m.contenido || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return `
+                    <div class="msg ${clase}">
+                        ${adjunto}
+                        ${texto ? '<span>' + texto + '</span>' : ''}
+                    </div>`;
+            }).join('');
+            
+            contenedor.scrollTop = contenedor.scrollHeight;
+        })
+        .catch(err => console.error("Error cargando mensajes:", err));
+}
+
+function enviarMensajeChat() {
+    const input = document.getElementById('input-mensaje');
+    const contenido = input.value.trim();
+    if (!contenido || !psicologoSeleccionadoId) return;
+    (async () => {
+        try {
+            const res = await fetch('/api/enviar-mensaje', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ destinatarioId: psicologoSeleccionadoId, contenido })
+            });
+            if (res.ok) {
+                input.value = '';
+                cargarMensajes(psicologoSeleccionadoId);
+            }
+        } catch (error) { console.error("Error al enviar:", error); }
+    })();
+}
+
+document.getElementById('btn-enviar-chat').onclick = enviarMensajeChat;
+
+document.getElementById('input-mensaje').onkeydown = (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        enviarMensajeChat();
+    }
+};
+
+document.getElementById('btn-adjuntar-pdf-chat').onclick = () => document.getElementById('input-chat-pdf').click();
+document.getElementById('input-chat-pdf').addEventListener('change', async function() {
+    const file = this.files && this.files[0];
+    if (!file || !psicologoSeleccionadoId) return;
+    const formData = new FormData();
+    formData.append('archivo', file);
+    formData.append('destinatarioId', psicologoSeleccionadoId);
+    try {
+        const res = await fetch('/api/chat/adjunto', { method: 'POST', body: formData, credentials: 'same-origin' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { alert(data.error || 'Error al enviar el PDF'); return; }
+        this.value = '';
+        cargarMensajes(psicologoSeleccionadoId);
+    } catch (e) { alert('Error de conexión'); }
+});
+
+        // 6. LÓGICA DE OPINIONES
+        let idPsicoActual = null;
+
+        function abrirModalOpinion(id, nombreCodificado) {
+            const nombre = decodeURIComponent(nombreCodificado);
+            idPsicoActual = id;
+            document.getElementById('opinar-sobre-nombre').innerText = "Psicólogo: " + nombre;
+            document.getElementById('modal-opinion').style.display = 'flex';
+        }
+
+        function cerrarModalOpinion() {
+            document.getElementById('modal-opinion').style.display = 'none';
+            document.getElementById('opinion-comentario').value = '';
+        }
+
+        function abrirModalDetalleCita(psicologoNombreCod, fechaISO, hora, estadoCod, linkCod, citaId) {
+            const nombre = decodeURIComponent(psicologoNombreCod || '');
+            const estado = decodeURIComponent(estadoCod || '');
+            const link = decodeURIComponent(linkCod || '');
+
+            document.getElementById('detalle-cita-titulo').innerText = `Detalle de cita #${citaId}`;
+
+            const fechaFormateada = new Date(fechaISO).toLocaleDateString('es-MX', {
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+            });
+
+            const body = document.getElementById('detalle-cita-body');
+            body.innerHTML = `
+                <div><strong>Psicólogo:</strong> ${nombre}</div>
+                <div><strong>Fecha:</strong> ${fechaFormateada}</div>
+                <div><strong>Hora:</strong> ${(hora || '').slice(0,5)}</div>
+                <div><strong>Estado:</strong> ${estado}</div>
+                ${link ? `<div><strong>Link de sesión:</strong> <span style="word-break:break-all;">${link}</span></div>` : `<div style="color:#888;"><strong>Link de sesión:</strong> (no asignado)</div>`}
+            `;
+
+            document.getElementById('modal-detalle-cita').style.display = 'flex';
+        }
+
+        function cerrarModalDetalleCita() {
+            document.getElementById('modal-detalle-cita').style.display = 'none';
+        }
+
+        async function enviarOpinion() {
+            const estrellas = document.getElementById('opinion-estrellas').value;
+            const comentario = document.getElementById('opinion-comentario').value;
+
+            if(!comentario.trim()) return mostrarPopup("Por favor escribe un comentario.", "Falta información");
+
+            try {
+        const res = await fetch('/api/dejar-opinion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                psicologo_id: idPsicoActual, // <--- AÑADE ESTA LÍNEA
+                estrellas: estrellas,
+                comentario: comentario
+            })
+        });
+
+                if (res.ok) {
+                    mostrarPopup("¡Gracias! Tu opinión ha sido publicada.", "Listo");
+                    cerrarModalOpinion();
+                    location.reload(); 
+                } else {
+                    const err = await res.json();
+                    mostrarPopup(err.error || "Error al enviar la opinión", "Error");
+                }
+            } catch (error) {
+                mostrarPopup("Hubo un error al conectar con el servidor.", "Error");
+            }
+        }
+
+        // 7. GESTIÓN DE CITAS (Agendar/Reagendar/Cancelar)
+        let gestionModo = null; // 'agendar' | 'reagendar'
+        let gestionCitaId = null;
+        let gestionPsicologoId = null;
+
+        function toLocalDateInputValue(dateLike) {
+            const d = new Date(dateLike);
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            return d.toISOString().slice(0, 10);
+        }
+
+        let calendarioGestion = null;
+
+        async function abrirModalGestionCita(modo, citaId, psicologoId, psicologoNombreCod, fechaISO = null, hora = null) {
+            gestionModo = modo;
+            gestionCitaId = citaId;
+            gestionPsicologoId = psicologoId;
+
+            const nombre = decodeURIComponent(psicologoNombreCod || '');
+            document.getElementById('gestion-cita-titulo').innerText = (modo === 'reagendar') ? 'Reagendar cita' : 'Agendar cita';
+            document.getElementById('gestion-cita-subtitulo').innerText = nombre ? `Psicólogo: ${nombre}` : '';
+
+            const selectHora = document.getElementById('gestion-cita-hora');
+            selectHora.innerHTML = '<option value="" disabled selected>Primero selecciona una fecha...</option>';
+            document.getElementById('gestion-mensaje-horarios').innerText = '';
+
+            document.getElementById('modal-gestion-cita').style.display = 'flex';
+
+            // Inicializar Flatpickr
+            await inicializarCalendarioGestion(psicologoId, fechaISO, hora);
+        }
+
+        async function inicializarCalendarioGestion(psicologoId, fechaInicial = null, horaInicial = null) {
+            if (calendarioGestion) {
+                calendarioGestion.destroy();
+            }
+
+            try {
+                const res = await fetch(`/api/disponibilidad-calendario/${psicologoId}`);
+                const disponibilidad = await res.json();
+
+                const diasNoLaborales = disponibilidad.diasNoLaborales || [];
+                const fechasBloqueadas = disponibilidad.fechasBloqueadas || [];
+
+                calendarioGestion = flatpickr('#gestion-cita-fecha', {
+                    locale: 'es',
+                    dateFormat: 'Y-m-d',
+                    minDate: 'today',
+                    maxDate: new Date().fp_incr(90),
+                    disable: [
+                        function(date) {
+                            return diasNoLaborales.includes(date.getDay());
+                        },
+                        ...fechasBloqueadas
+                    ],
+                    defaultDate: fechaInicial ? toLocalDateInputValue(fechaInicial) : null,
+                    onChange: function(selectedDates, dateStr) {
+                        if (dateStr) {
+                            cargarHorariosGestion(dateStr, psicologoId, horaInicial);
+                            horaInicial = null; // Solo usar la primera vez
+                        }
+                    }
+                });
+
+                // Si hay fecha inicial, cargar horarios
+                if (fechaInicial) {
+                    const fechaStr = toLocalDateInputValue(fechaInicial);
+                    cargarHorariosGestion(fechaStr, psicologoId, horaInicial);
+                }
+
+            } catch (error) {
+                console.error('Error al cargar disponibilidad:', error);
+            }
+        }
+
+        async function cargarHorariosGestion(fecha, psicologoId, horaSeleccionada = null) {
+            const selectHora = document.getElementById('gestion-cita-hora');
+            const mensaje = document.getElementById('gestion-mensaje-horarios');
+
+            selectHora.innerHTML = '<option value="" disabled selected>Cargando...</option>';
+            mensaje.innerText = '';
+
+            try {
+                const res = await fetch(`/api/horarios-disponibles/${psicologoId}?fecha=${fecha}`);
+                const data = await res.json();
+
+                if (!data.disponible || data.horarios.length === 0) {
+                    selectHora.innerHTML = '<option value="" disabled selected>No hay horarios</option>';
+                    mensaje.innerText = data.mensaje || 'No hay horarios disponibles.';
+                    mensaje.style.color = '#e74c3c';
+                    return;
+                }
+
+                selectHora.innerHTML = '<option value="" disabled>Elige una hora...</option>';
+                data.horarios.forEach(hora => {
+                    const h = parseInt(hora.split(':')[0], 10);
+                    const periodo = h < 12 ? 'AM' : 'PM';
+                    const hora12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+                    const selected = (horaSeleccionada && hora === horaSeleccionada.slice(0,5)) ? 'selected' : '';
+                    selectHora.innerHTML += `<option value="${hora}" ${selected}>${String(hora12).padStart(2, '0')}:00 ${periodo}</option>`;
+                });
+
+                // Si ninguna fue seleccionada, seleccionar el placeholder
+                if (!horaSeleccionada || !data.horarios.includes(horaSeleccionada?.slice(0,5))) {
+                    selectHora.selectedIndex = 0;
+                }
+
+                mensaje.innerText = `${data.horarios.length} horario(s) disponible(s)`;
+                mensaje.style.color = '#27ae60';
+
+            } catch (error) {
+                selectHora.innerHTML = '<option value="" disabled selected>Error</option>';
+                mensaje.innerText = 'Error de conexión';
+                mensaje.style.color = '#e74c3c';
+            }
+        }
+
+        function cerrarModalGestionCita() {
+            document.getElementById('modal-gestion-cita').style.display = 'none';
+            gestionModo = null;
+            gestionCitaId = null;
+            gestionPsicologoId = null;
+        }
+
+        async function confirmarGestionCita() {
+            const fecha = document.getElementById('gestion-cita-fecha').value;
+            const hora = document.getElementById('gestion-cita-hora').value;
+
+            if (!fecha || !hora) return mostrarPopup('Selecciona fecha y hora.', 'Falta información');
+
+            try {
+                let res;
+                if (gestionModo === 'reagendar') {
+                    res = await fetch('/api/reagendar-cita', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cita_id: gestionCitaId, fecha, hora })
+                    });
+                    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+                    let data = null;
+                    let text = '';
+                    if (contentType.includes('application/json')) {
+                        data = await res.json().catch(() => null);
+                    } else {
+                        text = await res.text().catch(() => '');
+                    }
+                    if (!res.ok) {
+                        const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+                        return mostrarPopup(msg, 'No se pudo guardar');
+                    }
+                    cerrarModalGestionCita();
+                    cargarCitas();
+                    mostrarPopup('Listo', 'Cita actualizada');
+                } else {
+                    // Agendar nueva cita: ir a Stripe Checkout para pagar
+                    res = await fetch('/api/crear-sesion-pago', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            psicologo_id: gestionPsicologoId,
+                            fecha,
+                            hora,
+                            servicio_interes: 'Sesión de psicoterapia'
+                        })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.url) {
+                        cerrarModalGestionCita();
+                        window.location.href = data.url;
+                        return;
+                    }
+                    mostrarPopup(data.error || 'No se pudo iniciar el pago. Intenta de nuevo.', 'Error');
+                }
+            } catch (e) {
+                mostrarPopup('Error de conexión', 'Error');
+            }
+        }
+
+        async function cancelarCita(citaId) {
+            const ok = await confirmarPopup('¿Seguro que quieres cancelar esta cita?', 'Confirmar');
+            if (!ok) return;
+            try {
+                const res = await fetch('/api/cancelar-cita', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cita_id: citaId })
+                });
+                const contentType = (res.headers.get('content-type') || '').toLowerCase();
+                let data = null;
+                let text = '';
+                if (contentType.includes('application/json')) {
+                    data = await res.json().catch(() => null);
+                } else {
+                    text = await res.text().catch(() => '');
+                }
+
+                if (!res.ok) {
+                    const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+                    console.error('Error cancelar cita:', res.status, data || text);
+                    return mostrarPopup(msg, 'No se pudo cancelar');
+                }
+                cargarCitas();
+                mostrarPopup('Cita cancelada.', 'Listo');
+            } catch (e) {
+                mostrarPopup('Error de conexión.', 'Error');
+            }
+        }
+
+        // Popup (reemplazo de alert)
+        function mostrarPopup(mensaje, titulo = 'Aviso') {
+            const t = document.getElementById('modal-feedback-titulo');
+            const m = document.getElementById('modal-feedback-mensaje');
+            if (t) t.innerText = titulo;
+            if (m) m.innerText = mensaje;
+            document.getElementById('modal-feedback').style.display = 'flex';
+        }
+
+        function cerrarPopup() {
+            document.getElementById('modal-feedback').style.display = 'none';
+        }
+
+        function confirmarPopup(mensaje, titulo = 'Confirmar') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('modal-feedback');
+                const t = document.getElementById('modal-feedback-titulo');
+                const m = document.getElementById('modal-feedback-mensaje');
+                if (t) t.innerText = titulo;
+                if (m) m.innerText = mensaje;
+
+                // Reemplazamos el footer por botones Sí/No
+                const container = modal.querySelector('div');
+                let actions = container.querySelector('.popup-actions');
+                if (!actions) {
+                    actions = document.createElement('div');
+                    actions.className = 'popup-actions';
+                    actions.style.cssText = 'display:flex; justify-content:flex-end; gap:10px; margin-top:18px;';
+                    container.appendChild(actions);
+                }
+                actions.innerHTML = `
+                    <button id="popup-no" class="btn-cita-secundario" type="button">No</button>
+                    <button id="popup-si" class="btn-cita-danger" type="button">Sí</button>
+                `;
+
+                modal.style.display = 'flex';
+
+                const cleanup = () => {
+                    document.getElementById('popup-no')?.removeEventListener('click', onNo);
+                    document.getElementById('popup-si')?.removeEventListener('click', onSi);
+                    cerrarPopup();
+                };
+                const onNo = () => { cleanup(); resolve(false); };
+                const onSi = () => { cleanup(); resolve(true); };
+                document.getElementById('popup-no')?.addEventListener('click', onNo);
+                document.getElementById('popup-si')?.addEventListener('click', onSi);
+            });
+        }
+    </script>
