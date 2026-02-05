@@ -488,8 +488,23 @@
             });
         }
 
+        // Obtener región: primero desde el navegador (IP real del usuario; evita que Railway/USA devuelva USD)
+        function obtenerPrecioRegion() {
+            return fetch('https://ipapi.co/json/')
+                .then(r => r.json())
+                .then(data => {
+                    const inMexico = (data.country_code || '') === 'MX';
+                    return {
+                        currency: inMexico ? 'MXN' : 'USD',
+                        amount: inMexico ? 600 : 55,
+                        inMexico: inMexico
+                    };
+                })
+                .catch(() => fetch('/api/precio-region').then(r => r.json()));
+        }
+
         // Cargar psicólogos y montar filtros
-        Promise.all([fetch('/api/psicologos').then(r => r.json()), fetch('/api/precio-region').then(r => r.json())])
+        Promise.all([fetch('/api/psicologos').then(r => r.json()), obtenerPrecioRegion()])
             .then(([psicologos, precioRegion]) => {
                 listaPsicologosCompleta = Array.isArray(psicologos) ? psicologos : [];
                 precioAmount = precioRegion.amount ?? (precioRegion.currency === 'USD' ? 55 : 600);
@@ -825,7 +840,8 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
                 psicologo_id: parseInt(document.getElementById('psico-id-input').value, 10),
                 fecha: document.getElementById('fecha-cita').value,
                 hora: document.getElementById('hora-cita').value,
-                servicio_interes: document.getElementById('servicio-interes').value || null
+                servicio_interes: document.getElementById('servicio-interes').value || null,
+                currency: typeof precioCurrency !== 'undefined' ? precioCurrency : 'MXN'
             };
 
             const res = await fetch('/api/crear-sesion-pago', {
