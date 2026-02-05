@@ -2828,9 +2828,10 @@ app.get('/api/chat/archivo/:mensajeId', authRequired, async (req, res) => {
     }
 });
 
-// 5. ENCENDIDO DEL SERVIDOR
-app.listen(3000, () => {
-    console.log('Servidor funcionando en http://localhost:3000');
+// 5. ENCENDIDO DEL SERVIDOR (Railway/hosting usan process.env.PORT)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log('Servidor funcionando en puerto', PORT);
     ejecutarRecordatoriosCitas();
     setInterval(ejecutarRecordatoriosCitas, 5 * 60 * 1000);
 });
