@@ -96,16 +96,20 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
     res.status(200).send();
 });
 
-// Configuración de Zoho Mail (en producción usar env vars: EMAIL_USER, EMAIL_PASS)
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.zoho.com',
-    port: parseInt(process.env.EMAIL_PORT || '465', 10),
-    secure: true,
-    auth: {
-        user: process.env.EMAIL_USER || 'contacto@psicologosenred.com',
-        pass: process.env.EMAIL_PASS || 'Flugufelsarinn18!'
-    }
-});
+// Configuración de Zoho Mail. En Railway usar EMAIL_USER, EMAIL_PASS. Puerto 587 (STARTTLS) suele funcionar si 465 está bloqueado.
+function getEmailTransporter() {
+    const port = parseInt(process.env.EMAIL_PORT || '587', 10);
+    return nodemailer.createTransport({
+        host: process.env.EMAIL_HOST || 'smtp.zoho.com',
+        port,
+        secure: port === 465,
+        auth: {
+            user: process.env.EMAIL_USER || 'contacto@psicologosenred.com',
+            pass: process.env.EMAIL_PASS || 'Flugufelsarinn18!'
+        }
+    });
+}
+const transporter = getEmailTransporter();
 
 // URL base del sitio (emails, Stripe success/cancel). En producción usar tu dominio HTTPS.
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -1318,7 +1322,8 @@ app.post('/registrar-usuario', async (req, res) => {
                 `
             });
         } catch (errMail) {
-            console.error('Error enviando correo de verificación al registrarse:', errMail.message || errMail);
+            console.error('Error enviando correo de verificación:', errMail.message);
+            if (errMail.code) console.error('Código:', errMail.code);
         }
 
         res.redirect('/registro-exitoso');
