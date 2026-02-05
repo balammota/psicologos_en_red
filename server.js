@@ -96,14 +96,14 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
     res.status(200).send();
 });
 
-// Configuración de Zoho Mail
+// Configuración de Zoho Mail (en producción usar env vars: EMAIL_USER, EMAIL_PASS)
 const transporter = nodemailer.createTransport({
-    host: 'smtp.zoho.com',
-    port: 465,
+    host: process.env.EMAIL_HOST || 'smtp.zoho.com',
+    port: parseInt(process.env.EMAIL_PORT || '465', 10),
     secure: true,
     auth: {
-        user: 'contacto@psicologosenred.com',
-        pass: 'Flugufelsarinn18!'
+        user: process.env.EMAIL_USER || 'contacto@psicologosenred.com',
+        pass: process.env.EMAIL_PASS || 'Flugufelsarinn18!'
     }
 });
 
@@ -1292,30 +1292,34 @@ app.post('/registrar-usuario', async (req, res) => {
             [nombre, email, telefonoNorm, hashedPassword, rol || 'paciente', aceptoTerminos, aceptoPublicidad, false, tokenVerificacion, tokenExpira]
         );
 
-        // Enviar email de verificación
+        // Enviar email de verificación (si falla, igual redirigimos para que pueda usar "Reenviar verificación")
         const enlaceVerificacion = `${BASE_URL}/verificar-email?token=${tokenVerificacion}`;
-        
-        await transporter.sendMail({
-            from: '"Psicólogos en Red" <contacto@psicologosenred.com>',
-            to: email,
-            subject: '✅ Verifica tu cuenta - Psicólogos en Red',
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #c9a0dc;">Psicólogos en Red</h1>
+        const fromEmail = process.env.EMAIL_USER || 'contacto@psicologosenred.com';
+        try {
+            await transporter.sendMail({
+                from: `"Psicólogos en Red" <${fromEmail}>`,
+                to: email,
+                subject: '✅ Verifica tu cuenta - Psicólogos en Red',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1 style="color: #c9a0dc;">Psicólogos en Red</h1>
+                        </div>
+                        <h2 style="color: #333;">¡Hola ${nombre}!</h2>
+                        <p style="color: #666; font-size: 16px;">Gracias por registrarte en Psicólogos en Red. Para completar tu registro y acceder a tu cuenta, por favor verifica tu correo electrónico haciendo clic en el siguiente botón:</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${enlaceVerificacion}" style="background: linear-gradient(135deg, #c9a0dc 0%, #a0c4e8 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-size: 16px; font-weight: bold;">Verificar mi cuenta</a>
+                        </div>
+                        <p style="color: #999; font-size: 14px;">Este enlace expira en 24 horas.</p>
+                        <p style="color: #999; font-size: 14px;">Si no creaste esta cuenta, puedes ignorar este correo.</p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                        <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red. Todos los derechos reservados.</p>
                     </div>
-                    <h2 style="color: #333;">¡Hola ${nombre}!</h2>
-                    <p style="color: #666; font-size: 16px;">Gracias por registrarte en Psicólogos en Red. Para completar tu registro y acceder a tu cuenta, por favor verifica tu correo electrónico haciendo clic en el siguiente botón:</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="${enlaceVerificacion}" style="background: linear-gradient(135deg, #c9a0dc 0%, #a0c4e8 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-size: 16px; font-weight: bold;">Verificar mi cuenta</a>
-                    </div>
-                    <p style="color: #999; font-size: 14px;">Este enlace expira en 24 horas.</p>
-                    <p style="color: #999; font-size: 14px;">Si no creaste esta cuenta, puedes ignorar este correo.</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                    <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red. Todos los derechos reservados.</p>
-                </div>
-            `
-        });
+                `
+            });
+        } catch (errMail) {
+            console.error('Error enviando correo de verificación al registrarse:', errMail.message || errMail);
+        }
 
         res.redirect('/registro-exitoso');
     } catch (error) {
