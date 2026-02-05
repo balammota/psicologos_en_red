@@ -114,14 +114,17 @@ const transporter = getEmailTransporter();
 /** Envía correo: por Resend (API HTTP) si RESEND_API_KEY está definida —evita bloqueo SMTP en Railway—; si no, por Nodemailer (SMTP). */
 async function sendMail(opts) {
     if (process.env.RESEND_API_KEY) {
-        const from = opts.from || `"Psicólogos en Red" <${process.env.RESEND_FROM || process.env.EMAIL_USER || 'onboarding@resend.dev'}>`;
+        // Resend exige dominio verificado. Sin RESEND_FROM usamos el remitente de prueba (onboarding@resend.dev).
+        const resendFrom = process.env.RESEND_FROM || 'onboarding@resend.dev';
+        const from = `Psicólogos en Red <${resendFrom}>`;
         const to = Array.isArray(opts.to) ? opts.to : (opts.to ? [opts.to] : []);
         const body = {
-            from: from.replace(/^"([^"]*)"\s*<([^>]*)>$/, (_, name, email) => `${name} <${email}>`).trim() || from,
+            from,
             to,
             subject: opts.subject,
             html: opts.html
         };
+        if (opts.bcc) body.bcc = Array.isArray(opts.bcc) ? opts.bcc : [opts.bcc];
         if (opts.attachments && opts.attachments.length) {
             body.attachments = opts.attachments.map(a => ({
                 filename: a.filename,
@@ -137,7 +140,7 @@ async function sendMail(opts) {
         if (!res.ok || data.error) throw new Error(data.message || data.error?.message || data.error || 'Resend error');
         return data;
     }
-    return sendMail(opts);
+    return transporter.sendMail(opts);
 }
 
 // URL base del sitio (emails, Stripe success/cancel). En producción usar tu dominio HTTPS.
