@@ -1352,7 +1352,10 @@ app.post('/auth/olvide-password', (req, res) => {
     (async () => {
         try {
             const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-            if (result.rows.length === 0) return;
+            if (result.rows.length === 0) {
+                console.log('[olvide-password] Correo no encontrado en BD:', email);
+                return;
+            }
             const usuario = result.rows[0];
             const tokenReset = crypto.randomBytes(32).toString('hex');
             const tokenExpira = new Date(Date.now() + 60 * 60 * 1000);
@@ -1362,6 +1365,9 @@ app.post('/auth/olvide-password', (req, res) => {
             );
             const resetLink = `${BASE_URL}/reestablecer-password?token=${tokenReset}`;
             const fromEmail = process.env.EMAIL_USER || 'contacto@psicologosenred.com';
+            if (!process.env.EMAIL_USER && !process.env.EMAIL_PASS) {
+                console.warn('[olvide-password] EMAIL_USER o EMAIL_PASS no configurados en env');
+            }
             await transporter.sendMail({
                 from: `"Psicólogos en Red" <${fromEmail}>`,
                 to: email,
@@ -1380,8 +1386,10 @@ app.post('/auth/olvide-password', (req, res) => {
                     </div>
                 `
             });
+            console.log('[olvide-password] Correo enviado a:', email);
         } catch (e) {
-            console.error('Error olvide-password (background):', e.message);
+            console.error('[olvide-password] Error (background):', e.message);
+            if (e.code) console.error('[olvide-password] Código:', e.code);
         }
     })();
 });
