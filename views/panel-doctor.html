@@ -10,9 +10,26 @@
 <body class="perfil-body">
 
     <div class="perfil-layout" id="perfil-layout">
+        <!-- Solo móvil: menú hamburguesa como en el index -->
+        <header class="perfil-mobile-header">
+            <span class="perfil-mobile-title">Panel Especialista</span>
+            <input type="checkbox" id="perfil-nav-toggle" class="perfil-nav-toggle" aria-hidden="true" tabindex="-1">
+            <label for="perfil-nav-toggle" class="perfil-nav-toggle-label" aria-label="Abrir menú"><span></span><span></span><span></span></label>
+            <nav class="perfil-mobile-nav">
+                <ul class="perfil-mobile-nav-list">
+                    <li><button type="button" class="perfil-mobile-nav-btn active" data-seccion="dashboard">📊 Dashboard</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="chat">💬 Mis Mensajes</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="video">🎥 Sala de Video</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="documentos">📄 Documentos</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="agenda">⚙️ Configuración</button></li>
+                    <li><a href="/" class="perfil-mobile-nav-link">🌐 Volver al Sitio</a></li>
+                    <li><a href="/logout" class="perfil-mobile-nav-link perfil-mobile-logout">🚪 Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+        </header>
+
         <aside class="perfil-sidebar" id="perfil-sidebar">
             <div class="sidebar-header">
-                <button type="button" class="sidebar-btn-minimizar" id="sidebar-btn-minimizar" aria-label="Abrir o minimizar menú"><span id="sidebar-btn-text">☰</span></button>
                 <div class="user-avatar" id="avatar-doctor">D</div>
                 <h3 class="sidebar-nombre" id="nombre-doctor">Especialista</h3>
                 <span class="status-badge sidebar-texto">Modo Especialista</span>
@@ -339,35 +356,29 @@
     </div>
 
 <script>
-        // Móvil: botón abre/cierra menú; al elegir opción se cierra; actualizar texto del botón
-        function actualizarTextoBtnSidebar() {
-            var layout = document.getElementById('perfil-layout');
-            var span = document.getElementById('sidebar-btn-text');
-            if (!span || !layout) return;
-            span.innerText = layout.classList.contains('sidebar-open') ? '← Minimizar' : '☰';
-        }
+        // Móvil: al elegir opción en el hamburguesa, cerrar menú y marcar activo
         document.addEventListener('DOMContentLoaded', function() {
-            var layout = document.getElementById('perfil-layout');
-            if (!layout) return;
-            document.querySelectorAll('.perfil-sidebar .nav-item, .perfil-sidebar .nav-item-link, .perfil-sidebar .btn-logout').forEach(function(el) {
-                el.addEventListener('click', function() { layout.classList.remove('sidebar-open'); actualizarTextoBtnSidebar(); });
+            var toggle = document.getElementById('perfil-nav-toggle');
+            document.querySelectorAll('.perfil-mobile-nav-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var sec = this.getAttribute('data-seccion');
+                    if (sec) {
+                        mostrarSeccion(sec);
+                        if (sec === 'chat') cargarContactosChat();
+                        if (sec === 'documentos') cargarDocumentos();
+                    }
+                    if (toggle) toggle.checked = false;
+                    document.querySelectorAll('.perfil-mobile-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+                    this.classList.add('active');
+                });
             });
-            var sidebar = document.getElementById('perfil-sidebar');
-            if (sidebar) {
-                var header = sidebar.querySelector('.sidebar-header');
-                if (header) header.addEventListener('click', function(e) {
-                    if (e.target.closest('.sidebar-btn-minimizar')) return;
-                    layout.classList.toggle('sidebar-open');
-                    actualizarTextoBtnSidebar();
-                });
-                var btnMin = document.getElementById('sidebar-btn-minimizar');
-                if (btnMin) btnMin.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    layout.classList.toggle('sidebar-open');
-                    actualizarTextoBtnSidebar();
-                });
-            }
-            actualizarTextoBtnSidebar();
+            document.querySelectorAll('.perfil-mobile-nav-link').forEach(function(a) {
+                a.addEventListener('click', function() { if (toggle) toggle.checked = false; });
+            });
+            var layout = document.getElementById('perfil-layout');
+            if (layout) document.querySelectorAll('.perfil-sidebar .nav-item, .perfil-sidebar .nav-item-link, .perfil-sidebar .btn-logout').forEach(function(el) {
+                el.addEventListener('click', function() { layout.classList.remove('sidebar-open'); });
+            });
         });
         let api = null;
         let miIdUsuario = null;    // ID de la tabla 'usuarios' (ej. 6)
@@ -491,9 +502,14 @@ fetch('/api/quien-soy')
     if (window.event && window.event.currentTarget) {
         window.event.currentTarget.classList.add('active');
     }
-    // 6. En móvil: contraer el menú lateral al elegir una opción
+    // 6. Cerrar menú lateral (desktop) y hamburguesa (móvil), marcar activo
     var layout = document.getElementById('perfil-layout');
-    if (layout) { layout.classList.remove('sidebar-open'); if (typeof actualizarTextoBtnSidebar === 'function') actualizarTextoBtnSidebar(); }
+    if (layout) layout.classList.remove('sidebar-open');
+    var toggle = document.getElementById('perfil-nav-toggle');
+    if (toggle) toggle.checked = false;
+    document.querySelectorAll('.perfil-mobile-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+    var btn = document.querySelector('.perfil-mobile-nav-btn[data-seccion="' + seccionId + '"]');
+    if (btn) btn.classList.add('active');
 }
 
 // --- HORARIO LABORAL (simple) ---
