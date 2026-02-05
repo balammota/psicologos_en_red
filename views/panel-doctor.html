@@ -12,6 +12,7 @@
     <div class="perfil-layout" id="perfil-layout">
         <aside class="perfil-sidebar" id="perfil-sidebar">
             <div class="sidebar-header">
+                <button type="button" class="sidebar-btn-minimizar" id="sidebar-btn-minimizar" aria-label="Minimizar menú">← Minimizar</button>
                 <div class="user-avatar" id="avatar-doctor">D</div>
                 <h3 class="sidebar-nombre" id="nombre-doctor">Especialista</h3>
                 <span class="status-badge sidebar-texto">Modo Especialista</span>
@@ -338,7 +339,7 @@
     </div>
 
 <script>
-        // En móvil: contraer el sidebar al elegir cualquier opción del menú
+        // En móvil: contraer al elegir opción; tap header expande/contrae; botón Minimizar contrae
         document.addEventListener('DOMContentLoaded', function() {
             var layout = document.getElementById('perfil-layout');
             if (!layout) return;
@@ -349,6 +350,8 @@
             if (sidebar) {
                 var header = sidebar.querySelector('.sidebar-header');
                 if (header) header.addEventListener('click', function() { layout.classList.toggle('sidebar-open'); });
+                var btnMin = document.getElementById('sidebar-btn-minimizar');
+                if (btnMin) btnMin.addEventListener('click', function(e) { e.stopPropagation(); layout.classList.remove('sidebar-open'); });
             }
         });
         let api = null;
