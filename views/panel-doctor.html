@@ -12,7 +12,7 @@
     <div class="perfil-layout" id="perfil-layout">
         <aside class="perfil-sidebar" id="perfil-sidebar">
             <div class="sidebar-header">
-                <button type="button" class="sidebar-btn-minimizar" id="sidebar-btn-minimizar" aria-label="Minimizar menú">← Minimizar</button>
+                <button type="button" class="sidebar-btn-minimizar" id="sidebar-btn-minimizar" aria-label="Abrir o minimizar menú"><span id="sidebar-btn-text">☰</span></button>
                 <div class="user-avatar" id="avatar-doctor">D</div>
                 <h3 class="sidebar-nombre" id="nombre-doctor">Especialista</h3>
                 <span class="status-badge sidebar-texto">Modo Especialista</span>
@@ -339,20 +339,35 @@
     </div>
 
 <script>
-        // En móvil: contraer al elegir opción; tap header expande/contrae; botón Minimizar contrae
+        // Móvil: botón abre/cierra menú; al elegir opción se cierra; actualizar texto del botón
+        function actualizarTextoBtnSidebar() {
+            var layout = document.getElementById('perfil-layout');
+            var span = document.getElementById('sidebar-btn-text');
+            if (!span || !layout) return;
+            span.innerText = layout.classList.contains('sidebar-open') ? '← Minimizar' : '☰';
+        }
         document.addEventListener('DOMContentLoaded', function() {
             var layout = document.getElementById('perfil-layout');
             if (!layout) return;
             document.querySelectorAll('.perfil-sidebar .nav-item, .perfil-sidebar .nav-item-link, .perfil-sidebar .btn-logout').forEach(function(el) {
-                el.addEventListener('click', function() { layout.classList.remove('sidebar-open'); });
+                el.addEventListener('click', function() { layout.classList.remove('sidebar-open'); actualizarTextoBtnSidebar(); });
             });
             var sidebar = document.getElementById('perfil-sidebar');
             if (sidebar) {
                 var header = sidebar.querySelector('.sidebar-header');
-                if (header) header.addEventListener('click', function() { layout.classList.toggle('sidebar-open'); });
+                if (header) header.addEventListener('click', function(e) {
+                    if (e.target.closest('.sidebar-btn-minimizar')) return;
+                    layout.classList.toggle('sidebar-open');
+                    actualizarTextoBtnSidebar();
+                });
                 var btnMin = document.getElementById('sidebar-btn-minimizar');
-                if (btnMin) btnMin.addEventListener('click', function(e) { e.stopPropagation(); layout.classList.remove('sidebar-open'); });
+                if (btnMin) btnMin.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    layout.classList.toggle('sidebar-open');
+                    actualizarTextoBtnSidebar();
+                });
             }
+            actualizarTextoBtnSidebar();
         });
         let api = null;
         let miIdUsuario = null;    // ID de la tabla 'usuarios' (ej. 6)
@@ -478,7 +493,7 @@ fetch('/api/quien-soy')
     }
     // 6. En móvil: contraer el menú lateral al elegir una opción
     var layout = document.getElementById('perfil-layout');
-    if (layout) layout.classList.remove('sidebar-open');
+    if (layout) { layout.classList.remove('sidebar-open'); if (typeof actualizarTextoBtnSidebar === 'function') actualizarTextoBtnSidebar(); }
 }
 
 // --- HORARIO LABORAL (simple) ---
