@@ -2164,7 +2164,6 @@ summary::after {
         display: none !important;
     }
     .perfil-main {
-        padding-top: 90px;
         min-height: 100vh;
         box-sizing: border-box;
     }
@@ -2178,6 +2177,13 @@ summary::after {
     padding: 30px;
     background-color: var(--fondo-hueso);
     overflow-y: auto;
+}
+
+/* Móvil: padding-top debe ir DESPUÉS de .perfil-main para no ser anulado por padding: 30px */
+@media (max-width: 768px) {
+    .perfil-main {
+        padding: 90px 30px 30px 30px;
+    }
 }
 
 .video-header {
