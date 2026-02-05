@@ -24,7 +24,7 @@ async function marcarCitasNoRealizadas() {
 }
 const app = express();
 const nodemailer = require('nodemailer');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || '');
+const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 const twilio = require('twilio');
 
 // WhatsApp (Twilio): número desde el que se envían los mensajes de citas
@@ -66,7 +66,7 @@ async function enviarWhatsapp(telefono, mensaje) {
 app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res) => {
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!endpointSecret || !process.env.STRIPE_SECRET_KEY) {
+    if (!stripe || !endpointSecret || !process.env.STRIPE_SECRET_KEY) {
         return res.status(400).send('Webhook no configurado');
     }
     let event;
@@ -1691,6 +1691,9 @@ app.get('/api/horarios-disponibles/:psicologoId', async (req, res) => {
 
 // Crear sesión de pago Stripe (redirige a Checkout); la cita se crea en el webhook
 app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
+    if (!stripe) {
+        return res.status(503).json({ error: 'Pagos no configurados. Contacta al administrador.' });
+    }
     const { psicologo_id, fecha, hora, servicio_interes } = req.body;
     const paciente_id = req.session.usuario.id;
 
