@@ -2045,6 +2045,31 @@ summary::after {
     text-shadow: 0 0 5px var(--acento-rosa);
 }
 
+/* --- Sidebar móvil (perfil y panel doctor): barra estrecha, tap en header expande, tap opción contrae --- */
+@media (max-width: 768px) {
+    .perfil-sidebar {
+        cursor: pointer;
+    }
+    .perfil-layout.sidebar-open .perfil-sidebar {
+        width: 260px;
+        padding: 20px 16px;
+    }
+    .perfil-layout.sidebar-open .perfil-sidebar .sidebar-nombre,
+    .perfil-layout.sidebar-open .perfil-sidebar .sidebar-texto,
+    .perfil-layout.sidebar-open .perfil-sidebar .nav-label {
+        opacity: 1;
+        width: auto;
+    }
+    .perfil-layout.sidebar-open .perfil-sidebar .user-avatar {
+        width: 70px;
+        height: 70px;
+        font-size: 1.8rem;
+    }
+    .perfil-sidebar .sidebar-header {
+        cursor: pointer;
+    }
+}
+
 /* Área de Video / Principal */
 .perfil-main {
     flex: 1;
