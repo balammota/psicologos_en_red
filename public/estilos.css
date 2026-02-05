@@ -2164,7 +2164,7 @@ summary::after {
         display: none !important;
     }
     .perfil-main {
-        padding-top: 64px;
+        padding-top: 90px;
         min-height: 100vh;
         box-sizing: border-box;
     }
