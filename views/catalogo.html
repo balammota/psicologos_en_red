@@ -244,18 +244,27 @@
 
         // Estado global: lista completa y precio (para filtrado y re-render)
         let listaPsicologosCompleta = [];
-        let precioAmount = 500;
+        let precioAmount = 600;
         let precioCurrency = 'MXN';
+        const PRECIOS_DEFAULT_MXN = { individual: 600, pareja: 900, crianza: 700 };
+        const PRECIOS_DEFAULT_USD = { individual: 55, pareja: 75, crianza: 65 };
 
         function renderCards(psicologos, amount, currency) {
             const contenedor = document.getElementById('contenedor-psicologos');
             contenedor.innerHTML = '';
-                const amt = amount ?? precioAmount;
                 const cur = currency ?? precioCurrency;
+                const isMxn = cur === 'MXN';
+                const defs = isMxn ? PRECIOS_DEFAULT_MXN : PRECIOS_DEFAULT_USD;
                 psicologos.forEach(psico => {
-                    const pi = psico.precio_terapia_individual != null ? Number(psico.precio_terapia_individual) : amt;
-                    const pp = psico.precio_terapia_pareja != null ? Number(psico.precio_terapia_pareja) : pi;
-                    const pc = psico.precio_asesoria_crianza != null ? Number(psico.precio_asesoria_crianza) : pi;
+                    const pi = isMxn
+                        ? (psico.precio_terapia_individual != null ? Number(psico.precio_terapia_individual) : defs.individual)
+                        : (psico.precio_terapia_individual_usd != null ? Number(psico.precio_terapia_individual_usd) : defs.individual);
+                    const pp = isMxn
+                        ? (psico.precio_terapia_pareja != null ? Number(psico.precio_terapia_pareja) : defs.pareja)
+                        : (psico.precio_terapia_pareja_usd != null ? Number(psico.precio_terapia_pareja_usd) : defs.pareja);
+                    const pc = isMxn
+                        ? (psico.precio_asesoria_crianza != null ? Number(psico.precio_asesoria_crianza) : defs.crianza)
+                        : (psico.precio_asesoria_crianza_usd != null ? Number(psico.precio_asesoria_crianza_usd) : defs.crianza);
                     const precioDesde = Math.min(pi, pp, pc);
                     const problemasHTML = (psico.problemas_principales && Array.isArray(psico.problemas_principales))
                         ? psico.problemas_principales.map(p => `
@@ -483,7 +492,7 @@
         Promise.all([fetch('/api/psicologos').then(r => r.json()), fetch('/api/precio-region').then(r => r.json())])
             .then(([psicologos, precioRegion]) => {
                 listaPsicologosCompleta = Array.isArray(psicologos) ? psicologos : [];
-                precioAmount = precioRegion.amount ?? 500;
+                precioAmount = precioRegion.amount ?? (precioRegion.currency === 'USD' ? 55 : 600);
                 precioCurrency = precioRegion.currency ?? 'MXN';
                 llenarOpcionesFiltros(listaPsicologosCompleta);
                 setupDropdowns();
@@ -548,7 +557,7 @@
                     listaPsicologosCompleta = Array.isArray(psicologos) ? psicologos : [];
                     llenarOpcionesFiltros(listaPsicologosCompleta);
                     setupDropdowns();
-                    renderCards(listaPsicologosCompleta, 500, 'MXN');
+                    renderCards(listaPsicologosCompleta, 600, 'MXN');
                 });
             });
 
@@ -691,20 +700,23 @@ async function abrirModal(id, nombre) {
         // Inicializar Flatpickr con fechas deshabilitadas
         await inicializarCalendario(id);
         
-        // Actualizar precio al cambiar servicio de interés
+        // Actualizar precio al cambiar servicio de interés (MXN o USD según región)
         if (servicioInteres) {
             servicioInteres.onchange = function () {
                 const psicoId = parseInt(document.getElementById('psico-id-input').value, 10);
                 const psico = typeof listaPsicologosCompleta !== 'undefined' && listaPsicologosCompleta.find(p => p.id === psicoId);
                 const sel = document.getElementById('servicio-interes').value;
                 if (!psico || !sel) { if (precioSesionEl) precioSesionEl.textContent = ''; return; }
-                const pi = Number(psico.precio_terapia_individual) || 500;
-                const pp = Number(psico.precio_terapia_pareja) ?? pi;
-                const pc = Number(psico.precio_asesoria_crianza) ?? pi;
+                const cur = typeof precioCurrency !== 'undefined' ? precioCurrency : 'MXN';
+                const isMxn = cur === 'MXN';
+                const defs = isMxn ? PRECIOS_DEFAULT_MXN : PRECIOS_DEFAULT_USD;
+                const pi = isMxn ? (Number(psico.precio_terapia_individual) || defs.individual) : (Number(psico.precio_terapia_individual_usd) || defs.individual);
+                const pp = isMxn ? (Number(psico.precio_terapia_pareja) ?? defs.pareja) : (Number(psico.precio_terapia_pareja_usd) ?? defs.pareja);
+                const pc = isMxn ? (Number(psico.precio_asesoria_crianza) ?? defs.crianza) : (Number(psico.precio_asesoria_crianza_usd) ?? defs.crianza);
                 let monto = pi;
                 const svc = (sel || '').toLowerCase();
                 if (svc.indexOf('pareja') !== -1) monto = pp; else if (svc.indexOf('crianza') !== -1) monto = pc;
-                precioSesionEl.textContent = 'Precio de esta sesión: $' + monto + ' MXN';
+                precioSesionEl.textContent = 'Precio de esta sesión: $' + monto + ' ' + cur;
             };
         }
 
