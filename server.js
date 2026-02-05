@@ -570,6 +570,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
+// Favicon: el navegador pide /favicon.ico; servimos el logo para evitar 404 en logs
+app.get('/favicon.ico', (req, res) => {
+    const faviconPath = path.join(__dirname, 'public', 'images', 'logo.png');
+    res.type('image/png');
+    res.sendFile(faviconPath, (err) => {
+        if (err) res.status(204).end();
+    });
+});
+
 // Configuración de Sesiones
 app.use(session({
     secret: 'mi-clave-secreta-psicologos', 
