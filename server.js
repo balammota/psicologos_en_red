@@ -962,10 +962,21 @@ app.get('/catalogo', (req, res) => {
 const PRECIOS_DEFAULT_MXN = { individual: 600, pareja: 900, crianza: 700 };
 const PRECIOS_DEFAULT_USD = { individual: 55, pareja: 75, crianza: 65 };
 
+// Obtener IP del cliente: en muchos proxies (Railway, etc.) la IP real va al FINAL de X-Forwarded-For
+function getClientIp(req) {
+    const forwarded = (req.get('x-forwarded-for') || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (forwarded.length > 0) {
+        const last = forwarded[forwarded.length - 1];
+        if (last) return last;
+        return forwarded[0];
+    }
+    return req.socket?.remoteAddress || req.ip || req.connection?.remoteAddress || '127.0.0.1';
+}
+
 // Helper: obtener precio según IP (Promise)
 function getPrecioRegionAsync(req) {
     return new Promise((resolve) => {
-        const clientIp = (req.get('x-forwarded-for') || '').split(',')[0].trim() || req.socket?.remoteAddress || req.ip || '127.0.0.1';
+        const clientIp = getClientIp(req);
         const isLocalhost = /^127\.|^::1$|^::ffff:127\./i.test(clientIp);
         if (isLocalhost) {
             return resolve({ amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true });
@@ -989,8 +1000,15 @@ function getPrecioRegionAsync(req) {
     });
 }
 
-// API: precio según región (IP). México → MXN; fuera → USD
+// API: precio según región (IP). México → MXN; fuera → USD. ?pais=MX fuerza MXN (para pruebas).
 app.get('/api/precio-region', (req, res) => {
+    const force = (req.query.pais || req.query.moneda || '').toUpperCase();
+    if (force === 'MX' || force === 'MXN') {
+        return res.json({ amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true });
+    }
+    if (force === 'US' || force === 'USD') {
+        return res.json({ amount: PRECIOS_DEFAULT_USD.individual, currency: 'USD', inMexico: false });
+    }
     getPrecioRegionAsync(req).then(data => res.json(data));
 });
 
@@ -1797,7 +1815,10 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
             return res.status(400).json({ error: 'Este horario ya está ocupado' });
         }
 
-        const region = await getPrecioRegionAsync(req);
+        // Usar moneda enviada por el frontend (detectada en el navegador = IP real); si no, detectar por IP en servidor
+        const region = (req.body.currency === 'USD' || req.body.currency === 'MXN')
+            ? { currency: req.body.currency, inMexico: req.body.currency === 'MXN' }
+            : await getPrecioRegionAsync(req);
         const useUsd = region.currency === 'USD';
 
         const psiRow = await pool.query(
