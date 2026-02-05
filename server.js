@@ -1363,9 +1363,14 @@ app.post('/auth/olvide-password', async (req, res) => {
         );
 
         const resetLink = `${BASE_URL}/reestablecer-password?token=${tokenReset}`;
+        const fromEmail = process.env.EMAIL_USER || 'contacto@psicologosenred.com';
 
-        await transporter.sendMail({
-            from: '"Psicólogos en Red" <contacto@psicologosenred.com>',
+        // Responder al cliente de inmediato para evitar 499 (timeout del navegador)
+        res.json({ message: "Si el correo existe en nuestro sistema, recibirás instrucciones pronto." });
+
+        // Enviar correo en segundo plano (no bloquear la respuesta)
+        transporter.sendMail({
+            from: `"Psicólogos en Red" <${fromEmail}>`,
             to: email,
             subject: "Reestablece tu contraseña - Psicólogos en Red 🔐",
             html: `
@@ -1385,9 +1390,7 @@ app.post('/auth/olvide-password', async (req, res) => {
                     <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red. Todos los derechos reservados.</p>
                 </div>
             `
-        });
-
-        res.json({ message: "Si el correo existe en nuestro sistema, recibirás instrucciones pronto." });
+        }).catch(err => console.error('Error enviando correo olvide-password:', err.message));
     } catch (error) {
         console.error('Error olvide-password:', error);
         res.status(500).json({ message: "Error al procesar la solicitud. Intenta de nuevo." });
