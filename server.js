@@ -958,13 +958,17 @@ app.get('/catalogo', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'catalogo.html'));
 });
 
+// Precios por defecto: México 600/900/700 MXN; fuera 55/75/65 USD (individual, pareja, crianza)
+const PRECIOS_DEFAULT_MXN = { individual: 600, pareja: 900, crianza: 700 };
+const PRECIOS_DEFAULT_USD = { individual: 55, pareja: 75, crianza: 65 };
+
 // Helper: obtener precio según IP (Promise)
 function getPrecioRegionAsync(req) {
     return new Promise((resolve) => {
         const clientIp = (req.get('x-forwarded-for') || '').split(',')[0].trim() || req.socket?.remoteAddress || req.ip || '127.0.0.1';
         const isLocalhost = /^127\.|^::1$|^::ffff:127\./i.test(clientIp);
         if (isLocalhost) {
-            return resolve({ amount: 500, currency: 'MXN', inMexico: true });
+            return resolve({ amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true });
         }
         const url = `https://ip-api.com/json/${encodeURIComponent(clientIp)}?fields=countryCode`;
         https.get(url, (apiRes) => {
@@ -974,16 +978,18 @@ function getPrecioRegionAsync(req) {
                 try {
                     const json = JSON.parse(data || '{}');
                     const inMexico = json.countryCode === 'MX';
-                    resolve(inMexico ? { amount: 500, currency: 'MXN', inMexico: true } : { amount: 50, currency: 'USD', inMexico: false });
+                    resolve(inMexico
+                        ? { amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true }
+                        : { amount: PRECIOS_DEFAULT_USD.individual, currency: 'USD', inMexico: false });
                 } catch (e) {
-                    resolve({ amount: 500, currency: 'MXN', inMexico: true });
+                    resolve({ amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true });
                 }
             });
-        }).on('error', () => resolve({ amount: 500, currency: 'MXN', inMexico: true }));
+        }).on('error', () => resolve({ amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true }));
     });
 }
 
-// API: precio según región (IP). México → $500 MXN; fuera → $50 USD
+// API: precio según región (IP). México → MXN; fuera → USD
 app.get('/api/precio-region', (req, res) => {
     getPrecioRegionAsync(req).then(data => res.json(data));
 });
@@ -1807,17 +1813,17 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
         let monto;
         let currency;
         if (useUsd) {
-            const pi = Number(p.precio_terapia_individual_usd) || 55;
-            const pp = Number(p.precio_terapia_pareja_usd) ?? pi;
-            const pc = Number(p.precio_asesoria_crianza_usd) ?? pi;
+            const pi = Number(p.precio_terapia_individual_usd) || PRECIOS_DEFAULT_USD.individual;
+            const pp = Number(p.precio_terapia_pareja_usd) ?? PRECIOS_DEFAULT_USD.pareja;
+            const pc = Number(p.precio_asesoria_crianza_usd) ?? PRECIOS_DEFAULT_USD.crianza;
             const svc = (servicio_interes || '').toLowerCase();
             monto = svc.includes('pareja') ? pp : (svc.includes('crianza') ? pc : pi);
             currency = 'usd';
             monto = Math.round(monto * 100);
         } else {
-            const precioIndividual = Number(p.precio_terapia_individual) || 500;
-            const precioPareja = Number(p.precio_terapia_pareja) ?? precioIndividual;
-            const precioCrianza = Number(p.precio_asesoria_crianza) ?? precioIndividual;
+            const precioIndividual = Number(p.precio_terapia_individual) || PRECIOS_DEFAULT_MXN.individual;
+            const precioPareja = Number(p.precio_terapia_pareja) ?? PRECIOS_DEFAULT_MXN.pareja;
+            const precioCrianza = Number(p.precio_asesoria_crianza) ?? PRECIOS_DEFAULT_MXN.crianza;
             monto = precioIndividual;
             const svc = (servicio_interes || '').toLowerCase();
             if (svc.includes('pareja')) monto = precioPareja;
