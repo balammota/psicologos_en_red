@@ -9,9 +9,8 @@
 </head>
 <body class="perfil-body">
 
-    <div class="perfil-layout">
-        <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle" aria-hidden="true">
-        <aside class="perfil-sidebar">
+    <div class="perfil-layout" id="perfil-layout">
+        <aside class="perfil-sidebar" id="perfil-sidebar">
             <div class="sidebar-header">
                 <div class="user-avatar" id="avatar-doctor">D</div>
                 <h3 class="sidebar-nombre" id="nombre-doctor">Especialista</h3>
@@ -45,9 +44,7 @@
                 </a>
             </div>
         </aside>
-        <label for="sidebar-toggle" class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></label>
         <main class="perfil-main">
-            <label for="sidebar-toggle" class="sidebar-hamburger" aria-label="Abrir menú"><span></span><span></span><span></span></label>
             <div id="seccion-dashboard" class="seccion-panel">
                 <div class="welcome-banner">
                     <h1>Panel del Especialista 👋</h1>
@@ -341,13 +338,18 @@
     </div>
 
 <script>
-        // Cerrar sidebar en móvil al hacer clic en cualquier opción del menú
+        // En móvil: contraer el sidebar al elegir cualquier opción del menú
         document.addEventListener('DOMContentLoaded', function() {
-            var sidebarTogg = document.getElementById('sidebar-toggle');
-            if (!sidebarTogg) return;
+            var layout = document.getElementById('perfil-layout');
+            if (!layout) return;
             document.querySelectorAll('.perfil-sidebar .nav-item, .perfil-sidebar .nav-item-link, .perfil-sidebar .btn-logout').forEach(function(el) {
-                el.addEventListener('click', function() { sidebarTogg.checked = false; });
+                el.addEventListener('click', function() { layout.classList.remove('sidebar-open'); });
             });
+            var sidebar = document.getElementById('perfil-sidebar');
+            if (sidebar) {
+                var header = sidebar.querySelector('.sidebar-header');
+                if (header) header.addEventListener('click', function() { layout.classList.toggle('sidebar-open'); });
+            }
         });
         let api = null;
         let miIdUsuario = null;    // ID de la tabla 'usuarios' (ej. 6)
@@ -471,9 +473,9 @@ fetch('/api/quien-soy')
     if (window.event && window.event.currentTarget) {
         window.event.currentTarget.classList.add('active');
     }
-    // 6. En móvil: cerrar el menú lateral al elegir una opción
-    var sidebarTogg = document.getElementById('sidebar-toggle');
-    if (sidebarTogg) sidebarTogg.checked = false;
+    // 6. En móvil: contraer el menú lateral al elegir una opción
+    var layout = document.getElementById('perfil-layout');
+    if (layout) layout.classList.remove('sidebar-open');
 }
 
 // --- HORARIO LABORAL (simple) ---
