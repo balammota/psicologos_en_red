@@ -2061,6 +2061,8 @@ summary::after {
         align-items: center;
         justify-content: space-between;
         padding: 0.75rem 1rem;
+        min-height: 52px;
+        box-sizing: border-box;
         background: var(--blanco);
         box-shadow: 0 2px 10px rgba(0,0,0,0.08);
         position: fixed;
@@ -2162,7 +2164,9 @@ summary::after {
         display: none !important;
     }
     .perfil-main {
-        padding-top: 56px;
+        padding-top: 64px;
+        min-height: 100vh;
+        box-sizing: border-box;
     }
 }
 
