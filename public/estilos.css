@@ -9,6 +9,8 @@
     --fondo-hueso: #F9F7F5;
     --blanco: #ffffff;
     --texto-oscuro: #3D3D3D;
+    /* Móvil: una sola definición para todo el sitio. Con viewport en el HTML, pantallas ≤768px = celular. */
+    --breakpoint-movil: 768px;
 }
 
 /* Configuración General */
@@ -54,8 +56,8 @@ body {
 .nav-toggle { position: absolute; opacity: 0; pointer-events: none; }
 .nav-toggle-label { display: none; }
 
-/* Responsive header: menú hamburguesa a partir de 750px */
-@media (max-width: 750px) {
+/* Responsive header: menú hamburguesa en móvil (≤768px) */
+@media (max-width: 768px) {
     .nav-toggle-label {
         display: flex;
         flex-direction: column;
@@ -2047,34 +2049,38 @@ summary::after {
     text-shadow: 0 0 5px var(--acento-rosa);
 }
 
-/* --- Botón minimizar: solo en celular, solo cuando el sidebar está expandido --- */
+/* --- Botón minimizar: solo visible en celular --- */
 .sidebar-btn-minimizar {
     display: none;
     margin: 0 0 12px 0;
     padding: 8px 12px;
     width: 100%;
+    min-width: 0;
     background: rgba(255,255,255,0.15);
     border: 1px solid rgba(255,255,255,0.3);
     border-radius: 8px;
     color: var(--blanco);
     font-size: 0.9rem;
     cursor: pointer;
-    text-align: left;
+    text-align: center;
 }
 .sidebar-btn-minimizar:hover {
     background: rgba(255,255,255,0.25);
 }
 
-/* --- Sidebar móvil (perfil y panel doctor): tap header expande, botón Minimizar contrae, scroll --- */
+/* --- Sidebar móvil: botón siempre visible, scroll habilitado --- */
 @media (max-width: 768px) {
+    .sidebar-btn-minimizar {
+        display: block;
+        flex-shrink: 0;
+    }
     .perfil-sidebar {
         cursor: pointer;
+        height: 100vh;
         max-height: 100vh;
         overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-    }
-    .perfil-layout.sidebar-open .sidebar-btn-minimizar {
-        display: block;
     }
     .perfil-layout.sidebar-open .perfil-sidebar {
         width: 260px;
