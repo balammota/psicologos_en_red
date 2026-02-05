@@ -1342,59 +1342,48 @@ app.post('/registrar-usuario', async (req, res) => {
     }
 });
 
-app.post('/auth/olvide-password', async (req, res) => {
+app.post('/auth/olvide-password', (req, res) => {
     const { email } = req.body;
-    try {
-        const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-        
-        if (result.rows.length === 0) {
-            return res.json({ message: "Si el correo existe en nuestro sistema, recibirás instrucciones pronto." });
+    const msg = "Si el correo existe en nuestro sistema, recibirás instrucciones pronto.";
+    // Responder YA para evitar 502/499 (nunca esperar DB ni correo en esta petición)
+    res.json({ message: msg });
+
+    // Todo lo demás en segundo plano (DB + correo)
+    (async () => {
+        try {
+            const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+            if (result.rows.length === 0) return;
+            const usuario = result.rows[0];
+            const tokenReset = crypto.randomBytes(32).toString('hex');
+            const tokenExpira = new Date(Date.now() + 60 * 60 * 1000);
+            await pool.query(
+                'UPDATE usuarios SET token_reset_password = $1, token_reset_expira = $2 WHERE id = $3',
+                [tokenReset, tokenExpira, usuario.id]
+            );
+            const resetLink = `${BASE_URL}/reestablecer-password?token=${tokenReset}`;
+            const fromEmail = process.env.EMAIL_USER || 'contacto@psicologosenred.com';
+            await transporter.sendMail({
+                from: `"Psicólogos en Red" <${fromEmail}>`,
+                to: email,
+                subject: "Reestablece tu contraseña - Psicólogos en Red 🔐",
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="text-align: center; margin-bottom: 30px;"><h1 style="color: #c9a0dc;">Psicólogos en Red</h1></div>
+                        <h2 style="color: #333;">Hola, ${usuario.nombre}</h2>
+                        <p style="color: #666; font-size: 16px;">Recibimos una solicitud para reestablecer tu contraseña. Haz clic en el botón:</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${resetLink}" style="background: linear-gradient(135deg, #c9a0dc 0%, #a0c4e8 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-size: 16px; font-weight: bold;">Reestablecer contraseña</a>
+                        </div>
+                        <p style="color: #999; font-size: 14px;">Este enlace expira en 1 hora. Si no solicitaste esto, ignora este correo.</p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                        <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red.</p>
+                    </div>
+                `
+            });
+        } catch (e) {
+            console.error('Error olvide-password (background):', e.message);
         }
-
-        const usuario = result.rows[0];
-        
-        // Token seguro de un solo uso, expira en 1 hora
-        const tokenReset = crypto.randomBytes(32).toString('hex');
-        const tokenExpira = new Date(Date.now() + 60 * 60 * 1000);
-        
-        await pool.query(
-            'UPDATE usuarios SET token_reset_password = $1, token_reset_expira = $2 WHERE id = $3',
-            [tokenReset, tokenExpira, usuario.id]
-        );
-
-        const resetLink = `${BASE_URL}/reestablecer-password?token=${tokenReset}`;
-        const fromEmail = process.env.EMAIL_USER || 'contacto@psicologosenred.com';
-
-        // Responder al cliente de inmediato para evitar 499 (timeout del navegador)
-        res.json({ message: "Si el correo existe en nuestro sistema, recibirás instrucciones pronto." });
-
-        // Enviar correo en segundo plano (no bloquear la respuesta)
-        transporter.sendMail({
-            from: `"Psicólogos en Red" <${fromEmail}>`,
-            to: email,
-            subject: "Reestablece tu contraseña - Psicólogos en Red 🔐",
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #c9a0dc;">Psicólogos en Red</h1>
-                    </div>
-                    <h2 style="color: #333;">Hola, ${usuario.nombre}</h2>
-                    <p style="color: #666; font-size: 16px;">Recibimos una solicitud para reestablecer tu contraseña en Psicólogos en Red.</p>
-                    <p style="color: #666; font-size: 16px;">Haz clic en el siguiente botón para crear una nueva contraseña:</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="${resetLink}" style="background: linear-gradient(135deg, #c9a0dc 0%, #a0c4e8 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-size: 16px; font-weight: bold;">Reestablecer contraseña</a>
-                    </div>
-                    <p style="color: #999; font-size: 14px;">Este enlace expira en 1 hora.</p>
-                    <p style="color: #999; font-size: 14px;">Si no solicitaste esto, puedes ignorar este correo. Tu contraseña no cambiará.</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                    <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red. Todos los derechos reservados.</p>
-                </div>
-            `
-        }).catch(err => console.error('Error enviando correo olvide-password:', err.message));
-    } catch (error) {
-        console.error('Error olvide-password:', error);
-        res.status(500).json({ message: "Error al procesar la solicitud. Intenta de nuevo." });
-    }
+    })();
 });
 
 // Página de reestablecer contraseña (solo si token válido)
