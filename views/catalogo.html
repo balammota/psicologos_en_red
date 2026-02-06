@@ -64,7 +64,7 @@
     </style>
     <section class="catalogo-section-wrap">
         <h2 class="catalogo-section-title">Nuestros especialistas</h2>
-        <p class="catalogo-section-desc">Filtra por especialidad, áreas de atención o tipo de servicio.</p>
+        <p class="catalogo-section-desc">Filtra por especialidad, áreas de intervención o tipo de servicio.</p>
         <div class="catalogo-filtros-modern">
             <div class="filtros-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; align-items: start;">
                 <div class="filtro-grupo dropdown-filtro-wrap">
@@ -80,7 +80,7 @@
                     </div>
                 </div>
                 <div class="filtro-grupo dropdown-filtro-wrap">
-                    <label class="filtro-label">Áreas de atención</label>
+                    <label class="filtro-label">Áreas de Intervención</label>
                     <div class="dropdown-filtro" id="dd-problemas" data-filtro="problemas">
                         <div class="dropdown-filtro-trigger">
                             <span class="dropdown-filtro-burbujas" id="trigger-problemas-text">Elegir áreas...</span>
@@ -214,7 +214,7 @@
                 </section>
     
                 <section style="margin-bottom:20px;">
-                    <h3 style="font-size:1rem; color:var(--texto-oscuro); text-transform: uppercase; letter-spacing: 1px;">🎯 Áreas de especialidad</h3>
+                    <h3 style="font-size:1rem; color:var(--texto-oscuro); text-transform: uppercase; letter-spacing: 1px;">🎯 Áreas de Intervención</h3>
                     <div id="det-tags-enfoque" style="display:flex; flex-wrap:wrap; gap:8px; margin-top: 10px;">
                         </div>
                 </section>
@@ -292,7 +292,7 @@
                             </div>
                         </div>
                         <div class="psico-card-body">
-                            <p class="psico-card-tags-label">Áreas de especialidad</p>
+                            <p class="psico-card-tags-label">Áreas de Intervención</p>
                             <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem;">${problemasHTML}</div>
                             <p class="psico-card-tags-label">Servicios</p>
                             <div style="display: flex; flex-wrap: wrap; gap: 6px;">${serviciosHTML}</div>
@@ -603,7 +603,7 @@
         document.getElementById('det-biografia').innerText = p.biografia || "Especialista comprometido con el bienestar emocional y el desarrollo personal.";
         document.getElementById('det-rating').innerText = p.rating || "5.0";
 
-        // 3. Áreas de Especialidad (con el diseño de óvalos rosa)
+        // 3. Áreas de Intervención (con el diseño de óvalos rosa)
         const enfoqueHTML = (p.problemas_principales || []).map(area => `
             <span class="tag-problema" style="background: #fdf2f7; color: var(--texto-oscuro); border: 1px solid var(--primario-rosa); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; display: inline-block;">
                 ${area}
