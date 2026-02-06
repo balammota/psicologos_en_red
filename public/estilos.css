@@ -2421,6 +2421,22 @@ summary::after {
 .contacto-item:hover { background: var(--suave-arena); }
 .contacto-item.active { background: var(--primario-rosa); color: white; }
 
+.chat-contacto-badge {
+    flex-shrink: 0;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: var(--primario-rosa, #e91e63);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.chat-contacto-badge-hidden { display: none !important; }
+
 /* En perfil paciente: resaltar nombre del psicólogo (como en panel-doctor con pacientes, sin mostrar id) */
 .contacto-item-psicologo {
     padding: 15px;
