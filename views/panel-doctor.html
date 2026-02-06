@@ -409,7 +409,10 @@
             }).catch(function() {});
         }
         actualizarBurbujaMensajes();
-        setInterval(actualizarBurbujaMensajes, 45000);
+        setInterval(function() {
+            actualizarBurbujaMensajes();
+            actualizarBurbujasPorContacto();
+        }, 45000);
 
 // --- POPUP (reemplazo de alert) ---
 function mostrarPopup(mensaje, titulo = 'Aviso') {
@@ -1185,56 +1188,58 @@ function generarTarjetaCita(cita, esFutura) {
 }
 
 function cargarContactosChat() {
-    fetch('/api/mis-citas-doctor')
-        .then(res => res.json())
-        .then(citas => {
-            console.log("Citas recibidas para procesar:", citas);
-            const lista = document.getElementById('lista-contactos-chat');
-            
-            if (!Array.isArray(citas) || citas.length === 0) {
-                lista.innerHTML = "<p style='padding:10px; color:#666;'>No hay pacientes con citas programadas.</p>";
-                return;
-            }
+    const lista = document.getElementById('lista-contactos-chat');
+    if (!lista) return;
 
-            // 1. Usamos un Map para filtrar pacientes únicos
-            const mapaPacientes = new Map();
-            
-            citas.forEach(cita => {
-                // PRIORIDAD: id_para_chat (el ID de usuario que pusimos en el AS del SQL)
-                const id = cita.id_para_chat || cita.paciente_id || cita.id;
-                const nombre = cita.paciente_nombre || cita.nombre;
+    Promise.all([
+        fetch('/api/mis-citas-doctor').then(function(r) { return r.json(); }),
+        fetch('/api/mensajes-no-leidos-por-contacto').then(function(r) { return r.json(); })
+    ]).then(function([citas, unreadPorContacto]) {
+        if (!Array.isArray(citas) || citas.length === 0) {
+            lista.innerHTML = "<p style='padding:10px; color:#666;'>No hay pacientes con citas programadas.</p>";
+            return;
+        }
 
-                if (id && nombre) {
-                    // Si el ID ya existe en el Map, no se crea uno nuevo, solo se actualiza.
-                    // Esto es lo que elimina los duplicados.
-                    mapaPacientes.set(id, nombre);
-                }
-            });
-
-            if (mapaPacientes.size === 0) {
-                lista.innerHTML = "<p style='padding:10px; color:red;'>Error: No se detectó el ID del usuario paciente.</p>";
-                return;
-            }
-
-            // 2. Renderizamos la lista limpia
-            let html = "";
-            mapaPacientes.forEach((nombre, id) => {
-                html += `
-                    <div class="contacto-item" 
-                         onclick="abrirChat(${id}, '${nombre}')" 
-                         style="padding: 15px; cursor: pointer; border-bottom: 1px solid #eee; background: white; 
-                                margin-bottom: 5px; border-radius: 8px; transition: background 0.2s; border-left: 4px solid #2563eb;">
-                        <strong style="display: block; color: #1e40af;">${nombre}</strong>
-                        <small style="color: #64748b;">Paciente ID: ${id}</small>
-                    </div>`;
-            });
-            
-            lista.innerHTML = html;
-        })
-        .catch(err => {
-            console.error("Error en cargarContactosChat:", err);
-            document.getElementById('lista-contactos-chat').innerHTML = "<p>Error de conexión.</p>";
+        var mapaPacientes = new Map();
+        citas.forEach(function(cita) {
+            var id = cita.id_para_chat || cita.paciente_id || cita.id;
+            if (id && (cita.paciente_nombre || cita.nombre)) mapaPacientes.set(id, { nombre: cita.paciente_nombre || cita.nombre });
         });
+
+        if (mapaPacientes.size === 0) {
+            lista.innerHTML = "<p style='padding:10px; color:red;'>Error: No se detectó el ID del usuario paciente.</p>";
+            return;
+        }
+
+        var html = '';
+        mapaPacientes.forEach(function(info, id) {
+            var count = unreadPorContacto && (unreadPorContacto[String(id)] != null || unreadPorContacto[id] != null) ? parseInt(unreadPorContacto[String(id)] || unreadPorContacto[id], 10) : 0;
+            var badgeHtml = count > 0
+                ? '<span class="chat-contacto-badge" data-contact-id="' + id + '">' + (count > 99 ? '99+' : count) + '</span>'
+                : '<span class="chat-contacto-badge chat-contacto-badge-hidden" data-contact-id="' + id + '">0</span>';
+            var nombreAttr = (info.nombre || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html += '<div class="contacto-item contacto-item-chat" data-contact-id="' + id + '" data-nombre="' + nombreAttr + '" onclick="abrirChatDesdeItem(this)" style="padding: 15px; cursor: pointer; border-bottom: 1px solid #eee; background: white; margin-bottom: 5px; border-radius: 8px; transition: background 0.2s; border-left: 4px solid #2563eb; display: flex; align-items: center; justify-content: space-between; gap: 8px;">' +
+                '<div><strong style="display: block; color: #1e40af;">' + (info.nombre.replace(/</g, '&lt;').replace(/>/g, '&gt;')) + '</strong><small style="color: #64748b;">Paciente ID: ' + id + '</small></div>' +
+                badgeHtml + '</div>';
+        });
+        lista.innerHTML = html;
+    }).catch(function(err) {
+        console.error("Error en cargarContactosChat:", err);
+        lista.innerHTML = "<p>Error de conexión.</p>";
+    });
+}
+
+function actualizarBurbujasPorContacto() {
+    var lista = document.getElementById('lista-contactos-chat');
+    if (!lista || !lista.querySelector('.contacto-item-chat')) return;
+    fetch('/api/mensajes-no-leidos-por-contacto').then(function(r) { return r.json(); }).then(function(unreadPorContacto) {
+        lista.querySelectorAll('.chat-contacto-badge').forEach(function(badge) {
+            var id = badge.getAttribute('data-contact-id');
+            var count = (unreadPorContacto && (unreadPorContacto[String(id)] != null ? unreadPorContacto[String(id)] : unreadPorContacto[id])) ? parseInt(unreadPorContacto[String(id)] || unreadPorContacto[id], 10) : 0;
+            badge.textContent = count > 99 ? '99+' : String(count);
+            badge.classList.toggle('chat-contacto-badge-hidden', count === 0);
+        });
+    }).catch(function() {});
 }
 
         // 4. FUNCIONES DE VIDEO
@@ -1455,6 +1460,12 @@ function abrirNotasEnVideo(citaId, pacienteNombre) {
 }
 
         // 5. CHAT
+        function abrirChatDesdeItem(el) {
+            var id = el.getAttribute('data-contact-id');
+            var nombre = el.getAttribute('data-nombre') || '';
+            if (id) abrirChat(parseInt(id, 10), nombre);
+        }
+
         function abrirChat(id, nombre) {
     pacienteSeleccionadoId = id; 
     document.getElementById('nombre-paciente-chat').innerText = nombre;
@@ -1526,6 +1537,7 @@ function cargarMensajes(idSocio) {
             // Auto-scroll al final
             contenedor.scrollTop = contenedor.scrollHeight;
             if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
+            if (typeof actualizarBurbujasPorContacto === 'function') actualizarBurbujasPorContacto();
         })
         .catch(err => console.error("Error al cargar mensajes:", err));
 }
