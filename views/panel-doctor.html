@@ -412,7 +412,13 @@
         setInterval(function() {
             actualizarBurbujaMensajes();
             actualizarBurbujasPorContacto();
-        }, 45000);
+        }, 15000);
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                actualizarBurbujaMensajes();
+                actualizarBurbujasPorContacto();
+            }
+        });
 
 // --- POPUP (reemplazo de alert) ---
 function mostrarPopup(mensaje, titulo = 'Aviso') {
