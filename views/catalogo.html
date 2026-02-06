@@ -148,6 +148,25 @@
                     <p id="modal-precio-sesion" style="font-size: 0.9rem; color: var(--primario-rosa); font-weight: 600; margin-top: 8px;"></p>
                 </div>
                 
+                <div id="wrapper-motivo-consulta" class="form-group" style="margin-top: 16px; display: none;">
+                    <label for="motivo-consulta" style="color: var(--texto-oscuro); font-weight: bold;">Motivo de consulta:</label>
+                    <div class="select-wrapper">
+                        <select id="motivo-consulta" style="border: 2px solid var(--suave-arena); border-radius: 10px; padding: 10px; width: 100%;">
+                            <option value="" disabled selected>Elige el motivo más cercano a tu situación</option>
+                            <option value="Ansiedad o estrés">Ansiedad o estrés</option>
+                            <option value="Depresión o tristeza prolongada">Depresión o tristeza prolongada</option>
+                            <option value="Problemas de pareja o relaciones">Problemas de pareja o relaciones</option>
+                            <option value="Duelo o pérdida">Duelo o pérdida</option>
+                            <option value="Autoestima o autoconcepto">Autoestima o autoconcepto</option>
+                            <option value="Crisis personal o adaptación a cambios">Crisis personal o adaptación a cambios</option>
+                            <option value="Conflictos familiares">Conflictos familiares</option>
+                            <option value="Problemas laborales o académicos">Problemas laborales o académicos</option>
+                            <option value="Trauma o experiencias difíciles">Trauma o experiencias difíciles</option>
+                            <option value="Otro motivo">Otro motivo</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <button type="submit" class="btn-confirmar" style="background-color: var(--primario-rosa);">Confirmar Reservación</button>
                 <p class="nota-seguridad" style="color: var(--suave-arena);">🔒 Tu información está protegida por cifrado de extremo a extremo.</p>
             </form>
@@ -690,6 +709,18 @@ async function abrirModal(id, nombre) {
         const servicioInteres = document.getElementById('servicio-interes');
         const precioSesionEl = document.getElementById('modal-precio-sesion');
         if (precioSesionEl) precioSesionEl.textContent = '';
+        const wrapperMotivo = document.getElementById('wrapper-motivo-consulta');
+        const motivoConsulta = document.getElementById('motivo-consulta');
+        if (wrapperMotivo) wrapperMotivo.style.display = 'none';
+        if (motivoConsulta) { motivoConsulta.value = ''; motivoConsulta.removeAttribute('required'); }
+        
+        // Saber si es paciente nuevo (nunca ha agendado) para mostrar motivo de consulta solo a nuevos
+        window.esPacienteNuevo = false;
+        try {
+            const resNuevo = await fetch('/api/soy-paciente-nuevo');
+            const dataNuevo = await resNuevo.json();
+            if (dataNuevo && dataNuevo.nuevo === true) window.esPacienteNuevo = true;
+        } catch (e) { window.esPacienteNuevo = false; }
         
         // Rellenar Servicio de interés solo con los servicios que ofrece este psicólogo
         const psico = typeof listaPsicologosCompleta !== 'undefined' && listaPsicologosCompleta.find(p => p.id === parseInt(id, 10));
@@ -715,12 +746,21 @@ async function abrirModal(id, nombre) {
         // Inicializar Flatpickr con fechas deshabilitadas
         await inicializarCalendario(id);
         
-        // Actualizar precio al cambiar servicio de interés (MXN o USD según región)
+        // Actualizar precio y mostrar/ocultar motivo de consulta (solo terapia individual + paciente nuevo)
         if (servicioInteres) {
             servicioInteres.onchange = function () {
                 const psicoId = parseInt(document.getElementById('psico-id-input').value, 10);
                 const psico = typeof listaPsicologosCompleta !== 'undefined' && listaPsicologosCompleta.find(p => p.id === psicoId);
                 const sel = document.getElementById('servicio-interes').value;
+                const wrMotivo = document.getElementById('wrapper-motivo-consulta');
+                const inpMotivo = document.getElementById('motivo-consulta');
+                const esIndividual = (sel || '').toLowerCase().indexOf('individual') !== -1;
+                const mostrarMotivo = window.esPacienteNuevo === true && esIndividual;
+                if (wrMotivo) wrMotivo.style.display = mostrarMotivo ? 'block' : 'none';
+                if (inpMotivo) {
+                    if (mostrarMotivo) inpMotivo.setAttribute('required', 'required');
+                    else { inpMotivo.removeAttribute('required'); inpMotivo.value = ''; }
+                }
                 if (!psico || !sel) { if (precioSesionEl) precioSesionEl.textContent = ''; return; }
                 const cur = typeof precioCurrency !== 'undefined' ? precioCurrency : 'MXN';
                 const isMxn = cur === 'MXN';
@@ -836,6 +876,8 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
 
         document.getElementById('form-agendar').onsubmit = async (e) => {
             e.preventDefault();
+            const motivoEl = document.getElementById('motivo-consulta');
+            const motivoVal = (motivoEl && motivoEl.value && motivoEl.value.trim()) ? motivoEl.value.trim() : null;
             const data = {
                 psicologo_id: parseInt(document.getElementById('psico-id-input').value, 10),
                 fecha: document.getElementById('fecha-cita').value,
@@ -843,6 +885,7 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
                 servicio_interes: document.getElementById('servicio-interes').value || null,
                 currency: typeof precioCurrency !== 'undefined' ? precioCurrency : 'MXN'
             };
+            if (motivoVal) data.motivo_de_consulta = motivoVal;
 
             const res = await fetch('/api/crear-sesion-pago', {
                 method: 'POST',
