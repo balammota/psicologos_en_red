@@ -357,7 +357,10 @@ fetch('/api/quien-soy')
             }).catch(function() {});
         }
         actualizarBurbujaMensajes();
-        setInterval(actualizarBurbujaMensajes, 45000);
+        setInterval(actualizarBurbujaMensajes, 15000);
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') actualizarBurbujaMensajes();
+        });
     
         // 1. CARGAR DATOS INICIALES
         fetch('/api/user-data')
