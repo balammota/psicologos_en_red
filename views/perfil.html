@@ -24,7 +24,7 @@
                     <li><button type="button" class="perfil-mobile-nav-btn active" data-seccion="dashboard">🏠 Inicio</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="citas">📅 Mis Citas</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="video">🎥 Sesión de Video</button></li>
-                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="chat">💬 Chat Privado</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="chat">💬 Chat Privado <span class="nav-badge nav-badge-mobile" id="nav-badge-mensajes-mobile" aria-hidden="true">0</span></button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="config">⚙️ Configuración</button></li>
                     <li><a href="/" class="perfil-mobile-nav-link">🌐 Volver al Sitio</a></li>
                     <li><a href="/logout" class="perfil-mobile-nav-link perfil-mobile-logout">🚪 Cerrar Sesión</a></li>
@@ -51,6 +51,7 @@
                 </button>
                 <button class="nav-item" onclick="mostrarSeccion('chat')">
                     <span class="nav-icon">💬</span><span class="nav-label">Chat Privado</span>
+                    <span class="nav-badge" id="nav-badge-mensajes" aria-hidden="true">0</span>
                 </button>
                 <button class="nav-item" onclick="mostrarSeccion('config')">
                     <span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span>
@@ -336,6 +337,27 @@ fetch('/api/quien-soy')
         console.log("Identificado como usuario:", miIdUsuario);
     })
     .catch(err => console.error("Error al identificarse:", err));
+
+        // Burbuja de mensajes no leídos en el sidebar
+        function actualizarBurbujaMensajes() {
+            fetch('/api/mensajes-no-leidos').then(function(r) { return r.json(); }).then(function(data) {
+                var count = (data && data.count) ? data.count : 0;
+                var badge = document.getElementById('nav-badge-mensajes');
+                var badgeMobile = document.getElementById('nav-badge-mensajes-mobile');
+                if (badge) {
+                    badge.textContent = count > 99 ? '99+' : String(count);
+                    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+                    badge.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
+                }
+                if (badgeMobile) {
+                    badgeMobile.textContent = count > 99 ? '99+' : String(count);
+                    badgeMobile.style.display = count > 0 ? 'inline-flex' : 'none';
+                    badgeMobile.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
+                }
+            }).catch(function() {});
+        }
+        actualizarBurbujaMensajes();
+        setInterval(actualizarBurbujaMensajes, 45000);
     
         // 1. CARGAR DATOS INICIALES
         fetch('/api/user-data')
@@ -792,6 +814,7 @@ function cargarMensajes(destinatarioId) {
             }).join('');
             
             contenedor.scrollTop = contenedor.scrollHeight;
+            if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
         })
         .catch(err => console.error("Error cargando mensajes:", err));
 }
