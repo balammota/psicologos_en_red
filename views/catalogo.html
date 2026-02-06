@@ -266,12 +266,12 @@
                         ? (psico.precio_asesoria_crianza != null ? Number(psico.precio_asesoria_crianza) : defs.crianza)
                         : (psico.precio_asesoria_crianza_usd != null ? Number(psico.precio_asesoria_crianza_usd) : defs.crianza);
                     const precioDesde = Math.min(pi, pp, pc);
-                    const problemasHTML = (psico.problemas_principales && Array.isArray(psico.problemas_principales))
-                        ? psico.problemas_principales.map(p => `
+                    const problemasLista = (psico.problemas_principales && Array.isArray(psico.problemas_principales)) ? psico.problemas_principales : [];
+                    const problemasEnTarjeta = problemasLista.slice(0, 5);
+                    const problemasHTML = problemasEnTarjeta.map(p => `
                         <span class="tag-problema" style="background: #fdf2f7; color: var(--texto-oscuro); border: 1px solid var(--primario-rosa); padding: 5px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; display: inline-block;">
                             ${p}
-                        </span>`).join('')
-                    : '';
+                        </span>`).join('');
                     const serviciosHTML = (psico.servicios && Array.isArray(psico.servicios) && psico.servicios.length > 0)
                         ? psico.servicios.map(s => `
                         <span class="tag-servicio" style="background: #e8f4f8; color: var(--texto-oscuro); border: 1px solid var(--secundario-azul); padding: 4px 10px; border-radius: 14px; font-size: 0.7rem; font-weight: 500; display: inline-block;">
