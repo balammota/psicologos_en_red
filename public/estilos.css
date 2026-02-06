@@ -2027,6 +2027,27 @@ summary::after {
     color: var(--blanco);
 }
 
+.nav-badge {
+    display: none;
+    margin-left: auto;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: var(--primario-rosa, #e91e63);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.nav-badge-mobile {
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
 .sidebar-footer {
     padding-top: 10px;
     border-top: 1px solid rgba(255,255,255,0.1);
