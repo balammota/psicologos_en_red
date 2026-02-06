@@ -2665,6 +2665,13 @@ app.get('/api/mensajes/:destinatarioId', authRequired, async (req, res) => {
             [miId, parseInt(suId)]
         );
 
+        // Marcar como leídos los mensajes que yo recibí en esta conversación
+        await pool.query(
+            `UPDATE mensajes SET leido = true 
+             WHERE destinatario_id = $1 AND remitente_id = $2 AND (leido IS NULL OR leido = false)`,
+            [miId, parseInt(suId)]
+        );
+
         res.json({ 
             mensajes: result.rows, 
             miId: miId 
@@ -2673,6 +2680,22 @@ app.get('/api/mensajes/:destinatarioId', authRequired, async (req, res) => {
     } catch (error) {
         console.error("Error en DB mensajes:", error);
         res.status(500).json({ error: 'Error al cargar mensajes' });
+    }
+});
+
+// Contador de mensajes no leídos (para burbuja en sidebar)
+app.get('/api/mensajes-no-leidos', authRequired, async (req, res) => {
+    const miId = req.session.usuario.id;
+    try {
+        const r = await pool.query(
+            `SELECT COUNT(*)::int AS total FROM mensajes 
+             WHERE destinatario_id = $1 AND (leido IS NULL OR leido = false)`,
+            [miId]
+        );
+        res.json({ count: (r.rows[0] && r.rows[0].total) ? r.rows[0].total : 0 });
+    } catch (error) {
+        console.error("Error contando mensajes no leídos:", error);
+        res.status(500).json({ count: 0 });
     }
 });
 
