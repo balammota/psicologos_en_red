@@ -18,7 +18,7 @@
             <nav class="perfil-mobile-nav">
                 <ul class="perfil-mobile-nav-list">
                     <li><button type="button" class="perfil-mobile-nav-btn active" data-seccion="dashboard">📊 Dashboard</button></li>
-                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="chat">💬 Mis Mensajes</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="chat">💬 Mis Mensajes <span class="nav-badge nav-badge-mobile" id="nav-badge-mensajes-mobile" aria-hidden="true">0</span></button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="video">🎥 Sala de Video</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="documentos">📄 Documentos</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="agenda">⚙️ Configuración</button></li>
@@ -41,6 +41,7 @@
                 </button>
                 <button class="nav-item" onclick="mostrarSeccion('chat'); cargarContactosChat();">
                     <span class="nav-icon">💬</span><span class="nav-label">Mis Mensajes</span>
+                    <span class="nav-badge" id="nav-badge-mensajes" aria-hidden="true">0</span>
                 </button>
                 <button class="nav-item" onclick="mostrarSeccion('video')">
                     <span class="nav-icon">🎥</span><span class="nav-label">Sala de Video</span>
@@ -388,6 +389,27 @@
         let citasDoctorOriginales = [];
         let citaActualId = null;
         const notasDrafts = new Map(); // citaId -> string
+
+        // Burbuja de mensajes no leídos en el sidebar
+        function actualizarBurbujaMensajes() {
+            fetch('/api/mensajes-no-leidos').then(function(r) { return r.json(); }).then(function(data) {
+                var count = (data && data.count) ? data.count : 0;
+                var badge = document.getElementById('nav-badge-mensajes');
+                var badgeMobile = document.getElementById('nav-badge-mensajes-mobile');
+                if (badge) {
+                    badge.textContent = count > 99 ? '99+' : String(count);
+                    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+                    badge.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
+                }
+                if (badgeMobile) {
+                    badgeMobile.textContent = count > 99 ? '99+' : String(count);
+                    badgeMobile.style.display = count > 0 ? 'inline-flex' : 'none';
+                    badgeMobile.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
+                }
+            }).catch(function() {});
+        }
+        actualizarBurbujaMensajes();
+        setInterval(actualizarBurbujaMensajes, 45000);
 
 // --- POPUP (reemplazo de alert) ---
 function mostrarPopup(mensaje, titulo = 'Aviso') {
@@ -1503,6 +1525,7 @@ function cargarMensajes(idSocio) {
             
             // Auto-scroll al final
             contenedor.scrollTop = contenedor.scrollHeight;
+            if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
         })
         .catch(err => console.error("Error al cargar mensajes:", err));
 }
