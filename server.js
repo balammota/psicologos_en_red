@@ -1093,6 +1093,23 @@ app.get('/api/estado-sesion', async (req, res) => {
     }
 });
 
+// Saber si el usuario es paciente nuevo (nunca ha agendado una cita) — para mostrar "motivo de consulta" solo a nuevos
+app.get('/api/soy-paciente-nuevo', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'paciente') {
+        return res.json({ nuevo: false });
+    }
+    try {
+        const r = await pool.query(
+            'SELECT 1 FROM citas WHERE paciente_id = $1 LIMIT 1',
+            [req.session.usuario.id]
+        );
+        res.json({ nuevo: r.rows.length === 0 });
+    } catch (err) {
+        console.error('Error soy-paciente-nuevo:', err);
+        res.json({ nuevo: false });
+    }
+});
+
 app.get('/panel-doctor', authRequired, (req, res) => {
     if (req.session.usuario.rol !== 'psicologo') {
         return res.status(403).send('Acceso denegado: Esta zona es solo para psicólogos.');
@@ -1772,7 +1789,7 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
     if (!stripe) {
         return res.status(503).json({ error: 'Pagos no configurados. Contacta al administrador.' });
     }
-    const { psicologo_id, fecha, hora, servicio_interes } = req.body;
+    const { psicologo_id, fecha, hora, servicio_interes, motivo_de_consulta } = req.body;
     const paciente_id = req.session.usuario.id;
 
     if (!psicologo_id || !fecha || !hora) {
@@ -1874,6 +1891,7 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
                 fecha,
                 hora,
                 ...(servicio_interes && { servicio_interes: String(servicio_interes) }),
+                ...(motivo_de_consulta && motivo_de_consulta.length <= 200 && { motivo_de_consulta: String(motivo_de_consulta) }),
             },
         });
 
@@ -1885,12 +1903,13 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
 });
 
 app.post('/api/agendar-cita', authRequired, async (req, res) => {
-    const { psicologo_id, fecha, hora } = req.body;
+    const { psicologo_id, fecha, hora, motivo_de_consulta } = req.body;
     const paciente_id = req.session.usuario.id;
 
     if (!psicologo_id || !fecha || !hora) {
         return res.status(400).json({ error: 'Faltan datos para agendar' });
     }
+    const motivo = (motivo_de_consulta && String(motivo_de_consulta).trim().length > 0 && String(motivo_de_consulta).length <= 200) ? String(motivo_de_consulta).trim() : null;
 
     try {
         // Validar disponibilidad antes de agendar
@@ -1929,12 +1948,21 @@ app.post('/api/agendar-cita', authRequired, async (req, res) => {
             return res.status(400).json({ error: 'Este horario ya está ocupado' });
         }
 
-        const insertResult = await pool.query(
-            'INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-            [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
-        );
-        const cita_id = insertResult.rows[0]?.id || null;
-        try { await enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora, cita_id); } catch (e) { console.error('Error enviando correos cita:', e); }
+        if (motivo) {
+            const insertResult = await pool.query(
+                'INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, motivo_de_consulta) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, motivo]
+            );
+            const cita_id = insertResult.rows[0]?.id || null;
+            try { await enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora, cita_id); } catch (e) { console.error('Error enviando correos cita:', e); }
+        } else {
+            const insertResult = await pool.query(
+                'INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
+            );
+            const cita_id = insertResult.rows[0]?.id || null;
+            try { await enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora, cita_id); } catch (e) { console.error('Error enviando correos cita:', e); }
+        }
         res.json({ success: true, message: 'Cita agendada correctamente' });
     } catch (error) {
         console.error(error);
