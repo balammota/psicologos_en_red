@@ -2699,6 +2699,28 @@ app.get('/api/mensajes-no-leidos', authRequired, async (req, res) => {
     }
 });
 
+// No leídos por contacto (remitente_id -> count) para mostrar burbuja en cada chat (panel-doctor)
+app.get('/api/mensajes-no-leidos-por-contacto', authRequired, async (req, res) => {
+    const miId = req.session.usuario.id;
+    try {
+        const r = await pool.query(
+            `SELECT remitente_id, COUNT(*)::int AS total FROM mensajes 
+             WHERE destinatario_id = $1 AND (leido IS NULL OR leido = false)
+             GROUP BY remitente_id`,
+            [miId]
+        );
+        const porContacto = {};
+        (r.rows || []).forEach(row => {
+            const id = row.remitente_id;
+            if (id != null) porContacto[String(id)] = row.total || 0;
+        });
+        res.json(porContacto);
+    } catch (error) {
+        console.error("Error mensajes no leídos por contacto:", error);
+        res.json({});
+    }
+});
+
 // Ruta para que el frontend sepa quién está logueado
 app.get('/api/quien-soy', authRequired, (req, res) => {
     res.json({ id: req.session.usuario.id });
