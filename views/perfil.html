@@ -380,6 +380,17 @@ fetch('/api/quien-soy')
                 if(document.getElementById('config-tel')) document.getElementById('config-tel').value = user.telefono || '';
                 
                 cargarCitas();
+                // Popup "Califica a tu psicólogo" después de la 3ª cita realizada (siguiente vez que inicia sesión)
+                setTimeout(function() {
+                    fetch('/api/debo-opinar-psicologo').then(function(r) { return r.json(); }).then(function(data) {
+                        if (!data || !data.mostrar || !data.psicologo_id) return;
+                        var encuesta = document.getElementById('modal-encuesta');
+                        if (encuesta && encuesta.style.display === 'flex') return;
+                        if (typeof abrirModalOpinion === 'function') {
+                            abrirModalOpinion(data.psicologo_id, encodeURIComponent(data.psicologo_nombre || 'Tu psicólogo'));
+                        }
+                    }).catch(function() {});
+                }, 1200);
             })
             .catch(err => console.error("Error cargando datos de usuario:", err));
 
