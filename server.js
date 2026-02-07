@@ -4,6 +4,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const http = require('http');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -1105,7 +1106,14 @@ function isIpNoConfiable(ip) {
     return false;
 }
 
+// Helper: resolver país desde respuesta de API geo (varias APIs usan country_code o countryCode).
+function parseCountryFromGeoJson(json) {
+    const cc = (json.country_code || json.countryCode || '').toUpperCase();
+    return cc || null;
+}
+
 // Helper: obtener precio según IP (Promise). Solo devuelve MXN/USD cuando la geolocalización es segura; si no, regionUnknown (nunca asumir MXN).
+// Usamos APIs con HTTPS primero; ip-api.com gratis solo permite HTTP por eso es fallback.
 function getPrecioRegionAsync(req) {
     return new Promise((resolve) => {
         const clientIp = getClientIp(req);
@@ -1116,26 +1124,57 @@ function getPrecioRegionAsync(req) {
         if (isIpNoConfiable(clientIp)) {
             return resolve({ regionUnknown: true });
         }
-        const url = `https://ip-api.com/json/${encodeURIComponent(clientIp)}?fields=countryCode`;
-        https.get(url, (apiRes) => {
+        const encodedIp = encodeURIComponent(clientIp);
+
+        function done(cc) {
+            if (!cc) return resolve({ regionUnknown: true });
+            const inMexico = cc === 'MX';
+            resolve(inMexico
+                ? { amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true }
+                : { amount: PRECIOS_DEFAULT_USD.individual, currency: 'USD', inMexico: false });
+        }
+
+        // 1) reallyfreegeoip.org — HTTPS, gratis, sin clave
+        const urlHttps = `https://reallyfreegeoip.org/json/${encodedIp}`;
+        https.get(urlHttps, (apiRes) => {
             let data = '';
             apiRes.on('data', chunk => { data += chunk; });
             apiRes.on('end', () => {
                 try {
-                    const json = JSON.parse(data || '{}');
-                    const cc = (json.countryCode || '').toUpperCase();
-                    if (!cc) {
-                        return resolve({ regionUnknown: true });
-                    }
-                    const inMexico = cc === 'MX';
-                    resolve(inMexico
-                        ? { amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true }
-                        : { amount: PRECIOS_DEFAULT_USD.individual, currency: 'USD', inMexico: false });
-                } catch (e) {
-                    resolve({ regionUnknown: true });
-                }
+                    const cc = parseCountryFromGeoJson(JSON.parse(data || '{}'));
+                    if (cc) return done(cc);
+                } catch (e) { /* seguir al fallback */ }
+                // 2) ip-api.com — solo HTTP en plan gratis
+                const urlHttp = `http://ip-api.com/json/${encodedIp}?fields=countryCode`;
+                http.get(urlHttp, (res2) => {
+                    let d = '';
+                    res2.on('data', c => { d += c; });
+                    res2.on('end', () => {
+                        try {
+                            const cc = parseCountryFromGeoJson(JSON.parse(d || '{}'));
+                            return done(cc);
+                        } catch (e) {
+                            resolve({ regionUnknown: true });
+                        }
+                    });
+                }).on('error', () => resolve({ regionUnknown: true }));
             });
-        }).on('error', () => resolve({ regionUnknown: true }));
+        }).on('error', () => {
+            // Si HTTPS falla, intentar ip-api.com por HTTP
+            const urlHttp = `http://ip-api.com/json/${encodedIp}?fields=countryCode`;
+            http.get(urlHttp, (res2) => {
+                let d = '';
+                res2.on('data', c => { d += c; });
+                res2.on('end', () => {
+                    try {
+                        const cc = parseCountryFromGeoJson(JSON.parse(d || '{}'));
+                        return done(cc);
+                    } catch (e) {
+                        resolve({ regionUnknown: true });
+                    }
+                });
+            }).on('error', () => resolve({ regionUnknown: true }));
+        });
     });
 }
 
