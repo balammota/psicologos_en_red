@@ -597,6 +597,122 @@ async function ejecutarRecordatoriosCitas() {
     } catch (e) { console.error('Error en job recordatorios:', e.message); }
 }
 
+/** Asegura que la tabla recordatorio_post_cita tenga secuencia y default en id (Railway no tiene Query UI). */
+async function asegurarSecuenciaRecordatorioPostCita() {
+    try {
+        await pool.query('CREATE SEQUENCE IF NOT EXISTS recordatorio_post_cita_id_seq');
+        await pool.query(`ALTER TABLE recordatorio_post_cita ALTER COLUMN id SET DEFAULT nextval('recordatorio_post_cita_id_seq'::regclass)`);
+    } catch (e) {
+        if (!e.message || !e.message.includes('does not exist')) console.error('Recordatorio post-cita init:', e.message);
+    }
+}
+
+/** Recordatorios "agendar de nuevo" a 15, 30 y 60 días desde la última cita realizada. Ejecutar 1 vez al día. */
+async function ejecutarRecordatoriosPostCita() {
+    const fromEmail = '"Psicólogos en Red" <contacto@psicologosenred.com>';
+    const enlaceLogin = BASE_URL + '/perfil';
+    const botonHtml = `<div style="text-align: center; margin: 25px 0;"><a href="${enlaceLogin}" style="background: linear-gradient(135deg, #c9a0dc 0%, #a0c4e8 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 30px; font-size: 16px; font-weight: bold;">Iniciar sesión y agendar</a></div>`;
+    const pieHtml = `<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;"><p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Psicólogos en Red.</p>`;
+
+    try {
+        const res = await pool.query(`
+            SELECT c.paciente_id, c.id AS cita_id, c.fecha
+            FROM citas c
+            INNER JOIN (
+                SELECT paciente_id, MAX(id) AS max_id
+                FROM citas WHERE estado = 'realizada'
+                GROUP BY paciente_id
+            ) u ON c.paciente_id = u.paciente_id AND c.id = u.max_id
+            WHERE c.estado = 'realizada'
+        `);
+        for (const row of res.rows) {
+            const paciente_id = row.paciente_id;
+            const cita_id = row.cita_id;
+            const fechaCita = row.fecha;
+            const diasDesde = Math.floor((Date.now() - new Date(fechaCita).getTime()) / (24 * 60 * 60 * 1000));
+
+            const userRow = await pool.query('SELECT nombre, email FROM usuarios WHERE id = $1', [paciente_id]);
+            const usuario = userRow.rows[0];
+            if (!usuario?.email) continue;
+            const nombre = (usuario.nombre || '').trim() || 'querido paciente';
+            const primerNombre = nombre.split(' ')[0] || nombre;
+
+            let rec = await pool.query(
+                'SELECT enviado_dia_15_at, enviado_dia_30_at, enviado_dia_60_at FROM recordatorio_post_cita WHERE paciente_id = $1 AND cita_id = $2',
+                [paciente_id, cita_id]
+            );
+            if (rec.rows.length === 0) {
+                await pool.query(
+                    `INSERT INTO recordatorio_post_cita (paciente_id, cita_id)
+                     SELECT $1, $2 WHERE NOT EXISTS (SELECT 1 FROM recordatorio_post_cita WHERE paciente_id = $1 AND cita_id = $2)`,
+                    [paciente_id, cita_id]
+                );
+                rec = await pool.query(
+                    'SELECT enviado_dia_15_at, enviado_dia_30_at, enviado_dia_60_at FROM recordatorio_post_cita WHERE paciente_id = $1 AND cita_id = $2',
+                    [paciente_id, cita_id]
+                );
+            }
+            const r = rec.rows[0];
+            if (!r) continue;
+
+            if (diasDesde >= 15 && !r.enviado_dia_15_at) {
+                const html = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 30px;"><h1 style="color: #c9a0dc;">Psicólogos en Red</h1></div>
+                    <h2 style="color: #333;">¿Cómo te has sentido estos últimos días, ${primerNombre}?</h2>
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">Hola, ${nombre}:</p>
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">Ha pasado un par de semanas desde tu última sesión en Psicólogos en Red. Solo queríamos pasar a saludarte y recordarte que la constancia es la clave para ver cambios reales en tu bienestar.</p>
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">A veces, la rutina diaria nos hace postergar lo más importante: nosotros mismos. Si estás listo para retomar tu proceso, tu terapeuta tiene espacios disponibles para ti.</p>
+                    ${botonHtml}
+                    <p style="color: #666; font-size: 16px;">Tu espacio sigue aquí.</p>
+                    ${pieHtml}
+                </div>`;
+                try {
+                    await sendMail({ from: fromEmail, to: usuario.email, bcc: 'contacto@psicologosenred.com', subject: `¿Cómo te has sentido estos últimos días, ${primerNombre}?`, html });
+                    await pool.query('UPDATE recordatorio_post_cita SET enviado_dia_15_at = NOW() WHERE paciente_id = $1 AND cita_id = $2', [paciente_id, cita_id]);
+                } catch (e) { console.error('Error recordatorio día 15 paciente', paciente_id, e.message); }
+            }
+            if (diasDesde >= 30 && !r.enviado_dia_30_at) {
+                const html = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 30px;"><h1 style="color: #c9a0dc;">Psicólogos en Red</h1></div>
+                    <h2 style="color: #333;">Un mes de tu última sesión: Reconecta con tus metas</h2>
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">Hola, ${nombre}:</p>
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">Hoy se cumple un mes desde que nos vimos por última vez. Queríamos recordarte por qué decidiste iniciar este camino de terapia.</p>
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">Sabemos que la vida se vuelve caótica, pero retomar tus sesiones es la mejor manera de mantener el equilibrio. No importa si sientes que "todo va bien" o si han surgido nuevos retos; cada sesión es un avance hacia la versión de ti que quieres construir.</p>
+                    ${botonHtml}
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">Recuerda que si necesitas cambiar de especialista o explorar otra corriente, nuestro algoritmo de match siempre está disponible para ayudarte.</p>
+                    ${pieHtml}
+                </div>`;
+                try {
+                    await sendMail({ from: fromEmail, to: usuario.email, bcc: 'contacto@psicologosenred.com', subject: `Un mes de tu última sesión: Reconecta con tus metas`, html });
+                    await pool.query('UPDATE recordatorio_post_cita SET enviado_dia_30_at = NOW() WHERE paciente_id = $1 AND cita_id = $2', [paciente_id, cita_id]);
+                } catch (e) { console.error('Error recordatorio día 30 paciente', paciente_id, e.message); }
+            }
+            if (diasDesde >= 60 && !r.enviado_dia_60_at) {
+                const html = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 30px;"><h1 style="color: #c9a0dc;">Psicólogos en Red</h1></div>
+                    <h2 style="color: #333;">${primerNombre}, queremos apoyarte a retomar tu bienestar</h2>
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">Hola, ${nombre}:</p>
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">Notamos que han pasado 60 días desde tu última consulta. En Psicólogos en Red creemos que la salud mental no debe ser algo que se atiende solo en crisis, sino un hábito de cuidado continuo.</p>
+                    <p style="color: #666; font-size: 16px; line-height: 1.6;">Si el motivo de tu ausencia ha sido el tiempo, la logística o simplemente una pausa necesaria, queremos que sepas que es muy fácil volver a empezar.</p>
+                    <p style="color: #666; font-size: 16px;">¿Listo para tu siguiente paso? Revisa los horarios disponibles de tu especialista o descubre a nuevos profesionales aquí:</p>
+                    ${botonHtml}
+                    <p style="color: #666; font-size: 16px;">Estamos aquí para acompañarte en la red de apoyo que mereces.</p>
+                    ${pieHtml}
+                </div>`;
+                try {
+                    await sendMail({ from: fromEmail, to: usuario.email, bcc: 'contacto@psicologosenred.com', subject: `${primerNombre}, queremos apoyarte a retomar tu bienestar`, html });
+                    await pool.query('UPDATE recordatorio_post_cita SET enviado_dia_60_at = NOW() WHERE paciente_id = $1 AND cita_id = $2', [paciente_id, cita_id]);
+                } catch (e) { console.error('Error recordatorio día 60 paciente', paciente_id, e.message); }
+            }
+        }
+    } catch (e) {
+        console.error('Error en job recordatorios post-cita:', e.message);
+    }
+}
+
 // 2. CONFIGURACIONES
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -3025,4 +3141,6 @@ app.listen(PORT, () => {
     console.log('Servidor funcionando en puerto', PORT);
     ejecutarRecordatoriosCitas();
     setInterval(ejecutarRecordatoriosCitas, 5 * 60 * 1000);
+    asegurarSecuenciaRecordatorioPostCita().then(() => ejecutarRecordatoriosPostCita());
+    setInterval(ejecutarRecordatoriosPostCita, 24 * 60 * 60 * 1000);
 });
