@@ -84,7 +84,7 @@
             index_faq_3_respuesta: "Solo necesitas un dispositivo con cámara y micrófono (computadora o celular) y una conexión a internet estable. Recomendamos un lugar tranquilo y privado.",
             index_faq_4_pregunta: "¿Cuáles son los métodos de pago?",
             index_faq_4_respuesta: "Aceptamos tarjetas de crédito, débito y transferencias bancarias. El pago se realiza de forma segura antes de iniciar la sesión.",
-            index_cta_title: "¿Listo para comenzar tu viaje?",
+            index_cta_title: "¿Estás listo para iniciar tu proceso?",
             index_cta_desc: "Da el primer paso hacia tu bienestar emocional. Agenda una consulta hoy mismo.",
             index_cta_btn: "Agendar Consulta",
             // Modal bienvenida
