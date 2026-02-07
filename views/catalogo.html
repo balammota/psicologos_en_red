@@ -514,18 +514,32 @@
             });
         }
 
-        // Obtener región: navegador (ipapi.co) tiene la IP real; si falla, servidor. Nunca asumir MXN: si no hay certeza, devolver regionUnknown.
+        // Obtener región desde el navegador (IP real). Probamos varias APIs por si una falla o está limitada. Nunca asumir MXN.
+        function parseRegion(data) {
+            const cc = (data.country_code || data.countryCode || '').toUpperCase();
+            if (!cc) return null;
+            const inMexico = cc === 'MX';
+            return { currency: inMexico ? 'MXN' : 'USD', amount: inMexico ? 600 : 55, inMexico };
+        }
         function obtenerPrecioRegion() {
             return fetch('https://ipapi.co/json/')
                 .then(r => r.json())
                 .then(data => {
-                    const cc = (data.country_code || '').toUpperCase();
-                    if (!cc) return { regionUnknown: true };
-                    const inMexico = cc === 'MX';
-                    return { currency: inMexico ? 'MXN' : 'USD', amount: inMexico ? 600 : 55, inMexico };
+                    const region = parseRegion(data);
+                    if (region) return region;
+                    return Promise.reject(new Error('no country'));
                 })
-                .catch(() => fetch('/api/precio-region').then(r => r.json()))
-                .then(region => {
+                .catch(function() {
+                    return fetch('https://api.ip.sb/geoip').then(r => r.json()).then(function(data) {
+                        const region = parseRegion(data);
+                        if (region) return region;
+                        return Promise.reject(new Error('no country'));
+                    });
+                })
+                .catch(function() {
+                    return fetch('/api/precio-region').then(r => r.json());
+                })
+                .then(function(region) {
                     if (!region || region.regionUnknown || (typeof region.currency === 'undefined' && !region.regionUnknown)) return { regionUnknown: true };
                     return region;
                 });
