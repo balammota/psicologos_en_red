@@ -1078,23 +1078,43 @@ app.get('/catalogo', (req, res) => {
 const PRECIOS_DEFAULT_MXN = { individual: 600, pareja: 900, crianza: 700 };
 const PRECIOS_DEFAULT_USD = { individual: 55, pareja: 75, crianza: 65 };
 
-// Obtener IP del cliente. X-Forwarded-For suele ser "cliente, proxy1, proxy2" → la primera es la IP real del usuario
+// Obtener IP del cliente. En Railway: X-Envoy-External-Address o X-Real-IP son fiables; X-Forwarded-For tiene la IP real al final (rightmost).
 function getClientIp(req) {
+    const envoy = (req.get('x-envoy-external-address') || '').trim();
+    if (envoy) return envoy;
+    const realIp = (req.get('x-real-ip') || '').trim();
+    if (realIp) return realIp;
     const forwarded = (req.get('x-forwarded-for') || '').split(',').map(s => s.trim()).filter(Boolean);
     if (forwarded.length > 0) {
-        const client = forwarded[0];
+        // En Railway el valor más fiable es el último (rightmost); el primero puede ser spoofed por el cliente
+        const client = forwarded[forwarded.length - 1];
         if (client) return client;
     }
     return req.socket?.remoteAddress || req.ip || req.connection?.remoteAddress || '127.0.0.1';
 }
 
-// Helper: obtener precio según IP (Promise)
+// True si la IP es privada o de proxy (no confiable para geolocalización)
+function isIpNoConfiable(ip) {
+    if (!ip || typeof ip !== 'string') return true;
+    const s = ip.replace(/^::ffff:/i, '');
+    if (/^127\.|^::1$/i.test(s)) return true;
+    if (/^10\./.test(s)) return true;
+    if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(s)) return true;
+    if (/^192\.168\./.test(s)) return true;
+    if (/^169\.254\./.test(s)) return true; // link-local
+    return false;
+}
+
+// Helper: obtener precio según IP (Promise). Solo devuelve MXN/USD cuando la geolocalización es segura; si no, regionUnknown (nunca asumir MXN).
 function getPrecioRegionAsync(req) {
     return new Promise((resolve) => {
         const clientIp = getClientIp(req);
         const isLocalhost = /^127\.|^::1$|^::ffff:127\./i.test(clientIp);
         if (isLocalhost) {
-            return resolve({ amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true });
+            return resolve({ regionUnknown: true });
+        }
+        if (isIpNoConfiable(clientIp)) {
+            return resolve({ regionUnknown: true });
         }
         const url = `https://ip-api.com/json/${encodeURIComponent(clientIp)}?fields=countryCode`;
         https.get(url, (apiRes) => {
@@ -1103,15 +1123,19 @@ function getPrecioRegionAsync(req) {
             apiRes.on('end', () => {
                 try {
                     const json = JSON.parse(data || '{}');
-                    const inMexico = json.countryCode === 'MX';
+                    const cc = (json.countryCode || '').toUpperCase();
+                    if (!cc) {
+                        return resolve({ regionUnknown: true });
+                    }
+                    const inMexico = cc === 'MX';
                     resolve(inMexico
                         ? { amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true }
                         : { amount: PRECIOS_DEFAULT_USD.individual, currency: 'USD', inMexico: false });
                 } catch (e) {
-                    resolve({ amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true });
+                    resolve({ regionUnknown: true });
                 }
             });
-        }).on('error', () => resolve({ amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true }));
+        }).on('error', () => resolve({ regionUnknown: true }));
     });
 }
 
@@ -1947,10 +1971,13 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
             return res.status(400).json({ error: 'Este horario ya está ocupado' });
         }
 
-        // Usar moneda enviada por el frontend (detectada en el navegador = IP real); si no, detectar por IP en servidor
+        // Usar moneda enviada por el frontend; si no, detectar por IP. Nunca asumir MXN: si no sabemos la región, exigir que el cliente envíe currency.
         const region = (req.body.currency === 'USD' || req.body.currency === 'MXN')
             ? { currency: req.body.currency, inMexico: req.body.currency === 'MXN' }
             : await getPrecioRegionAsync(req);
+        if (region.regionUnknown || !region.currency) {
+            return res.status(400).json({ error: 'No se pudo determinar tu región. Por favor indica si pagarás desde México (MXN) o desde otro país (USD).', code: 'REGION_REQUIRED' });
+        }
         const useUsd = region.currency === 'USD';
 
         const psiRow = await pool.query(
