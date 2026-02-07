@@ -106,6 +106,12 @@
                 </div>
             </div>
             <p id="filtros-resultado" style="font-size: 0.8rem; color: #666; margin-top: 8px;"></p>
+        <div id="selector-region-wrap" style="display: none; margin: 1rem 0; padding: 1rem; background: #fdf2f7; border: 1px solid var(--primario-rosa); border-radius: 12px;">
+            <p style="margin: 0 0 10px; font-weight: 600; color: var(--texto-oscuro);">No pudimos detectar tu ubicación. Indica desde dónde pagarás para mostrar los precios correctos:</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="button" id="btn-region-mxn" style="padding: 10px 20px; background: var(--primario-rosa); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">México (MXN)</button>
+                <button type="button" id="btn-region-usd" style="padding: 10px 20px; background: #2c3e50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Otro país (USD)</button>
+            </div>
         </div>
         <div class="catalogo-grid-modern" id="contenedor-psicologos"></div>
     </section>
@@ -272,6 +278,7 @@
             const contenedor = document.getElementById('contenedor-psicologos');
             contenedor.innerHTML = '';
                 const cur = currency ?? precioCurrency;
+                const sinRegion = !cur || cur === '';
                 const isMxn = cur === 'MXN';
                 const defs = isMxn ? PRECIOS_DEFAULT_MXN : PRECIOS_DEFAULT_USD;
                 psicologos.forEach(psico => {
@@ -317,7 +324,7 @@
                             <div style="display: flex; flex-wrap: wrap; gap: 6px;">${serviciosHTML}</div>
                             <div class="psico-card-footer">
                                 <span class="psico-card-rating">⭐ ${psico.rating != null ? psico.rating : '—'}</span>
-                                <span class="psico-card-precio">Desde $${precioDesde} <small>${cur} /sesión</small></span>
+                                <span class="psico-card-precio">${sinRegion ? 'Selecciona tu país para ver precios' : 'Desde $' + precioDesde + ' <small>' + cur + ' /sesión</small>'}</span>
                             </div>
                             <div class="psico-card-actions">
                                 <button type="button" onclick="verDetallesPsicologo(${psico.id})" class="psico-card-btn psico-card-btn-outline">Ver perfil</button>
@@ -507,27 +514,36 @@
             });
         }
 
-        // Obtener región: primero desde el navegador (IP real del usuario; evita que Railway/USA devuelva USD)
+        // Obtener región: navegador (ipapi.co) tiene la IP real; si falla, servidor. Nunca asumir MXN: si no hay certeza, devolver regionUnknown.
         function obtenerPrecioRegion() {
             return fetch('https://ipapi.co/json/')
                 .then(r => r.json())
                 .then(data => {
-                    const inMexico = (data.country_code || '') === 'MX';
-                    return {
-                        currency: inMexico ? 'MXN' : 'USD',
-                        amount: inMexico ? 600 : 55,
-                        inMexico: inMexico
-                    };
+                    const cc = (data.country_code || '').toUpperCase();
+                    if (!cc) return { regionUnknown: true };
+                    const inMexico = cc === 'MX';
+                    return { currency: inMexico ? 'MXN' : 'USD', amount: inMexico ? 600 : 55, inMexico };
                 })
-                .catch(() => fetch('/api/precio-region').then(r => r.json()));
+                .catch(() => fetch('/api/precio-region').then(r => r.json()))
+                .then(region => {
+                    if (!region || region.regionUnknown || (typeof region.currency === 'undefined' && !region.regionUnknown)) return { regionUnknown: true };
+                    return region;
+                });
         }
 
         // Cargar psicólogos y montar filtros
         Promise.all([fetch('/api/psicologos').then(r => r.json()), obtenerPrecioRegion()])
             .then(([psicologos, precioRegion]) => {
                 listaPsicologosCompleta = Array.isArray(psicologos) ? psicologos : [];
-                precioAmount = precioRegion.amount ?? (precioRegion.currency === 'USD' ? 55 : 600);
-                precioCurrency = precioRegion.currency ?? 'MXN';
+                if (precioRegion.regionUnknown) {
+                    precioAmount = 0;
+                    precioCurrency = '';
+                    var selWrap = document.getElementById('selector-region-wrap');
+                    if (selWrap) selWrap.style.display = 'block';
+                } else {
+                    precioAmount = precioRegion.amount ?? (precioRegion.currency === 'USD' ? 55 : 600);
+                    precioCurrency = precioRegion.currency || '';
+                }
                 llenarOpcionesFiltros(listaPsicologosCompleta);
                 setupDropdowns();
                 aplicarFiltros();
@@ -587,11 +603,15 @@
             })
             .catch(err => {
                 console.error('Error cargando catálogo o precio:', err);
+                precioCurrency = '';
+                precioAmount = 0;
+                var selWrap = document.getElementById('selector-region-wrap');
+                if (selWrap) selWrap.style.display = 'block';
                 fetch('/api/psicologos').then(r => r.json()).then(psicologos => {
                     listaPsicologosCompleta = Array.isArray(psicologos) ? psicologos : [];
                     llenarOpcionesFiltros(listaPsicologosCompleta);
                     setupDropdowns();
-                    renderCards(listaPsicologosCompleta, 600, 'MXN');
+                    aplicarFiltros();
                 });
             });
 
@@ -762,7 +782,8 @@ async function abrirModal(id, nombre) {
                     else { inpMotivo.removeAttribute('required'); inpMotivo.value = ''; }
                 }
                 if (!psico || !sel) { if (precioSesionEl) precioSesionEl.textContent = ''; return; }
-                const cur = typeof precioCurrency !== 'undefined' ? precioCurrency : 'MXN';
+                const cur = (typeof precioCurrency !== 'undefined' && precioCurrency) ? precioCurrency : '';
+                if (!cur) { precioSesionEl.textContent = 'Selecciona tu país (arriba) para ver el precio.'; return; }
                 const isMxn = cur === 'MXN';
                 const defs = isMxn ? PRECIOS_DEFAULT_MXN : PRECIOS_DEFAULT_USD;
                 const pi = isMxn ? (Number(psico.precio_terapia_individual) || defs.individual) : (Number(psico.precio_terapia_individual_usd) || defs.individual);
@@ -876,6 +897,10 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
 
         document.getElementById('form-agendar').onsubmit = async (e) => {
             e.preventDefault();
+            if (!precioCurrency) {
+                alert('Por favor selecciona tu país (México u otro) para mostrar precios y poder agendar.');
+                return;
+            }
             const motivoEl = document.getElementById('motivo-consulta');
             const motivoVal = (motivoEl && motivoEl.value && motivoEl.value.trim()) ? motivoEl.value.trim() : null;
             const data = {
@@ -883,7 +908,7 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
                 fecha: document.getElementById('fecha-cita').value,
                 hora: document.getElementById('hora-cita').value,
                 servicio_interes: document.getElementById('servicio-interes').value || null,
-                currency: typeof precioCurrency !== 'undefined' ? precioCurrency : 'MXN'
+                currency: precioCurrency
             };
             if (motivoVal) data.motivo_de_consulta = motivoVal;
 
