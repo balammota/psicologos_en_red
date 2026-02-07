@@ -1078,13 +1078,12 @@ app.get('/catalogo', (req, res) => {
 const PRECIOS_DEFAULT_MXN = { individual: 600, pareja: 900, crianza: 700 };
 const PRECIOS_DEFAULT_USD = { individual: 55, pareja: 75, crianza: 65 };
 
-// Obtener IP del cliente: en muchos proxies (Railway, etc.) la IP real va al FINAL de X-Forwarded-For
+// Obtener IP del cliente. X-Forwarded-For suele ser "cliente, proxy1, proxy2" → la primera es la IP real del usuario
 function getClientIp(req) {
     const forwarded = (req.get('x-forwarded-for') || '').split(',').map(s => s.trim()).filter(Boolean);
     if (forwarded.length > 0) {
-        const last = forwarded[forwarded.length - 1];
-        if (last) return last;
-        return forwarded[0];
+        const client = forwarded[0];
+        if (client) return client;
     }
     return req.socket?.remoteAddress || req.ip || req.connection?.remoteAddress || '127.0.0.1';
 }
