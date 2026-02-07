@@ -2579,6 +2579,40 @@ app.get('/api/psicologo/:id', async (req, res) => {
 
 // --- COLOCAR EN server.js ---
 
+// ¿Debe mostrarse el popup de opinar? (paciente con >= 3 citas realizadas con un psicólogo al que aún no ha valorado)
+app.get('/api/debo-opinar-psicologo', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'paciente') {
+        return res.json({ mostrar: false });
+    }
+    const paciente_id = req.session.usuario.id;
+    try {
+        const r = await pool.query(
+            `SELECT c.psicologo_id, p.nombre AS psicologo_nombre
+             FROM citas c
+             JOIN psicologos p ON p.id = c.psicologo_id
+             WHERE c.paciente_id = $1 AND c.estado = 'realizada'
+               AND NOT EXISTS (SELECT 1 FROM opiniones o WHERE o.paciente_id = $1 AND o.psicologo_id = c.psicologo_id)
+             GROUP BY c.psicologo_id, p.nombre
+             HAVING COUNT(*) >= 3
+             ORDER BY MAX(c.fecha + c.hora) DESC
+             LIMIT 1`,
+            [paciente_id, paciente_id]
+        );
+        if (r.rows.length === 0) {
+            return res.json({ mostrar: false });
+        }
+        const row = r.rows[0];
+        res.json({
+            mostrar: true,
+            psicologo_id: row.psicologo_id,
+            psicologo_nombre: row.psicologo_nombre || 'Tu psicólogo'
+        });
+    } catch (err) {
+        console.error('Error debo-opinar-psicologo:', err);
+        res.json({ mostrar: false });
+    }
+});
+
 app.post('/api/dejar-opinion', authRequired, async (req, res) => {
     const { psicologo_id, comentario, estrellas } = req.body;
     const paciente_id = req.session.usuario.id;
