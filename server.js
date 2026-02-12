@@ -826,7 +826,7 @@ app.post('/api/daily-meeting', authRequired, async (req, res) => {
     } catch (err) {
         console.error('Daily meeting error:', err);
         if (!res.headersSent) {
-            res.json({ error: err.message || 'Error al preparar la videollamada' });
+            res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ error: err.message || 'Error al preparar la videollamada' }));
         }
     }
 });
@@ -1150,6 +1150,7 @@ app.post('/api/contacto', async (req, res) => {
 
 // RUTA PROTEGIDA: Solo entran logueados
 app.get('/perfil', authRequired, (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.sendFile(path.join(__dirname, 'views', 'perfil.html'));
 });
 
@@ -1374,6 +1375,7 @@ app.get('/panel-doctor', authRequired, (req, res) => {
     if (req.session.usuario.rol !== 'psicologo') {
         return res.status(403).send('Acceso denegado: Esta zona es solo para psicólogos.');
     }
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.sendFile(path.join(__dirname, 'views', 'panel-doctor.html'));
 });
 
