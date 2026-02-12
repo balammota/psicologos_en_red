@@ -2777,7 +2777,7 @@ app.get('/api/debo-opinar-psicologo', authRequired, async (req, res) => {
              HAVING COUNT(*) >= 3
              ORDER BY MAX(c.fecha + c.hora) DESC
              LIMIT 1`,
-            [paciente_id, paciente_id]
+            [paciente_id]
         );
         if (r.rows.length === 0) {
             return res.json({ mostrar: false });
