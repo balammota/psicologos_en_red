@@ -1633,6 +1633,33 @@ app.get('/api/admin/pacientes', authRequired, async (req, res) => {
     }
 });
 
+// API: Lista de pacientes del psicólogo (solo quienes han agendado cita con él)
+app.get('/api/doctor/pacientes', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'psicologo') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+    try {
+        const psicologoId = await getPsicologoIdFromSession(req);
+        if (!psicologoId) return res.status(404).json({ error: 'Perfil de psicólogo no encontrado' });
+
+        const result = await pool.query(`
+            SELECT u.id, u.nombre, u.email, u.telefono, u.contacto_emergencia,
+                   (SELECT COUNT(*) FROM citas WHERE paciente_id = u.id AND psicologo_id = $1) as total_citas,
+                   (SELECT MAX(fecha) FROM citas WHERE paciente_id = u.id AND psicologo_id = $1 AND fecha < CURRENT_DATE) as ultima_cita,
+                   (SELECT COUNT(*) FROM citas WHERE paciente_id = u.id AND psicologo_id = $1 AND fecha >= CURRENT_DATE AND estado NOT IN ('cancelada')) as citas_futuras
+            FROM usuarios u
+            WHERE u.rol = 'paciente'
+              AND EXISTS (SELECT 1 FROM citas WHERE paciente_id = u.id AND psicologo_id = $1)
+            ORDER BY u.nombre
+            LIMIT 200
+        `, [psicologoId]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error al obtener pacientes del psicólogo:', error);
+        res.status(500).json({ error: 'Error al obtener pacientes' });
+    }
+});
+
 app.get('/api/psicologos', async (req, res) => {
     try {
         const inMexico = req.query.inMexico;
