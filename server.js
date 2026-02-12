@@ -1501,6 +1501,8 @@ app.get('/api/admin/psicologos', authRequired, async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT p.id, p.nombre, p.especialidad, u.email, u.telefono, p.usuario_id,
+                   COALESCE(p.visible_mexico, true) as visible_mexico,
+                   COALESCE(p.visible_internacional, false) as visible_internacional,
                    (SELECT COUNT(*) FROM citas WHERE psicologo_id = p.id) as total_citas,
                    (SELECT COUNT(*) FROM citas WHERE psicologo_id = p.id AND fecha = CURRENT_DATE) as citas_hoy,
                    COALESCE(p.rating, 0) as calificacion,
@@ -1514,6 +1516,32 @@ app.get('/api/admin/psicologos', authRequired, async (req, res) => {
     } catch (error) {
         console.error('Error al obtener psicólogos admin:', error);
         res.status(500).json({ error: 'Error al obtener psicólogos' });
+    }
+});
+
+// API: Actualizar visibilidad México / Internacional de un psicólogo
+app.put('/api/admin/psicologos/:id/visibilidad', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+    const { visible_mexico, visible_internacional } = req.body || {};
+    const vm = visible_mexico === true || visible_mexico === 'true';
+    const vi = visible_internacional === true || visible_internacional === 'true';
+    try {
+        const result = await pool.query(
+            `UPDATE psicologos
+             SET visible_mexico = $1, visible_internacional = $2
+             WHERE id = $3
+             RETURNING id, visible_mexico, visible_internacional`,
+            [vm, vi, id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Psicólogo no encontrado' });
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error actualizando visibilidad:', error);
+        res.status(500).json({ error: 'Error al actualizar visibilidad' });
     }
 });
 
@@ -1605,9 +1633,17 @@ app.get('/api/admin/pacientes', authRequired, async (req, res) => {
 
 app.get('/api/psicologos', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM psicologos');
-        // 'result.rows' ya contiene 'problemas_principales' como un array de JS
-        // Ejemplo: ["Ansiedad", "Depresión", "Estrés laboral"]
+        const inMexico = req.query.inMexico;
+        let query = 'SELECT * FROM psicologos';
+        const params = [];
+        if (inMexico === 'true') {
+            query += ' WHERE COALESCE(visible_mexico, true) = true';
+        } else if (inMexico === 'false') {
+            query += ' WHERE COALESCE(visible_internacional, false) = true';
+        } else {
+            query += ' WHERE (COALESCE(visible_mexico, true) = true OR COALESCE(visible_internacional, false) = true)';
+        }
+        const result = await pool.query(query);
         res.json(result.rows);
     } catch (error) {
         console.error(error);
