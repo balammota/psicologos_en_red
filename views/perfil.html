@@ -682,8 +682,8 @@ fetch('/api/quien-soy')
         function loadDailyScript() {
             if (window.Daily) return Promise.resolve();
             var urls = [
-                'https://unpkg.com/@daily-co/daily-js/build/daily.js',
-                'https://cdn.jsdelivr.net/npm/@daily-co/daily-js/build/daily.js'
+                'https://unpkg.com/@daily-co/daily-js/dist/daily.js',
+                'https://cdn.jsdelivr.net/npm/@daily-co/daily-js/dist/daily.js'
             ];
             function tryLoad(idx) {
                 if (idx >= urls.length) return Promise.reject(new Error('No se pudo cargar el script de video. Revisa tu conexión o prueba sin bloqueadores de anuncios.'));
