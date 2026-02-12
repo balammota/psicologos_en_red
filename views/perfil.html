@@ -259,6 +259,11 @@
                             </div>
             
                             <div class="form-group-config">
+                                <label>Contacto de emergencia</label>
+                                <input type="text" id="config-contacto-emergencia" class="input-readonly" readonly placeholder="Nombre y/o teléfono de quien avisar en caso de emergencia">
+                            </div>
+            
+                            <div class="form-group-config">
                                 <label>Contraseña</label>
                                 <div style="position: relative; display: flex; align-items: center;">
                                     <input type="password" id="config-pass" class="input-readonly" readonly 
@@ -378,6 +383,7 @@ fetch('/api/quien-soy')
                 if(document.getElementById('config-nombre')) document.getElementById('config-nombre').value = user.nombre;
                 if(document.getElementById('config-email')) document.getElementById('config-email').value = user.email;
                 if(document.getElementById('config-tel')) document.getElementById('config-tel').value = user.telefono || '';
+                if(document.getElementById('config-contacto-emergencia')) document.getElementById('config-contacto-emergencia').value = user.contacto_emergencia || '';
                 
                 cargarCitas();
                 // Popup "Califica a tu psicólogo" después de la 3ª cita realizada (siguiente vez que inicia sesión)
@@ -466,7 +472,7 @@ fetch('/api/quien-soy')
             document.getElementById('btn-editar-toggle').style.display = 'none';
             document.getElementById('eye-btn').style.display = 'block';
     
-            const inputs = ['config-nombre', 'config-tel', 'config-pass'];
+            const inputs = ['config-nombre', 'config-tel', 'config-contacto-emergencia', 'config-pass'];
             inputs.forEach(id => {
                 const el = document.getElementById(id);
                 if(el) {
@@ -492,6 +498,7 @@ fetch('/api/quien-soy')
             const data = {
                 nombre: document.getElementById('config-nombre').value,
                 telefono: document.getElementById('config-tel').value,
+                contacto_emergencia: document.getElementById('config-contacto-emergencia').value.trim(),
                 password: document.getElementById('config-pass').value
             };
             try {
