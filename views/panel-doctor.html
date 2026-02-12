@@ -1248,16 +1248,24 @@ function actualizarBurbujasPorContacto() {
     }).catch(function() {});
 }
 
-        // 4. FUNCIONES DE VIDEO (Daily.co)
+        // 4. FUNCIONES DE VIDEO (Daily.co) — unpkg (recomendado por Daily) y jsdelivr como respaldo
         function loadDailyScript() {
             if (window.Daily) return Promise.resolve();
-            return new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/@daily-co/daily-js/build/daily.js';
-                s.onload = () => resolve();
-                s.onerror = () => reject(new Error('No se pudo cargar el script de video. Revisa tu conexión.'));
-                document.head.appendChild(s);
-            });
+            var urls = [
+                'https://unpkg.com/@daily-co/daily-js/build/daily.js',
+                'https://cdn.jsdelivr.net/npm/@daily-co/daily-js/build/daily.js'
+            ];
+            function tryLoad(idx) {
+                if (idx >= urls.length) return Promise.reject(new Error('No se pudo cargar el script de video. Revisa tu conexión o prueba sin bloqueadores de anuncios.'));
+                return new Promise((resolve, reject) => {
+                    var s = document.createElement('script');
+                    s.src = urls[idx];
+                    s.onload = () => resolve();
+                    s.onerror = () => { s.remove(); tryLoad(idx + 1).then(resolve, reject); };
+                    document.head.appendChild(s);
+                });
+            }
+            return tryLoad(0);
         }
 
         async function iniciarVideo(url, nombre, citaId) {
