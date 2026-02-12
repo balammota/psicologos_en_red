@@ -749,7 +749,87 @@ function authRequired(req, res, next) {
     }
 }
 
-// Configuración Jitsi as a Service (JaaS) - solo App ID; el frontend lo usa para 8x8.vc
+// ----- Daily.co: videollamadas (reemplazo de Jitsi) -----
+const DAILY_API_KEY = (process.env.DAILY_API_KEY || '').trim();
+const DAILY_API_BASE = 'https://api.daily.co/v1';
+
+function dailyApi(method, path, body) {
+    return new Promise((resolve, reject) => {
+        const url = new URL(path, DAILY_API_BASE);
+        const data = body ? JSON.stringify(body) : '';
+        const opts = {
+            hostname: url.hostname,
+            path: url.pathname,
+            method,
+            headers: {
+                'Authorization': `Bearer ${DAILY_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        };
+        if (data) opts.headers['Content-Length'] = Buffer.byteLength(data, 'utf8');
+        const req = https.request(opts, (res) => {
+            let chunks = '';
+            res.on('data', c => { chunks += c; });
+            res.on('end', () => {
+                try {
+                    const json = chunks ? JSON.parse(chunks) : {};
+                    if (res.statusCode >= 200 && res.statusCode < 300) resolve(json);
+                    else reject(new Error(json.error || json.message || `Daily API ${res.statusCode}`));
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        });
+        req.on('error', reject);
+        if (data) req.write(data);
+        req.end();
+    });
+}
+
+// Obtener o crear sala Daily y devolver URL + token para el usuario
+app.post('/api/daily-meeting', authRequired, async (req, res) => {
+    if (!DAILY_API_KEY) {
+        return res.status(503).json({ error: 'Videollamadas no configuradas (DAILY_API_KEY)' });
+    }
+    const { citaId, rol, displayName } = req.body || {};
+    const citaIdNum = parseInt(citaId, 10);
+    const roomName = ('sesion-' + (Number.isNaN(citaIdNum) ? Date.now() : citaIdNum)).replace(/[^A-Za-z0-9_-]/g, '') || 'sesion-' + Math.floor(Date.now() / 1000);
+    const isOwner = rol === 'psicologo';
+    const name = (displayName || req.session?.usuario?.nombre || 'Usuario').trim().slice(0, 100);
+    const userId = String(req.session?.usuario?.id || '').slice(0, 36);
+    const now = Math.floor(Date.now() / 1000);
+    const expRoom = now + 4 * 3600;
+    const expToken = now + 2 * 3600;
+    try {
+        let room = await dailyApi('GET', '/rooms/' + encodeURIComponent(roomName)).catch(() => null);
+        if (!room || !room.url) {
+            room = await dailyApi('POST', '/rooms', {
+                name: roomName,
+                privacy: 'private',
+                properties: { exp: expRoom, nbf: now - 60 }
+            });
+        }
+        if (!room || !room.url) {
+            return res.status(500).json({ error: 'No se pudo crear la sala de video' });
+        }
+        const tokenRes = await dailyApi('POST', '/meeting-tokens', {
+            properties: {
+                room_name: room.name,
+                user_name: name,
+                user_id: userId,
+                is_owner: isOwner,
+                exp: expToken,
+                lang: 'es'
+            }
+        });
+        res.json({ url: room.url, token: tokenRes.token });
+    } catch (err) {
+        console.error('Daily meeting error:', err);
+        res.status(500).json({ error: err.message || 'Error al preparar la videollamada' });
+    }
+});
+
+// Configuración Jitsi as a Service (JaaS) - solo App ID; el frontend lo usa para 8x8.vc (legacy)
 app.get('/api/jaas-config', (req, res) => {
     const appId = limpiaEnv(process.env.JAAS_APP_ID);
     res.json({ appId });
