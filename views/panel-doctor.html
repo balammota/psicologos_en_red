@@ -20,6 +20,7 @@
                     <li><button type="button" class="perfil-mobile-nav-btn active" data-seccion="dashboard">📊 Dashboard</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="chat">💬 Mis Mensajes <span class="nav-badge nav-badge-mobile" id="nav-badge-mensajes-mobile" aria-hidden="true">0</span></button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="video">🎥 Sala de Video</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="pacientes">👥 Pacientes</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="documentos">📄 Documentos</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="agenda">⚙️ Configuración</button></li>
                     <li><a href="/" class="perfil-mobile-nav-link">🌐 Volver al Sitio</a></li>
@@ -45,6 +46,9 @@
                 </button>
                 <button class="nav-item" onclick="mostrarSeccion('video')">
                     <span class="nav-icon">🎥</span><span class="nav-label">Sala de Video</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('pacientes'); cargarPacientesDoctor();">
+                    <span class="nav-icon">👥</span><span class="nav-label">Pacientes</span>
                 </button>
                 <button class="nav-item" onclick="mostrarSeccion('documentos'); cargarDocumentos();">
                     <span class="nav-icon">📄</span><span class="nav-label">Documentos</span>
@@ -162,6 +166,37 @@
                     <textarea id="notas-textarea" rows="6" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; resize:vertical;" placeholder="Escribe tus notas aquí..." disabled></textarea>
                     <div style="display:flex; gap:10px; margin-top:10px;">
                         <button id="btn-guardar-notas" class="btn-guardar" style="max-width:220px;" disabled>Guardar notas</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="seccion-pacientes" class="seccion-panel" style="display: none;">
+                <div class="documentos-container" style="max-width: 100%;">
+                    <div class="documentos-header" style="margin-bottom: 16px;">
+                        <h2>👥 Mis Pacientes</h2>
+                        <p>Pacientes que han agendado cita contigo.</p>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
+                            <span style="font-size: 1.2rem;">🔍</span>
+                            <input type="text" id="buscar-paciente-doctor" placeholder="Buscar por nombre o email..." style="padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; min-width: 220px;">
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f8f9fa; border-bottom: 2px solid #eee;">
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">ID</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Nombre</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Email</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Teléfono</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Contacto emergencia</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Total Citas</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Días sin cita</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-pacientes-doctor">
+                                <tr><td colspan="7" style="text-align: center; padding: 24px;">Cargando...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -366,6 +401,7 @@
                     if (sec) {
                         mostrarSeccion(sec);
                         if (sec === 'chat') cargarContactosChat();
+                        if (sec === 'pacientes') cargarPacientesDoctor();
                         if (sec === 'documentos') cargarDocumentos();
                     }
                     if (toggle) toggle.checked = false;
@@ -542,6 +578,76 @@ fetch('/api/quien-soy')
     var btn = document.querySelector('.perfil-mobile-nav-btn[data-seccion="' + seccionId + '"]');
     if (btn) btn.classList.add('active');
 }
+
+// --- PACIENTES DEL PSICÓLOGO (solo quienes han agendado cita con él) ---
+let todosLosPacientesDoctor = [];
+
+async function cargarPacientesDoctor() {
+    const tbody = document.getElementById('tabla-pacientes-doctor');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px;">Cargando...</td></tr>';
+    try {
+        const res = await fetch('/api/doctor/pacientes', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Error al cargar');
+        todosLosPacientesDoctor = await res.json();
+        filtrarPacientesDoctor();
+    } catch (err) {
+        console.error('Error cargando pacientes:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px; color: #c00;">Error al cargar la lista.</td></tr>';
+    }
+}
+
+function renderizarPacientesDoctor(pacientes) {
+    const tbody = document.getElementById('tabla-pacientes-doctor');
+    if (!tbody) return;
+    if (pacientes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px;">No hay pacientes que hayan agendado cita contigo.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = pacientes.map(function(p) {
+        var diasSinCita = '-';
+        var colorDias = '#666';
+        if (p.citas_futuras > 0) {
+            diasSinCita = '📅 Cita agendada';
+            colorDias = '#27ae60';
+        } else if (p.ultima_cita) {
+            var ultimaCita = new Date(p.ultima_cita);
+            var hoy = new Date();
+            var diffDays = Math.floor((hoy - ultimaCita) / (1000 * 60 * 60 * 24));
+            diasSinCita = diffDays + ' días';
+            if (diffDays > 90) colorDias = '#e74c3c';
+            else if (diffDays > 30) colorDias = '#f39c12';
+            else colorDias = '#27ae60';
+        } else {
+            diasSinCita = 'Sin citas';
+        }
+        return '<tr style="border-bottom: 1px solid #eee;">' +
+            '<td style="padding: 12px;">' + p.id + '</td>' +
+            '<td style="padding: 12px;">' + (p.nombre || '') + '</td>' +
+            '<td style="padding: 12px;">' + (p.email || '') + '</td>' +
+            '<td style="padding: 12px;">' + (p.telefono || '—') + '</td>' +
+            '<td style="padding: 12px;">' + ((p.contacto_emergencia || '').trim() || '—') + '</td>' +
+            '<td style="padding: 12px;">' + p.total_citas + '</td>' +
+            '<td style="padding: 12px; color: ' + colorDias + '; font-weight: 500;">' + diasSinCita + '</td>' +
+            '</tr>';
+    }).join('');
+}
+
+function filtrarPacientesDoctor() {
+    var busqueda = (document.getElementById('buscar-paciente-doctor') && document.getElementById('buscar-paciente-doctor').value) ? document.getElementById('buscar-paciente-doctor').value.toLowerCase() : '';
+    var filtrados = busqueda
+        ? todosLosPacientesDoctor.filter(function(p) {
+            return (p.nombre && p.nombre.toLowerCase().indexOf(busqueda) !== -1) ||
+                   (p.email && p.email.toLowerCase().indexOf(busqueda) !== -1);
+        })
+        : todosLosPacientesDoctor;
+    renderizarPacientesDoctor(filtrados);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var inp = document.getElementById('buscar-paciente-doctor');
+    if (inp) inp.addEventListener('input', filtrarPacientesDoctor);
+});
 
 // --- HORARIO LABORAL (simple) ---
 const DIAS_SEMANA = {
