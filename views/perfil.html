@@ -706,12 +706,20 @@ fetch('/api/quien-soy')
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ citaId: citaId || null, rol: 'paciente', displayName: (document.getElementById('config-nombre') || {}).value || '' })
                 });
-                const contentType = res.headers.get('content-type') || '';
                 const text = await res.text();
-                if (!contentType.includes('application/json')) {
-                    throw new Error('El servidor no respondió correctamente. ¿Sigue tu sesión activa? Cierra sesión, vuelve a entrar e inténtalo de nuevo.');
+                var body = (typeof text === 'string' ? text : '').replace(/^\uFEFF/, '').trim();
+                if (body.charAt(0) === '<' || body.slice(0, 9) === '<!DOCTYPE' || body.slice(0, 6).toLowerCase() === '<html ') {
+                    throw new Error('El servidor devolvió una página HTML en lugar de datos de video. Suele ser un error 502/503. Revisa los logs y que DAILY_API_KEY esté configurada; redeploya si hace falta.');
                 }
-                const data = JSON.parse(text);
+                if (body.charAt(0) !== '{' && body.charAt(0) !== '[') {
+                    throw new Error('El servidor no respondió con datos válidos. Cierra sesión, vuelve a entrar e inténtalo de nuevo.');
+                }
+                var data;
+                try {
+                    data = JSON.parse(body);
+                } catch (_) {
+                    throw new Error('El servidor no respondió correctamente. Cierra sesión, vuelve a entrar e inténtalo de nuevo.');
+                }
                 if (data && data.error) {
                     throw new Error(data.error);
                 }
