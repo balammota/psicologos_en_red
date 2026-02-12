@@ -820,9 +820,9 @@ app.post('/api/daily-meeting', authRequired, (req, res) => {
             const expRoom = now + 4 * 3600;
             const expToken = now + 2 * 3600;
 
-            let room = await dailyApi('GET', '/rooms/' + encodeURIComponent(roomName)).catch(() => null);
+            let room = await dailyApi('GET', 'rooms/' + encodeURIComponent(roomName)).catch(() => null);
             if (!room || !room.url) {
-                room = await dailyApi('POST', '/rooms', {
+                room = await dailyApi('POST', 'rooms', {
                     name: roomName,
                     privacy: 'private',
                     properties: { exp: expRoom, nbf: now - 60 }
@@ -831,7 +831,7 @@ app.post('/api/daily-meeting', authRequired, (req, res) => {
             if (!room || !room.url) {
                 return sendJson({ error: 'No se pudo crear la sala de video' });
             }
-            const tokenRes = await dailyApi('POST', '/meeting-tokens', {
+            const tokenRes = await dailyApi('POST', 'meeting-tokens', {
                 properties: {
                     room_name: room.name,
                     user_name: name,
