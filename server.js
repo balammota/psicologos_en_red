@@ -1617,7 +1617,7 @@ app.get('/api/admin/pacientes', authRequired, async (req, res) => {
     }
     try {
         const result = await pool.query(`
-            SELECT u.id, u.nombre, u.email, u.telefono, u.acepto_publicidad,
+            SELECT u.id, u.nombre, u.email, u.telefono, u.contacto_emergencia, u.acepto_publicidad,
                    (SELECT COUNT(*) FROM citas WHERE paciente_id = u.id) as total_citas,
                    (SELECT MAX(fecha) FROM citas WHERE paciente_id = u.id AND fecha < CURRENT_DATE) as ultima_cita,
                    (SELECT COUNT(*) FROM citas WHERE paciente_id = u.id AND fecha >= CURRENT_DATE AND estado NOT IN ('cancelada')) as citas_futuras
