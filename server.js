@@ -786,49 +786,59 @@ function dailyApi(method, path, body) {
     });
 }
 
-// Obtener o crear sala Daily y devolver URL + token para el usuario
-app.post('/api/daily-meeting', authRequired, async (req, res) => {
-    if (!DAILY_API_KEY) {
-        return res.status(503).json({ error: 'Videollamadas no configuradas (DAILY_API_KEY)' });
+// Obtener o crear sala Daily y devolver URL + token para el usuario.
+// Siempre respondemos JSON (200) para que el proxy de Railway no sustituya por HTML en 5xx.
+app.post('/api/daily-meeting', authRequired, (req, res) => {
+    function sendJson(obj) {
+        if (res.headersSent) return;
+        res.set('Content-Type', 'application/json');
+        res.status(200).send(JSON.stringify(obj));
     }
-    const { citaId, rol, displayName } = req.body || {};
-    const citaIdNum = parseInt(citaId, 10);
-    const roomName = ('sesion-' + (Number.isNaN(citaIdNum) ? Date.now() : citaIdNum)).replace(/[^A-Za-z0-9_-]/g, '') || 'sesion-' + Math.floor(Date.now() / 1000);
-    const isOwner = rol === 'psicologo';
-    const name = (displayName || req.session?.usuario?.nombre || 'Usuario').trim().slice(0, 100);
-    const userId = String(req.session?.usuario?.id || '').slice(0, 36);
-    const now = Math.floor(Date.now() / 1000);
-    const expRoom = now + 4 * 3600;
-    const expToken = now + 2 * 3600;
-    try {
-        let room = await dailyApi('GET', '/rooms/' + encodeURIComponent(roomName)).catch(() => null);
-        if (!room || !room.url) {
-            room = await dailyApi('POST', '/rooms', {
-                name: roomName,
-                privacy: 'private',
-                properties: { exp: expRoom, nbf: now - 60 }
-            });
-        }
-        if (!room || !room.url) {
-            return res.json({ error: 'No se pudo crear la sala de video' });
-        }
-        const tokenRes = await dailyApi('POST', '/meeting-tokens', {
-            properties: {
-                room_name: room.name,
-                user_name: name,
-                user_id: userId,
-                is_owner: isOwner,
-                exp: expToken,
-                lang: 'es'
+    (async () => {
+        try {
+            if (!DAILY_API_KEY) {
+                return sendJson({ error: 'Videollamadas no configuradas (DAILY_API_KEY)' });
             }
-        });
-        res.json({ url: room.url, token: tokenRes.token });
-    } catch (err) {
-        console.error('Daily meeting error:', err);
-        if (!res.headersSent) {
-            res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ error: err.message || 'Error al preparar la videollamada' }));
+            const { citaId, rol, displayName } = req.body || {};
+            const citaIdNum = parseInt(citaId, 10);
+            const roomName = ('sesion-' + (Number.isNaN(citaIdNum) ? Date.now() : citaIdNum)).replace(/[^A-Za-z0-9_-]/g, '') || 'sesion-' + Math.floor(Date.now() / 1000);
+            const isOwner = rol === 'psicologo';
+            const name = (displayName || (req.session && req.session.usuario && req.session.usuario.nombre) || 'Usuario').trim().slice(0, 100);
+            const userId = String((req.session && req.session.usuario && req.session.usuario.id) || '').slice(0, 36);
+            const now = Math.floor(Date.now() / 1000);
+            const expRoom = now + 4 * 3600;
+            const expToken = now + 2 * 3600;
+
+            let room = await dailyApi('GET', '/rooms/' + encodeURIComponent(roomName)).catch(() => null);
+            if (!room || !room.url) {
+                room = await dailyApi('POST', '/rooms', {
+                    name: roomName,
+                    privacy: 'private',
+                    properties: { exp: expRoom, nbf: now - 60 }
+                });
+            }
+            if (!room || !room.url) {
+                return sendJson({ error: 'No se pudo crear la sala de video' });
+            }
+            const tokenRes = await dailyApi('POST', '/meeting-tokens', {
+                properties: {
+                    room_name: room.name,
+                    user_name: name,
+                    user_id: userId,
+                    is_owner: isOwner,
+                    exp: expToken,
+                    lang: 'es'
+                }
+            });
+            sendJson({ url: room.url, token: tokenRes.token });
+        } catch (err) {
+            console.error('Daily meeting error:', err);
+            sendJson({ error: err.message || 'Error al preparar la videollamada' });
         }
-    }
+    })().catch((err) => {
+        console.error('Daily meeting unhandled:', err);
+        sendJson({ error: 'Error inesperado al preparar la videollamada' });
+    });
 });
 
 // Configuración Jitsi as a Service (JaaS) - solo App ID; el frontend lo usa para 8x8.vc (legacy)
