@@ -545,8 +545,13 @@
                 });
         }
 
-        // Cargar psicólogos y montar filtros
-        Promise.all([fetch('/api/psicologos').then(r => r.json()), obtenerPrecioRegion()])
+        // Cargar región y luego psicólogos visibles para esa región (México / Internacional)
+        obtenerPrecioRegion()
+            .then(function(precioRegion) {
+                var inMexico = precioRegion.regionUnknown ? '' : (precioRegion.inMexico === true ? 'true' : 'false');
+                var url = inMexico === '' ? '/api/psicologos' : '/api/psicologos?inMexico=' + inMexico;
+                return fetch(url).then(function(r) { return r.json(); }).then(function(psicologos) { return [psicologos, precioRegion]; });
+            })
             .then(([psicologos, precioRegion]) => {
                 listaPsicologosCompleta = Array.isArray(psicologos) ? psicologos : [];
                 if (precioRegion.regionUnknown) {
@@ -628,6 +633,28 @@
                     aplicarFiltros();
                 });
             });
+
+        // Al elegir región manual (México / Otro país), actualizar precios y recargar psicólogos visibles
+        function recargarPsicologosPorRegion(inMexico) {
+            var url = '/api/psicologos?inMexico=' + (inMexico ? 'true' : 'false');
+            fetch(url).then(function(r) { return r.json(); }).then(function(psicologos) {
+                listaPsicologosCompleta = Array.isArray(psicologos) ? psicologos : [];
+                llenarOpcionesFiltros(listaPsicologosCompleta);
+                aplicarFiltros();
+            });
+        }
+        document.getElementById('btn-region-mxn').addEventListener('click', function() {
+            precioCurrency = 'MXN';
+            precioAmount = PRECIOS_DEFAULT_MXN.individual;
+            recargarPsicologosPorRegion(true);
+            aplicarFiltros();
+        });
+        document.getElementById('btn-region-usd').addEventListener('click', function() {
+            precioCurrency = 'USD';
+            precioAmount = PRECIOS_DEFAULT_USD.individual;
+            recargarPsicologosPorRegion(false);
+            aplicarFiltros();
+        });
 
         document.getElementById('btn-limpiar-filtros').addEventListener('click', limpiarFiltros);
         
