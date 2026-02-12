@@ -771,8 +771,14 @@ function dailyApi(method, path, body) {
             let chunks = '';
             res.on('data', c => { chunks += c; });
             res.on('end', () => {
+                const body = (chunks || '').trim();
+                if (body.charAt(0) === '<' || body.slice(0, 9) === '<!DOCTYPE') {
+                    console.error('Daily API devolvió HTML en lugar de JSON. Status:', res.statusCode, 'Body (primeros 200 chars):', body.slice(0, 200));
+                    reject(new Error('Daily.co respondió con una página de error (posible API key inválida, facturación o límite). Revisa https://dashboard.daily.co y la variable DAILY_API_KEY. Status: ' + res.statusCode));
+                    return;
+                }
                 try {
-                    const json = chunks ? JSON.parse(chunks) : {};
+                    const json = body ? JSON.parse(body) : {};
                     if (res.statusCode >= 200 && res.statusCode < 300) resolve(json);
                     else reject(new Error(json.error || json.message || `Daily API ${res.statusCode}`));
                 } catch (e) {
