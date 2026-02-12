@@ -1281,12 +1281,20 @@ function actualizarBurbujasPorContacto() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ citaId, rol: 'psicologo', displayName })
         });
-        const contentType = res.headers.get('content-type') || '';
         const text = await res.text();
-        if (!contentType.includes('application/json')) {
-            throw new Error('El servidor no respondió correctamente. ¿Sigue tu sesión activa? Cierra sesión, vuelve a entrar e inténtalo de nuevo.');
+        const textTrim = (text || '').trim();
+        if (textTrim.startsWith('<')) {
+            throw new Error('El servidor devolvió una página HTML en lugar de datos de video. Cierra sesión, vuelve a entrar, haz un refresco forzado (Ctrl+Shift+R) y prueba de nuevo. Si usas Railway, redeploya y espera a que termine.');
         }
-        const data = JSON.parse(text);
+        if (!textTrim.startsWith('{') && !textTrim.startsWith('[')) {
+            throw new Error('El servidor no respondió con datos válidos. Cierra sesión, vuelve a entrar e inténtalo de nuevo.');
+        }
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (_) {
+            throw new Error('El servidor no respondió correctamente. Cierra sesión, vuelve a entrar e inténtalo de nuevo.');
+        }
         if (data && data.error) {
             throw new Error(data.error);
         }
