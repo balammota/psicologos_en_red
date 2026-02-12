@@ -1281,11 +1281,20 @@ function actualizarBurbujasPorContacto() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ citaId, rol: 'psicologo', displayName })
         });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || 'No se pudo preparar la videollamada');
+        const contentType = res.headers.get('content-type') || '';
+        const text = await res.text();
+        if (!contentType.includes('application/json')) {
+            throw new Error('El servidor no respondió correctamente. ¿Sigue tu sesión activa? Cierra sesión, vuelve a entrar e inténtalo de nuevo.');
         }
-        const { url: meetingUrl, token } = await res.json();
+        const data = JSON.parse(text);
+        if (data && data.error) {
+            throw new Error(data.error);
+        }
+        if (!res.ok) {
+            throw new Error('No se pudo preparar la videollamada');
+        }
+        const meetingUrl = data.url;
+        const token = data.token;
         if (!meetingUrl) throw new Error('No se recibió enlace de video');
         await loadDailyScript();
         if (!window.Daily || !window.Daily.createFrame) throw new Error('No se cargó el reproductor de video');
