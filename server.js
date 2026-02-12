@@ -751,15 +751,15 @@ function authRequired(req, res, next) {
 
 // ----- Daily.co: videollamadas (reemplazo de Jitsi) -----
 const DAILY_API_KEY = (process.env.DAILY_API_KEY || '').trim();
-const DAILY_API_BASE = 'https://api.daily.co/v1';
+const DAILY_API_BASE = 'https://api.daily.co';
 
 function dailyApi(method, path, body) {
     return new Promise((resolve, reject) => {
-        const url = new URL(path, DAILY_API_BASE);
+        const pathname = path.startsWith('/v1/') ? path : '/v1/' + path.replace(/^\//, '');
         const data = body ? JSON.stringify(body) : '';
         const opts = {
-            hostname: url.hostname,
-            path: url.pathname,
+            hostname: 'api.daily.co',
+            path: pathname,
             method,
             headers: {
                 'Authorization': `Bearer ${DAILY_API_KEY}`,
