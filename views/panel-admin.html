@@ -555,6 +555,8 @@
                                     <th>Nombre</th>
                                     <th>Email</th>
                                     <th>Teléfono</th>
+                                    <th title="Visible en catálogo para México (MXN)">🇲🇽 México</th>
+                                    <th title="Visible en catálogo para internacional (USD)">🌎 Internacional</th>
                                     <th>Citas Hoy</th>
                                     <th>Total Citas</th>
                                     <th>Calificación</th>
@@ -562,7 +564,7 @@
                                 </tr>
                             </thead>
                             <tbody id="tabla-psicologos">
-                                <tr><td colspan="8" style="text-align: center;">Cargando...</td></tr>
+                                <tr><td colspan="10" style="text-align: center;">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -845,21 +847,52 @@
         function renderizarPsicologos(psicologos) {
             const tbody = document.getElementById('tabla-psicologos');
             if (psicologos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No hay psicólogos registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">No hay psicólogos registrados</td></tr>';
                 return;
             }
-            tbody.innerHTML = psicologos.map(p => `
+            tbody.innerHTML = psicologos.map(p => {
+                const vm = p.visible_mexico !== false;
+                const vi = p.visible_internacional === true;
+                return `
                 <tr>
                     <td>${p.id}</td>
                     <td>${p.nombre}</td>
                     <td>${p.email}</td>
                     <td>${p.telefono || '-'}</td>
+                    <td style="text-align: center;"><input type="checkbox" class="cb-visible-mexico" data-id="${p.id}" ${vm ? 'checked' : ''} title="Visible en México"></td>
+                    <td style="text-align: center;"><input type="checkbox" class="cb-visible-internacional" data-id="${p.id}" ${vi ? 'checked' : ''} title="Visible internacional"></td>
                     <td>${p.citas_hoy}</td>
                     <td>${p.total_citas}</td>
                     <td>${p.calificacion > 0 ? p.calificacion + ' ⭐' : 'Sin opiniones'}</td>
                     <td style="color: ${p.opiniones_negativas > 0 ? '#e74c3c' : '#27ae60'}; font-weight: 600;">${p.opiniones_negativas}</td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
+            tbody.querySelectorAll('.cb-visible-mexico, .cb-visible-internacional').forEach(cb => {
+                cb.addEventListener('change', function() { actualizarVisibilidad(this); });
+            });
+        }
+
+        async function actualizarVisibilidad(checkbox) {
+            const id = parseInt(checkbox.dataset.id, 10);
+            const row = checkbox.closest('tr');
+            const cbMexico = row.querySelector('.cb-visible-mexico');
+            const cbInt = row.querySelector('.cb-visible-internacional');
+            const visible_mexico = cbMexico.checked;
+            const visible_internacional = cbInt.checked;
+            try {
+                const res = await fetch('/api/admin/psicologos/' + id + '/visibilidad', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ visible_mexico, visible_internacional })
+                });
+                if (!res.ok) throw new Error('Error al guardar');
+            } catch (e) {
+                console.error(e);
+                cbMexico.checked = !visible_mexico;
+                cbInt.checked = !visible_internacional;
+                alert('No se pudo guardar la visibilidad. Intenta de nuevo.');
+            }
         }
 
         function filtrarPsicologos() {
