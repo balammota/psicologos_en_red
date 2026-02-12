@@ -810,7 +810,7 @@ app.post('/api/daily-meeting', authRequired, async (req, res) => {
             });
         }
         if (!room || !room.url) {
-            return res.status(500).json({ error: 'No se pudo crear la sala de video' });
+            return res.json({ error: 'No se pudo crear la sala de video' });
         }
         const tokenRes = await dailyApi('POST', '/meeting-tokens', {
             properties: {
@@ -825,7 +825,9 @@ app.post('/api/daily-meeting', authRequired, async (req, res) => {
         res.json({ url: room.url, token: tokenRes.token });
     } catch (err) {
         console.error('Daily meeting error:', err);
-        res.status(500).json({ error: err.message || 'Error al preparar la videollamada' });
+        if (!res.headersSent) {
+            res.json({ error: err.message || 'Error al preparar la videollamada' });
+        }
     }
 });
 
