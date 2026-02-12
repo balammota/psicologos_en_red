@@ -772,6 +772,11 @@ function dailyApi(method, path, body) {
             res.on('data', c => { chunks += c; });
             res.on('end', () => {
                 const body = (chunks || '').trim();
+                // GET 404 = sala no existe; es normal, devolvemos null para que se cree
+                if (method === 'GET' && res.statusCode === 404) {
+                    resolve(null);
+                    return;
+                }
                 if (body.charAt(0) === '<' || body.slice(0, 9) === '<!DOCTYPE') {
                     console.error('Daily API devolvió HTML en lugar de JSON. Status:', res.statusCode, 'Body (primeros 200 chars):', body.slice(0, 200));
                     reject(new Error('Daily.co respondió con una página de error (posible API key inválida, facturación o límite). Revisa https://dashboard.daily.co y la variable DAILY_API_KEY. Status: ' + res.statusCode));
