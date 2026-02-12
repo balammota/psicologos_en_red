@@ -680,7 +680,10 @@
         // 2. Información Básica
         document.getElementById('det-nombre').innerText = p.nombre;
         document.getElementById('det-especialidad').innerText = p.especialidad;
-        document.getElementById('det-biografia').innerText = p.biografia || "Especialista comprometido con el bienestar emocional y el desarrollo personal.";
+        // Mostrar biografía respetando saltos de línea; si al pegar se perdieron, recuperar párrafos por doble espacio
+        const bio = (p.biografia || "Especialista comprometido con el bienestar emocional y el desarrollo personal.").trim();
+        const bioConParrafos = bio.replace(/\s{2,}/g, '\n\n');
+        document.getElementById('det-biografia').innerText = bioConParrafos;
         document.getElementById('det-rating').innerText = p.rating || "5.0";
 
         // 3. Áreas de Intervención (con el diseño de óvalos rosa)
