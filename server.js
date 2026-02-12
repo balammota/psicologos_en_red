@@ -1326,6 +1326,7 @@ app.get('/api/user-data', async (req, res) => {
                 u.nombre, 
                 u.email, 
                 u.telefono,
+                u.contacto_emergencia,
                 u.rol, 
                 p.id AS psicologo_id
             FROM usuarios u
@@ -1343,6 +1344,7 @@ app.get('/api/user-data', async (req, res) => {
                 nombre: user.nombre,
                 email: user.email,
                 telefono: user.telefono,
+                contacto_emergencia: user.contacto_emergencia || '',
                 rol: user.rol
             });
         } else {
@@ -2560,8 +2562,9 @@ app.delete('/api/horario-laboral/:id', authRequired, async (req, res) => {
 
 // Ruta para actualizar el perfil del usuario
 app.post('/api/update-profile', authRequired, async (req, res) => {
-    const { nombre, telefono, password } = req.body;
+    const { nombre, telefono, contacto_emergencia, password } = req.body;
     const usuarioId = req.session.usuario.id;
+    const contactoEmerg = (contacto_emergencia != null && String(contacto_emergencia).trim() !== '') ? String(contacto_emergencia).trim().slice(0, 255) : null;
 
     try {
         console.log("Intentando actualizar usuario ID:", usuarioId); // Log de depuración
@@ -2570,14 +2573,14 @@ app.post('/api/update-profile', authRequired, async (req, res) => {
             // Caso con contraseña nueva
             const hashedPassword = await bcrypt.hash(password, 10);
             await pool.query(
-                'UPDATE usuarios SET nombre = $1, telefono = $2, password = $3 WHERE id = $4',
-                [nombre, telefono, hashedPassword, usuarioId]
+                'UPDATE usuarios SET nombre = $1, telefono = $2, contacto_emergencia = $3, password = $4 WHERE id = $5',
+                [nombre, telefono, contactoEmerg, hashedPassword, usuarioId]
             );
         } else {
             // Caso sin cambiar contraseña
             await pool.query(
-                'UPDATE usuarios SET nombre = $1, telefono = $2 WHERE id = $3',
-                [nombre, telefono, usuarioId]
+                'UPDATE usuarios SET nombre = $1, telefono = $2, contacto_emergencia = $3 WHERE id = $4',
+                [nombre, telefono, contactoEmerg, usuarioId]
             );
         }
 
