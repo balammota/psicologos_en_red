@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consultorio Virtual - Psicólogos en Red</title>
     <link rel="stylesheet" href="/estilos.css">
-    <!-- Jitsi script se carga dinámicamente (JaaS o meet.jit.si) al iniciar video -->
+    <!-- Daily.co script se carga dinámicamente al iniciar video -->
     <!-- Flatpickr para calendario con fechas deshabilitadas -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -323,7 +323,7 @@
                 el.addEventListener('click', function() { layout.classList.remove('sidebar-open'); });
             });
         });
-        let api = null;
+        let dailyCallFrame = null;
         let miId = null; 
         let psicologoSeleccionadoId = null;
         let intervaloChat = null;
@@ -444,9 +444,9 @@ fetch('/api/quien-soy')
         window.event.currentTarget.classList.add('active');
     }
 
-    // 5. Cerrar Jitsi o quitar iframe de Zoho si salimos de video
+    // 5. Cerrar Daily o limpiar contenedor de video si salimos de la sección
     if (seccionId !== 'video') {
-        if (api) { api.dispose(); api = null; }
+        if (dailyCallFrame) { dailyCallFrame.destroy(); dailyCallFrame = null; }
         const cont = document.getElementById('jitsi-container');
         if (cont) cont.innerHTML = '';
     }
@@ -679,66 +679,44 @@ fetch('/api/quien-soy')
                 .catch(err => console.error("Error cargando citas:", err));
         }
     
-        function loadJitsiScript(appId) {
-            const url = appId
-                ? `https://8x8.vc/${encodeURIComponent(appId)}/external_api.js`
-                : 'https://meet.jit.si/external_api.js';
-            if (window.JitsiMeetExternalAPI) return Promise.resolve();
+        function loadDailyScript() {
+            if (window.Daily) return Promise.resolve();
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');
-                s.src = url;
+                s.src = 'https://cdn.jsdelivr.net/npm/@daily-co/daily-js/build/daily.js';
                 s.onload = () => resolve();
-                s.onerror = () => reject(new Error('No se pudo cargar el script de video (revise conexión o App ID en .env)'));
+                s.onerror = () => reject(new Error('No se pudo cargar el script de video. Revisa tu conexión.'));
                 document.head.appendChild(s);
             });
         }
 
         async function iniciarVideo(urlSesion, doctorNombre, citaId) {
-            if (!urlSesion) {
-                mostrarPopup("Esta cita no tiene enlace de video.", "No se puede iniciar sesión");
-                return;
-            }
-            let roomSlug = (urlSesion.split('/').pop() || '').split('?')[0].trim();
-            if (!roomSlug || ['perfil', 'n', 'panel-doctor', 'catalogo', 'login'].indexOf(roomSlug) >= 0) {
-                const match = urlSesion.match(/[?&]sala=([^&]+)/);
-                roomSlug = (match && match[1]) ? match[1] : ('sesion-' + (citaId || Date.now()));
-            }
-            roomSlug = (roomSlug || '').replace(/[^a-zA-Z0-9\-_]/g, '') || ('sesion-' + (citaId || Date.now()));
             const cont = document.getElementById('jitsi-container');
             if (cont) cont.innerHTML = '';
-            if (api) { api.dispose(); api = null; }
+            if (dailyCallFrame) { dailyCallFrame.destroy(); dailyCallFrame = null; }
             mostrarSeccion('video');
-            document.getElementById('info-sesion').innerText = "Sesión con: " + doctorNombre;
+            document.getElementById('info-sesion').innerText = "Sesión con: " + (doctorNombre || 'tu especialista');
+            if (!citaId) {
+                mostrarPopup("Selecciona una cita para iniciar la videollamada.", "No se puede iniciar");
+                return;
+            }
             try {
-                const configRes = await fetch('/api/jaas-config');
-                const data = await configRes.json();
-                const appId = (data.appId || '').replace(/\s+/g, '').trim();
-                await loadJitsiScript(appId);
-                const domain = appId ? '8x8.vc' : 'meet.jit.si';
-                const roomName = appId ? (appId + '/' + roomSlug) : roomSlug;
-                if (!window.JitsiMeetExternalAPI) {
-                    throw new Error('No se cargó el script de Jitsi. Revisa la consola (F12).');
+                const res = await fetch('/api/daily-meeting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ citaId: citaId || null, rol: 'paciente', displayName: (document.getElementById('config-nombre') || {}).value || '' })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'No se pudo preparar la videollamada');
                 }
-                let jwtToken = null;
-                if (appId) {
-                    try {
-                        const jwtRes = await fetch(`/api/jaas-jwt?roomName=${encodeURIComponent(roomName)}&moderator=false`);
-                        if (jwtRes.ok) {
-                            const jwtData = await jwtRes.json();
-                            jwtToken = jwtData.jwt || null;
-                        }
-                    } catch (_) {}
-                }
-                const options = {
-                    roomName,
-                    width: "100%",
-                    height: "100%",
-                    parentNode: document.querySelector('#jitsi-container')
-                };
-                if (jwtToken && typeof jwtToken === 'string') options.jwt = jwtToken;
-                api = new JitsiMeetExternalAPI(domain, options);
+                const { url, token } = await res.json();
+                if (!url) throw new Error('No se recibió enlace de video');
+                await loadDailyScript();
+                if (!window.Daily || !window.Daily.createFrame) throw new Error('No se cargó el reproductor de video');
+                dailyCallFrame = window.Daily.createFrame(document.getElementById('jitsi-container'), { showLeaveButton: true });
                 if (citaId) {
-                    api.addEventListener('videoConferenceJoined', () => {
+                    dailyCallFrame.on('joined-meeting', () => {
                         fetch(`/api/citas/${citaId}/registrar-entrada`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -746,6 +724,7 @@ fetch('/api/quien-soy')
                         }).catch(() => {});
                     });
                 }
+                await dailyCallFrame.join({ url, token });
             } catch (e) {
                 console.error('Error videollamada:', e);
                 mostrarPopup("Error al cargar la videollamada: " + (e.message || 'Intenta de nuevo.'), "Error");
