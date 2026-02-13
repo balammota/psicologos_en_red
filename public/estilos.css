@@ -21,11 +21,6 @@ body {
     background-color: var(--fondo-hueso);
 }
 
-/* Párrafos justificados en todo el sitio (solo párrafos, no títulos) */
-p {
-    text-align: justify;
-}
-
 /* Header */
 .main-header {
     display: flex;
