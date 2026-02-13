@@ -39,6 +39,7 @@
                 <span>🔒 Sesiones privadas</span>
                 <span>⭐ Reseñas reales</span>
             </div>
+            <p style="margin-top: 1rem; margin-bottom: 0.5rem;"><button type="button" id="btn-ayuda-elegir-catalogo" class="modal-bienvenida-btn modal-bienvenida-btn-sec" style="font-size: 0.95rem;">¿No sabes qué enfoque te conviene? Ayúdame a elegir</button></p>
         </div>
     </section>
 
@@ -118,6 +119,128 @@
 
     <main style="min-height: 200px;">
         </main>
+
+    <!-- Modal encuesta: para quien llegó directo al catálogo sin hacer la encuesta del index -->
+    <div id="modal-encuesta-catalogo" class="modal-bienvenida-overlay" role="dialog" aria-modal="true" style="display: none;">
+        <div class="modal-bienvenida-box">
+            <button type="button" class="modal-bienvenida-cerrar" id="modal-encuesta-catalogo-cerrar" aria-label="Cerrar">&times;</button>
+            <!-- Paso encuesta (5 preguntas) -->
+            <div id="catalogo-paso-encuesta" class="modal-bienvenida-paso">
+                <button type="button" class="modal-bienvenida-volver" id="catalogo-volver-encuesta" aria-label="Volver">← Volver</button>
+                <p class="encuesta-indicador" id="catalogo-encuesta-indicador">Pregunta 1 de 5</p>
+                <h2 class="modal-bienvenida-titulo encuesta-pregunta-titulo" id="catalogo-encuesta-pregunta-texto"></h2>
+                <div class="modal-bienvenida-opciones" id="catalogo-encuesta-burbujas"></div>
+            </div>
+            <!-- Paso resultado -->
+            <div id="catalogo-paso-resultado" class="modal-bienvenida-paso" style="display: none;">
+                <h2 class="modal-bienvenida-titulo modal-bienvenida-titulo-rosa">Te dirigiremos con los mejores psicólogos para ti</h2>
+                <p class="modal-bienvenida-mensaje">Según tus respuestas, te recomendamos especialistas en el enfoque que mejor se adapta a lo que buscas.</p>
+                <a href="#" id="catalogo-btn-ir-filtrado" class="modal-bienvenida-btn modal-bienvenida-btn-cta">Ver psicólogos recomendados</a>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function() {
+        var modalEncuesta = document.getElementById('modal-encuesta-catalogo');
+        var btnAbrir = document.getElementById('btn-ayuda-elegir-catalogo');
+        var btnCerrar = document.getElementById('modal-encuesta-catalogo-cerrar');
+        var pasoEncuesta = document.getElementById('catalogo-paso-encuesta');
+        var pasoResultado = document.getElementById('catalogo-paso-resultado');
+        var btnVolver = document.getElementById('catalogo-volver-encuesta');
+        var linkIrFiltrado = document.getElementById('catalogo-btn-ir-filtrado');
+        var encuestaPreguntas = [
+            { texto: '¿En qué aspecto de tu vida prefieres centrar el trabajo inicial?', opciones: [
+                { texto: 'En mis pensamientos actuales y en cómo cambiar mis conductas diarias.', valor: 'TCC' },
+                { texto: 'En entender el origen de mis conflictos y cómo mi pasado influye en mi presente.', valor: 'Psicoanalisis' },
+                { texto: 'En mis relaciones actuales y la forma en que interactúo con mi entorno (familia, pareja, trabajo).', valor: 'Sistemica' },
+                { texto: 'En mi crecimiento personal, mis valores y el sentido que le doy a mi vida.', valor: 'Humanista' }
+            ]},
+            { texto: 'Si tuvieras que elegir el "estilo" de la sesión, ¿cuál te haría sentir más cómodo?', opciones: [
+                { texto: 'Estructurado: con metas claras, tareas para la semana y ejercicios prácticos.', valor: 'TCC' },
+                { texto: 'Exploratorio: hablando libremente sobre lo que venga a mi mente para descubrir significados ocultos.', valor: 'Psicoanalisis' },
+                { texto: 'Dinámico: analizando los roles que juego en mi familia o grupos sociales.', valor: 'Sistemica' },
+                { texto: 'Empático y reflexivo: un espacio de aceptación total para explorar mis sentimientos.', valor: 'Humanista' }
+            ]},
+            { texto: '¿Cuál de estas frases describe mejor lo que esperas de tu psicólogo?', opciones: [
+                { texto: '"Espero que me dé herramientas concretas para manejar mis síntomas (insomnio, estrés, fobias)".', valor: 'TCC' },
+                { texto: '"Espero que me ayude a profundizar en mis procesos inconscientes y traumas".', valor: 'Psicoanalisis' },
+                { texto: '"Espero que me ayude a mejorar la comunicación y los límites con las personas que me rodean".', valor: 'Sistemica' },
+                { texto: '"Espero que me acompañe en mi proceso de autodescubrimiento y realización personal".', valor: 'Humanista' }
+            ]},
+            { texto: '¿Cómo visualizas la duración y el enfoque del proceso?', opciones: [
+                { texto: 'Breve y enfocado en resolver un problema específico lo antes posible.', valor: 'TCC' },
+                { texto: 'A largo plazo, buscando un cambio profundo en mi estructura de personalidad.', valor: 'Psicoanalisis' },
+                { texto: 'Variable, enfocado en cambiar la dinámica de mis relaciones actuales.', valor: 'Sistemica' },
+                { texto: 'Enfocado en el "aquí y ahora", sin una duración rígidamente predeterminada.', valor: 'Humanista' }
+            ]},
+            { texto: 'Ante una situación difícil, ¿qué buscas entender primordialmente?', opciones: [
+                { texto: 'Qué pensamientos automáticos me están haciendo daño.', valor: 'TCC' },
+                { texto: 'Qué patrón de mi infancia estoy repitiendo sin darme cuenta.', valor: 'Psicoanalisis' },
+                { texto: 'Cómo estoy influyendo en los demás y cómo ellos influyen en mí.', valor: 'Sistemica' },
+                { texto: 'Quién soy realmente frente a esta situación y qué quiero decidir.', valor: 'Humanista' }
+            ]}
+        ];
+        var encuestaPasoActual = 1;
+        var encuestaRespuestas = [null, null, null, null, null];
+        function abrirModalEncuesta() {
+            modalEncuesta.style.display = 'flex';
+            pasoEncuesta.style.display = 'block';
+            pasoResultado.style.display = 'none';
+            encuestaPasoActual = 1;
+            encuestaRespuestas = [null, null, null, null, null];
+            encuestaRenderPregunta(1);
+        }
+        function cerrarModalEncuesta() {
+            modalEncuesta.style.display = 'none';
+        }
+        function encuestaRenderPregunta(paso) {
+            encuestaPasoActual = paso;
+            document.getElementById('catalogo-encuesta-indicador').textContent = 'Pregunta ' + paso + ' de 5';
+            var p = encuestaPreguntas[paso - 1];
+            document.getElementById('catalogo-encuesta-pregunta-texto').textContent = p.texto;
+            var contenedor = document.getElementById('catalogo-encuesta-burbujas');
+            contenedor.innerHTML = '';
+            p.opciones.forEach(function(opt) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'modal-bienvenida-opcion modal-bienvenida-opcion-btn';
+                btn.textContent = opt.texto;
+                btn.dataset.valor = opt.valor;
+                btn.addEventListener('click', function() {
+                    encuestaRespuestas[paso - 1] = opt.valor;
+                    if (paso < 5) {
+                        encuestaRenderPregunta(paso + 1);
+                    } else {
+                        var puntos = { TCC: 0, Psicoanalisis: 0, Sistemica: 0, Humanista: 0 };
+                        encuestaRespuestas.forEach(function(v) { if (v) puntos[v]++; });
+                        var maxPuntos = Math.max(puntos.TCC, puntos.Psicoanalisis, puntos.Sistemica, puntos.Humanista);
+                        var ganadores = ['TCC', 'Psicoanalisis', 'Sistemica', 'Humanista'].filter(function(c) { return puntos[c] === maxPuntos; });
+                        var corrienteGanadora = ganadores.length === 1 ? ganadores[0] : ganadores[Math.floor(Math.random() * ganadores.length)];
+                        linkIrFiltrado.href = '/catalogo?corriente=' + encodeURIComponent(corrienteGanadora);
+                        pasoEncuesta.style.display = 'none';
+                        pasoResultado.style.display = 'block';
+                    }
+                });
+                contenedor.appendChild(btn);
+            });
+        }
+        if (btnAbrir) btnAbrir.addEventListener('click', abrirModalEncuesta);
+        if (btnCerrar) btnCerrar.addEventListener('click', cerrarModalEncuesta);
+        if (btnVolver) btnVolver.addEventListener('click', function() {
+            if (encuestaPasoActual === 1) {
+                cerrarModalEncuesta();
+            } else {
+                encuestaRenderPregunta(encuestaPasoActual - 1);
+            }
+        });
+        modalEncuesta.addEventListener('click', function(e) {
+            if (e.target === modalEncuesta) cerrarModalEncuesta();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modalEncuesta.style.display === 'flex') cerrarModalEncuesta();
+        });
+    })();
+    </script>
 
     <div id="modal-agenda" class="modal">
         <div class="modal-content" style="border-top: 8px solid var(--primario-rosa);">
