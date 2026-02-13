@@ -279,8 +279,8 @@ body {
 .hero-ribbon {
     position: absolute;
     top: 102px;
-    right: -55px;
-    width: 540px;
+    right: -200px;
+    width: 720px;
     padding: 14px 32px 16px;
     background: linear-gradient(135deg, var(--acento-dorado) 0%, #b8923f 50%, var(--acento-dorado) 100%);
     color: #fff;
