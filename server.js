@@ -2228,14 +2228,15 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
             monto = Math.round(monto * 100);
         }
 
-        const returnUrl = (req.body.return_url && typeof req.body.return_url === 'string' && req.body.return_url.startsWith(BASE_URL))
-            ? req.body.return_url
+        const successUrl = (req.body.success_url && typeof req.body.success_url === 'string' && req.body.success_url.startsWith(BASE_URL))
+            ? req.body.success_url
             : `${BASE_URL}/catalogo?pago=exito`;
+        const cancelUrl = (req.body.cancel_url && typeof req.body.cancel_url === 'string' && req.body.cancel_url.startsWith(BASE_URL))
+            ? req.body.cancel_url
+            : `${BASE_URL}/catalogo`;
 
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
-            ui_mode: 'embedded',
-            return_url: returnUrl,
             line_items: [{
                 price_data: {
                     currency,
@@ -2247,6 +2248,8 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
                 },
                 quantity: 1,
             }],
+            success_url: successUrl,
+            cancel_url: cancelUrl,
             metadata: {
                 paciente_id: String(paciente_id),
                 psicologo_id: String(psicologo_id),
@@ -2257,7 +2260,7 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
             },
         });
 
-        res.json({ clientSecret: session.client_secret, url: session.url });
+        res.json({ url: session.url });
     } catch (error) {
         console.error('Error crear sesión Stripe:', error);
         res.status(500).json({ error: 'No se pudo iniciar el pago. Intenta de nuevo.' });
