@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <script async src="https://js.stripe.com/v3/"></script>
+    <script async src="https://js.stripe.com/embedded-checkout/v1/embedded-checkout.js"></script>
 </head>
 <body>
 
@@ -176,6 +178,16 @@
                 <button type="submit" class="btn-confirmar" style="background-color: var(--primario-rosa);">Confirmar Reservación</button>
                 <p class="nota-seguridad" style="color: var(--suave-arena);">🔒 Tu información está protegida por cifrado de extremo a extremo.</p>
             </form>
+        </div>
+    </div>
+    <!-- Modal popup de pago Stripe (embedded): el cliente no sale del sitio -->
+    <div id="modal-stripe-pago" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
+        <div style="background: white; border-radius: 16px; width: 100%; max-width: 480px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: var(--primario-rosa); font-size: 1.1rem;">Pago seguro con Stripe</h3>
+                <button type="button" id="btn-cerrar-modal-stripe" aria-label="Cerrar" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #888; line-height: 1;">&times;</button>
+            </div>
+            <div id="stripe-embedded-checkout-container" style="flex: 1; min-height: 400px;"></div>
         </div>
     </div>
     <div id="modalCita" class="modal-cita">
@@ -952,7 +964,8 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
                 fecha: document.getElementById('fecha-cita').value,
                 hora: document.getElementById('hora-cita').value,
                 servicio_interes: document.getElementById('servicio-interes').value || null,
-                currency: precioCurrency
+                currency: precioCurrency,
+                return_url: window.location.origin + window.location.pathname + '?pago=exito'
             };
             if (motivoVal) data.motivo_de_consulta = motivoVal;
 
@@ -963,19 +976,61 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
             });
 
             const json = await res.json().catch(() => ({}));
-            if (res.ok && json.url) {
+            if (!res.ok) {
+                alert(json.error || 'No se pudo iniciar el pago. Intenta de nuevo.');
+                return;
+            }
+            if (json.clientSecret) {
+                cerrarModal();
+                try {
+                    const modalStripe = document.getElementById('modal-stripe-pago');
+                    const container = document.getElementById('stripe-embedded-checkout-container');
+                    if (container) container.innerHTML = '';
+                    modalStripe.style.display = 'flex';
+                    if (window.StripeEmbeddedCheckout && typeof window.StripeEmbeddedCheckout.create === 'function') {
+                        const checkout = await window.StripeEmbeddedCheckout.create({ clientSecret: json.clientSecret });
+                        checkout.mount('#stripe-embedded-checkout-container');
+                        window._stripeEmbeddedCheckoutInstance = checkout;
+                    } else {
+                        window.location.href = json.url || (window.location.origin + '/catalogo');
+                    }
+                } catch (err) {
+                    console.error('Stripe embedded checkout error:', err);
+                    if (json.url) window.location.href = json.url;
+                    else alert('No se pudo abrir el pago. Intenta de nuevo.');
+                    document.getElementById('modal-stripe-pago').style.display = 'none';
+                }
+                return;
+            }
+            if (json.url) {
                 cerrarModal();
                 window.location.href = json.url;
                 return;
             }
-            alert(json.error || 'No se pudo iniciar el pago. Intenta de nuevo.');
+            alert('No se pudo iniciar el pago. Intenta de nuevo.');
         };
 
         window.onclick = function(event) {
             if (event.target == document.getElementById('modal-agenda')) {
                 cerrarModal();
             }
+            if (event.target === document.getElementById('modal-stripe-pago')) {
+                cerrarModalStripePago();
+            }
+        };
+
+        function cerrarModalStripePago() {
+            const modal = document.getElementById('modal-stripe-pago');
+            if (modal) modal.style.display = 'none';
+            if (window._stripeEmbeddedCheckoutInstance && typeof window._stripeEmbeddedCheckoutInstance.destroy === 'function') {
+                try { window._stripeEmbeddedCheckoutInstance.destroy(); } catch (e) {}
+                window._stripeEmbeddedCheckoutInstance = null;
+            }
+            const container = document.getElementById('stripe-embedded-checkout-container');
+            if (container) container.innerHTML = '';
         }
+        var btnCerrarStripe = document.getElementById('btn-cerrar-modal-stripe');
+        if (btnCerrarStripe) btnCerrarStripe.addEventListener('click', cerrarModalStripePago);
 
         document.getElementById('formRegistroCita').addEventListener('submit', async (e) => {
     e.preventDefault();
