@@ -2133,7 +2133,13 @@ app.get('/api/horarios-disponibles/:psicologoId', async (req, res) => {
     }
 });
 
-// Crear sesión de pago Stripe (redirige a Checkout); la cita se crea en el webhook
+// Clave pública de Stripe para el frontend (embedded checkout / popup)
+app.get('/api/stripe-config', (req, res) => {
+    const key = process.env.STRIPE_PUBLISHABLE_KEY || '';
+    res.json({ publishableKey: key });
+});
+
+// Crear sesión de pago Stripe (embedded = popup en el sitio; fallback redirect); la cita se crea en el webhook
 app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
     if (!stripe) {
         return res.status(503).json({ error: 'Pagos no configurados. Contacta al administrador.' });
@@ -2222,8 +2228,14 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
             monto = Math.round(monto * 100);
         }
 
+        const returnUrl = (req.body.return_url && typeof req.body.return_url === 'string' && req.body.return_url.startsWith(BASE_URL))
+            ? req.body.return_url
+            : `${BASE_URL}/catalogo?pago=exito`;
+
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
+            ui_mode: 'embedded',
+            return_url: returnUrl,
             line_items: [{
                 price_data: {
                     currency,
@@ -2235,8 +2247,6 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
                 },
                 quantity: 1,
             }],
-            success_url: `${BASE_URL}/catalogo?pago=exito`,
-            cancel_url: `${BASE_URL}/catalogo`,
             metadata: {
                 paciente_id: String(paciente_id),
                 psicologo_id: String(psicologo_id),
@@ -2247,7 +2257,7 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
             },
         });
 
-        res.json({ url: session.url });
+        res.json({ clientSecret: session.client_secret, url: session.url });
     } catch (error) {
         console.error('Error crear sesión Stripe:', error);
         res.status(500).json({ error: 'No se pudo iniciar el pago. Intenta de nuevo.' });
