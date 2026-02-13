@@ -3976,6 +3976,16 @@ select {
     margin: 0 auto;
 }
 
+@media (max-width: 768px) {
+    .catalogo-grid-modern {
+        justify-items: center;
+    }
+    .catalogo-grid-modern .psico-card-modern {
+        max-width: 340px;
+        width: 100%;
+    }
+}
+
 .psico-card-modern {
     background: #fff;
     border-radius: 20px;
@@ -4347,6 +4357,16 @@ select {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 30px;
     margin-top: 40px;
+}
+
+@media (max-width: 768px) {
+    .curso-grid {
+        justify-items: center;
+    }
+    .curso-grid .curso-card {
+        max-width: 340px;
+        width: 100%;
+    }
 }
 
 .curso-card {
