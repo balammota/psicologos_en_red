@@ -3977,10 +3977,13 @@ select {
 }
 
 @media (max-width: 768px) {
+    .catalogo-section-wrap {
+        padding-left: 1rem;
+        padding-right: 2.5rem;
+    }
     .catalogo-grid-modern {
         justify-items: center;
-        margin-left: auto;
-        margin-right: 2.5rem;
+        transform: translateX(-0.75rem);
     }
     .catalogo-grid-modern .psico-card-modern {
         max-width: 340px;
@@ -4362,10 +4365,13 @@ select {
 }
 
 @media (max-width: 768px) {
+    .academia-container {
+        padding-left: 1rem;
+        padding-right: 4rem;
+    }
     .curso-grid {
         justify-items: center;
-        margin-left: auto;
-        margin-right: 5rem;
+        transform: translateX(-2rem);
     }
     .curso-grid .curso-card {
         max-width: 340px;
