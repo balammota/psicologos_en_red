@@ -278,8 +278,8 @@ body {
 /* Listón / banda del hero: "Estrenamos Plataforma Digital" */
 .hero-ribbon {
     position: absolute;
-    top: 140px;
-    right: -120px;
+    top: 122px;
+    right: -85px;
     width: 420px;
     padding: 14px 32px 16px;
     background: linear-gradient(135deg, var(--acento-dorado) 0%, #b8923f 50%, var(--acento-dorado) 100%);
@@ -5306,14 +5306,14 @@ select {
     .hero.hero-modern {
         min-height: auto;
         padding-top: 1.75rem;
-        padding-bottom: 2.75rem;
+        padding-bottom: 3.25rem;
         align-items: flex-start;
         flex-direction: column;
     }
     .index-hero-content {
         gap: 1.5rem;
         padding-top: 1rem;
-        padding-bottom: 1.75rem;
+        padding-bottom: 2.25rem;
     }
     .index-hero-title {
         margin-top: 0;
