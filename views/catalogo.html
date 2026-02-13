@@ -240,8 +240,8 @@
     
                 <section style="margin-bottom:20px;">
                     <h3 style="font-size:1rem; color:var(--texto-oscuro); text-transform: uppercase; letter-spacing: 1px;">🎯 Áreas de Intervención</h3>
-                    <div id="det-tags-enfoque" style="display:flex; flex-wrap:wrap; gap:8px; margin-top: 10px;">
-                        </div>
+                    <ul id="det-tags-enfoque" style="margin: 10px 0 0 0; padding-left: 1.25rem; color: var(--texto-oscuro); font-size: 0.9rem; line-height: 1.8; list-style: disc;">
+                        </ul>
                 </section>
     
                 <section style="margin-bottom:20px;">
@@ -686,13 +686,9 @@
         document.getElementById('det-biografia').innerText = bioConParrafos;
         document.getElementById('det-rating').innerText = p.rating || "5.0";
 
-        // 3. Áreas de Intervención (con el diseño de óvalos rosa)
-        const enfoqueHTML = (p.problemas_principales || []).map(area => `
-            <span class="tag-problema" style="background: #fdf2f7; color: var(--texto-oscuro); border: 1px solid var(--primario-rosa); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; display: inline-block;">
-                ${area}
-            </span>
-        `).join('');
-        document.getElementById('det-tags-enfoque').innerHTML = enfoqueHTML;
+        // 3. Áreas de Intervención (en el perfil abierto: lista con viñetas; en la tarjeta siguen los globos)
+        const enfoqueHTML = (p.problemas_principales || []).map(area => `<li>${area}</li>`).join('');
+        document.getElementById('det-tags-enfoque').innerHTML = enfoqueHTML || '<li style="list-style:none; color:#888;">No especificado</li>';
 
         // 3b. Servicios (desde columna servicios)
         const serviciosHTML = (p.servicios && Array.isArray(p.servicios) && p.servicios.length > 0)
