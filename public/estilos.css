@@ -3986,7 +3986,7 @@ select {
         transform: translateX(-0.75rem);
     }
     .catalogo-grid-modern .psico-card-modern {
-        max-width: 340px;
+        max-width: 318px;
         width: 100%;
     }
 }
@@ -4367,11 +4367,11 @@ select {
 @media (max-width: 768px) {
     .academia-container {
         padding-left: 1rem;
-        padding-right: 4rem;
+        padding-right: 2.25rem;
     }
     .curso-grid {
         justify-items: center;
-        transform: translateX(-2rem);
+        transform: translateX(-1rem);
     }
     .curso-grid .curso-card {
         max-width: 340px;
