@@ -280,6 +280,48 @@ p {
     50% { transform: translate(-50%, -50%) translateY(-20px); }
 }
 
+/* Listón / ribbon del hero: "Nuevo diseño" */
+.hero-ribbon {
+    position: absolute;
+    top: 42px;
+    right: -72px;
+    width: 280px;
+    padding: 10px 16px 12px;
+    background: linear-gradient(135deg, var(--acento-dorado) 0%, #b8923f 50%, var(--acento-dorado) 100%);
+    color: #fff;
+    text-align: center;
+    transform: rotate(45deg);
+    z-index: 20;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.hero-ribbon-text {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.hero-ribbon-sub {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    opacity: 0.95;
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+}
+@media (max-width: 768px) {
+    .hero-ribbon {
+        top: 32px;
+        right: -78px;
+        width: 260px;
+        padding: 8px 12px 10px;
+    }
+    .hero-ribbon-text { font-size: 0.85rem; }
+    .hero-ribbon-sub { font-size: 0.62rem; }
+}
+
 .index-hero-content {
     position: relative;
     z-index: 10;
