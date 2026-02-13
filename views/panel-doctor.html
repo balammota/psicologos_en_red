@@ -191,10 +191,11 @@
                                     <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Contacto emergencia</th>
                                     <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Total Citas</th>
                                     <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Días sin cita</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Motivo consulta</th>
                                 </tr>
                             </thead>
                             <tbody id="tabla-pacientes-doctor">
-                                <tr><td colspan="7" style="text-align: center; padding: 24px;">Cargando...</td></tr>
+                                <tr><td colspan="8" style="text-align: center; padding: 24px;">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -585,7 +586,7 @@ let todosLosPacientesDoctor = [];
 async function cargarPacientesDoctor() {
     const tbody = document.getElementById('tabla-pacientes-doctor');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px;">Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px;">Cargando...</td></tr>';
     try {
         const res = await fetch('/api/doctor/pacientes', { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Error al cargar');
@@ -593,7 +594,7 @@ async function cargarPacientesDoctor() {
         filtrarPacientesDoctor();
     } catch (err) {
         console.error('Error cargando pacientes:', err);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px; color: #c00;">Error al cargar la lista.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px; color: #c00;">Error al cargar la lista.</td></tr>';
     }
 }
 
@@ -601,7 +602,7 @@ function renderizarPacientesDoctor(pacientes) {
     const tbody = document.getElementById('tabla-pacientes-doctor');
     if (!tbody) return;
     if (pacientes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px;">No hay pacientes que hayan agendado cita contigo.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px;">No hay pacientes que hayan agendado cita contigo.</td></tr>';
         return;
     }
     tbody.innerHTML = pacientes.map(function(p) {
@@ -629,6 +630,7 @@ function renderizarPacientesDoctor(pacientes) {
             '<td style="padding: 12px;">' + ((p.contacto_emergencia || '').trim() || '—') + '</td>' +
             '<td style="padding: 12px;">' + p.total_citas + '</td>' +
             '<td style="padding: 12px; color: ' + colorDias + '; font-weight: 500;">' + diasSinCita + '</td>' +
+            '<td style="padding: 12px;">' + ((p.motivo_consulta || '').trim() || '—') + '</td>' +
             '</tr>';
     }).join('');
 }
