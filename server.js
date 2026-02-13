@@ -1621,7 +1621,8 @@ app.get('/api/admin/pacientes', authRequired, async (req, res) => {
                    (SELECT COUNT(*) FROM citas WHERE paciente_id = u.id) as total_citas,
                    (SELECT MAX(fecha) FROM citas WHERE paciente_id = u.id AND fecha < CURRENT_DATE) as ultima_cita,
                    (SELECT COUNT(*) FROM citas WHERE paciente_id = u.id AND fecha >= CURRENT_DATE AND estado NOT IN ('cancelada')) as citas_futuras,
-                   (SELECT p.nombre FROM citas c JOIN psicologos p ON p.id = c.psicologo_id WHERE c.paciente_id = u.id ORDER BY c.fecha DESC, c.hora DESC NULLS LAST LIMIT 1) as psicologo
+                   (SELECT p.nombre FROM citas c JOIN psicologos p ON p.id = c.psicologo_id WHERE c.paciente_id = u.id ORDER BY c.fecha DESC, c.hora DESC NULLS LAST LIMIT 1) as psicologo,
+                   (SELECT c.motivo_de_consulta FROM citas c WHERE c.paciente_id = u.id ORDER BY c.fecha DESC, c.hora DESC NULLS LAST LIMIT 1) as motivo_consulta
             FROM usuarios u
             WHERE u.rol = 'paciente'
             ORDER BY u.nombre
@@ -1647,7 +1648,8 @@ app.get('/api/doctor/pacientes', authRequired, async (req, res) => {
             SELECT u.id, u.nombre, u.email, u.telefono, u.contacto_emergencia,
                    (SELECT COUNT(*) FROM citas WHERE paciente_id = u.id AND psicologo_id = $1) as total_citas,
                    (SELECT MAX(fecha) FROM citas WHERE paciente_id = u.id AND psicologo_id = $1 AND fecha < CURRENT_DATE) as ultima_cita,
-                   (SELECT COUNT(*) FROM citas WHERE paciente_id = u.id AND psicologo_id = $1 AND fecha >= CURRENT_DATE AND estado NOT IN ('cancelada')) as citas_futuras
+                   (SELECT COUNT(*) FROM citas WHERE paciente_id = u.id AND psicologo_id = $1 AND fecha >= CURRENT_DATE AND estado NOT IN ('cancelada')) as citas_futuras,
+                   (SELECT c.motivo_de_consulta FROM citas c WHERE c.paciente_id = u.id AND c.psicologo_id = $1 ORDER BY c.fecha DESC, c.hora DESC NULLS LAST LIMIT 1) as motivo_consulta
             FROM usuarios u
             WHERE u.rol = 'paciente'
               AND EXISTS (SELECT 1 FROM citas WHERE paciente_id = u.id AND psicologo_id = $1)
@@ -2133,13 +2135,7 @@ app.get('/api/horarios-disponibles/:psicologoId', async (req, res) => {
     }
 });
 
-// Clave pública de Stripe para el frontend (embedded checkout / popup)
-app.get('/api/stripe-config', (req, res) => {
-    const key = process.env.STRIPE_PUBLISHABLE_KEY || '';
-    res.json({ publishableKey: key });
-});
-
-// Crear sesión de pago Stripe (embedded = popup en el sitio; fallback redirect); la cita se crea en el webhook
+// Crear sesión de pago Stripe (redirect a página de Stripe); la cita se crea en el webhook
 app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
     if (!stripe) {
         return res.status(503).json({ error: 'Pagos no configurados. Contacta al administrador.' });
