@@ -1169,6 +1169,75 @@ app.post('/api/contacto', async (req, res) => {
     }
 });
 
+// Chatbot Groq: respuestas con IA. Si se acaba la cuota (429), redirigir a WhatsApp
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const CHAT_WHATSAPP_NUMBER = (process.env.CHAT_WHATSAPP_NUMBER || '5215530776194').replace(/\D/g, '') || '5215530776194';
+const CHAT_WHATSAPP_URL = 'https://wa.me/' + (CHAT_WHATSAPP_NUMBER.startsWith('52') ? CHAT_WHATSAPP_NUMBER : '52' + CHAT_WHATSAPP_NUMBER);
+
+const CHAT_SYSTEM_PROMPT = `Eres el asistente virtual de Psicólogos en Red, una plataforma de terapia psicológica en línea en México.
+Respondes en español, de forma breve y amable. Solo informas sobre: horarios de atención, cómo agendar citas, tipos de servicio (terapia individual, pareja, asesoría de crianza), que pueden explorar el catálogo de psicólogos en el sitio, y la Academia Virtual para formación de psicólogos.
+No das consejos clínicos ni diagnósticos. Si preguntan por precios, indica que pueden verlos en el catálogo o contactar por WhatsApp para información personalizada.
+Si no sabes algo, sugiere escribir por WhatsApp o visitar el sitio.`;
+
+app.post('/api/chat', async (req, res) => {
+    const { message, history } = req.body || {};
+    if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: 'Falta el mensaje' });
+    }
+    const userMessage = message.trim().slice(0, 1000);
+    if (!GROQ_API_KEY) {
+        return res.json({
+            fallback: true,
+            message: 'Para recibir respuesta a tu pregunta, dirígete con nuestros especialistas por WhatsApp.',
+            whatsappUrl: CHAT_WHATSAPP_URL
+        });
+    }
+    const messages = [
+        { role: 'system', content: CHAT_SYSTEM_PROMPT },
+        ...(Array.isArray(history) ? history.slice(-10).map(m => ({ role: m.role, content: String(m.content || '').slice(0, 500) })) : []),
+        { role: 'user', content: userMessage }
+    ];
+    try {
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + GROQ_API_KEY
+            },
+            body: JSON.stringify({
+                model: 'llama-3.1-8b-instant',
+                messages,
+                max_tokens: 400,
+                temperature: 0.6
+            })
+        });
+        const data = await groqRes.json();
+        if (!groqRes.ok) {
+            const isRateLimit = groqRes.status === 429 || (data.error && (data.error.code === 'rate_limit_exceeded' || String(data.error.message || '').toLowerCase().includes('quota')));
+            if (isRateLimit) {
+                return res.json({
+                    fallback: true,
+                    message: 'Para recibir respuesta a tu pregunta, dirígete con nuestros especialistas por WhatsApp.',
+                    whatsappUrl: CHAT_WHATSAPP_URL
+                });
+            }
+            console.error('Groq API error:', groqRes.status, data);
+            return res.status(500).json({ error: 'No se pudo obtener respuesta. Intenta de nuevo o escribe por WhatsApp.' });
+        }
+        const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+            ? String(data.choices[0].message.content).trim()
+            : '';
+        res.json({ text: text || 'No pude generar una respuesta. ¿Quieres que te pasemos con un especialista por WhatsApp?' });
+    } catch (err) {
+        console.error('Error llamando Groq:', err.message);
+        res.json({
+            fallback: true,
+            message: 'Para recibir respuesta a tu pregunta, dirígete con nuestros especialistas por WhatsApp.',
+            whatsappUrl: CHAT_WHATSAPP_URL
+        });
+    }
+});
+
 // RUTA PROTEGIDA: Solo entran logueados
 app.get('/perfil', authRequired, (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
