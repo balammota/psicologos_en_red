@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <script async src="https://js.stripe.com/v3/"></script>
+    <script async src="https://js.stripe.com/embedded-checkout/v1/embedded-checkout.js"></script>
 </head>
 <body class="perfil-body">
 
@@ -192,6 +194,15 @@
                     </div>
                 </div>
             </div>
+            <div id="modal-stripe-pago" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
+                <div style="background: white; border-radius: 16px; width: 100%; max-width: 480px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0; color: var(--primario-rosa); font-size: 1.1rem;">Pago seguro con Stripe</h3>
+                        <button type="button" id="btn-cerrar-modal-stripe" aria-label="Cerrar" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #888; line-height: 1;">&times;</button>
+                    </div>
+                    <div id="stripe-embedded-checkout-container" style="flex: 1; min-height: 400px;"></div>
+                </div>
+            </div>
         
             <div id="seccion-video" class="seccion-panel" style="display: none;">
                 <header class="video-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -307,8 +318,11 @@
     </div>
 
     <script>
-        // Móvil: al elegir opción en el hamburguesa, cerrar menú y marcar activo
         document.addEventListener('DOMContentLoaded', function() {
+            if (new URLSearchParams(window.location.search).get('pago') === 'exito') {
+                history.replaceState({}, '', window.location.pathname);
+                setTimeout(function() { mostrarPopup('¡Pago realizado! Tu cita ha sido agendada. Revisa Mis Citas.', 'Listo'); }, 300);
+            }
             var toggle = document.getElementById('perfil-nav-toggle');
             document.querySelectorAll('.perfil-mobile-nav-btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
@@ -1114,7 +1128,7 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
                     cargarCitas();
                     mostrarPopup('Listo', 'Cita actualizada');
                 } else {
-                    // Agendar nueva cita: ir a Stripe Checkout para pagar
+                    // Agendar nueva cita: Stripe Embedded Checkout (popup en el sitio) o redirect
                     res = await fetch('/api/crear-sesion-pago', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1122,16 +1136,43 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
                             psicologo_id: gestionPsicologoId,
                             fecha,
                             hora,
-                            servicio_interes: 'Sesión de psicoterapia'
+                            servicio_interes: 'Sesión de psicoterapia',
+                            return_url: window.location.origin + '/perfil?pago=exito'
                         })
                     });
                     const data = await res.json().catch(() => ({}));
-                    if (res.ok && data.url) {
+                    if (!res.ok) {
+                        mostrarPopup(data.error || 'No se pudo iniciar el pago. Intenta de nuevo.', 'Error');
+                        return;
+                    }
+                    if (data.clientSecret) {
+                        cerrarModalGestionCita();
+                        try {
+                            const modalStripe = document.getElementById('modal-stripe-pago');
+                            const container = document.getElementById('stripe-embedded-checkout-container');
+                            if (container) container.innerHTML = '';
+                            modalStripe.style.display = 'flex';
+                            if (window.StripeEmbeddedCheckout && typeof window.StripeEmbeddedCheckout.create === 'function') {
+                                const checkout = await window.StripeEmbeddedCheckout.create({ clientSecret: data.clientSecret });
+                                checkout.mount('#stripe-embedded-checkout-container');
+                                window._stripeEmbeddedCheckoutInstance = checkout;
+                            } else {
+                                window.location.href = data.url || (window.location.origin + '/perfil');
+                            }
+                        } catch (err) {
+                            console.error('Stripe embedded checkout error:', err);
+                            if (data.url) window.location.href = data.url;
+                            else mostrarPopup('No se pudo abrir el pago. Intenta de nuevo.', 'Error');
+                            document.getElementById('modal-stripe-pago').style.display = 'none';
+                        }
+                        return;
+                    }
+                    if (data.url) {
                         cerrarModalGestionCita();
                         window.location.href = data.url;
                         return;
                     }
-                    mostrarPopup(data.error || 'No se pudo iniciar el pago. Intenta de nuevo.', 'Error');
+                    mostrarPopup('No se pudo iniciar el pago. Intenta de nuevo.', 'Error');
                 }
             } catch (e) {
                 mostrarPopup('Error de conexión', 'Error');
@@ -1180,6 +1221,21 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
         function cerrarPopup() {
             document.getElementById('modal-feedback').style.display = 'none';
         }
+
+        function cerrarModalStripePago() {
+            const modal = document.getElementById('modal-stripe-pago');
+            if (modal) modal.style.display = 'none';
+            if (window._stripeEmbeddedCheckoutInstance && typeof window._stripeEmbeddedCheckoutInstance.destroy === 'function') {
+                try { window._stripeEmbeddedCheckoutInstance.destroy(); } catch (e) {}
+                window._stripeEmbeddedCheckoutInstance = null;
+            }
+            const container = document.getElementById('stripe-embedded-checkout-container');
+            if (container) container.innerHTML = '';
+        }
+        var btnCerrarStripe = document.getElementById('btn-cerrar-modal-stripe');
+        if (btnCerrarStripe) btnCerrarStripe.addEventListener('click', cerrarModalStripePago);
+        var modalStripeEl = document.getElementById('modal-stripe-pago');
+        if (modalStripeEl) modalStripeEl.addEventListener('click', function(e) { if (e.target === this) cerrarModalStripePago(); });
 
         function confirmarPopup(mensaje, titulo = 'Confirmar') {
             return new Promise((resolve) => {
