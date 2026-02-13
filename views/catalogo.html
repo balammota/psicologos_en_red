@@ -159,7 +159,8 @@
                     <div class="select-wrapper">
                         <select id="motivo-consulta" style="border: 2px solid var(--suave-arena); border-radius: 10px; padding: 10px; width: 100%;">
                             <option value="" disabled selected>Elige el motivo más cercano a tu situación</option>
-                            <option value="Ansiedad o estrés">Ansiedad o estrés</option>
+                            <option value="Ansiedad">Ansiedad</option>
+                            <option value="Estrés">Estrés</option>
                             <option value="Depresión o tristeza prolongada">Depresión o tristeza prolongada</option>
                             <option value="Problemas de pareja o relaciones">Problemas de pareja o relaciones</option>
                             <option value="Duelo o pérdida">Duelo o pérdida</option>
@@ -170,6 +171,11 @@
                             <option value="Trauma o experiencias difíciles">Trauma o experiencias difíciles</option>
                             <option value="Otro motivo">Otro motivo</option>
                         </select>
+                    </div>
+                    <div id="wrapper-motivo-otro" style="display: none; margin-top: 10px;">
+                        <label for="motivo-otro-texto" style="color: var(--texto-oscuro); font-weight: 600; font-size: 0.9rem;">Indica tu motivo:</label>
+                        <textarea id="motivo-otro-texto" maxlength="200" placeholder="Escribe brevemente el motivo de tu consulta..." style="width: 100%; border: 2px solid var(--suave-arena); border-radius: 10px; padding: 10px; margin-top: 6px; font-family: inherit; font-size: 0.95rem; min-height: 70px; box-sizing: border-box;" rows="3"></textarea>
+                        <small style="color: #888; font-size: 0.8rem;">Máximo 200 caracteres.</small>
                     </div>
                 </div>
                 
@@ -773,6 +779,10 @@ async function abrirModal(id, nombre) {
         const motivoConsulta = document.getElementById('motivo-consulta');
         if (wrapperMotivo) wrapperMotivo.style.display = 'none';
         if (motivoConsulta) { motivoConsulta.value = ''; motivoConsulta.removeAttribute('required'); }
+        const wrapperMotivoOtro = document.getElementById('wrapper-motivo-otro');
+        const motivoOtroTexto = document.getElementById('motivo-otro-texto');
+        if (wrapperMotivoOtro) wrapperMotivoOtro.style.display = 'none';
+        if (motivoOtroTexto) { motivoOtroTexto.value = ''; motivoOtroTexto.removeAttribute('required'); }
         
         // Saber si es paciente nuevo (nunca ha agendado) para mostrar motivo de consulta solo a nuevos
         window.esPacienteNuevo = false;
@@ -821,6 +831,10 @@ async function abrirModal(id, nombre) {
                     if (mostrarMotivo) inpMotivo.setAttribute('required', 'required');
                     else { inpMotivo.removeAttribute('required'); inpMotivo.value = ''; }
                 }
+                const wrOtro = document.getElementById('wrapper-motivo-otro');
+                const inpOtro = document.getElementById('motivo-otro-texto');
+                if (wrOtro) wrOtro.style.display = 'none';
+                if (inpOtro) { inpOtro.value = ''; inpOtro.removeAttribute('required'); }
                 if (!psico || !sel) { if (precioSesionEl) precioSesionEl.textContent = ''; return; }
                 const cur = (typeof precioCurrency !== 'undefined' && precioCurrency) ? precioCurrency : '';
                 if (!cur) { precioSesionEl.textContent = 'Selecciona tu país (arriba) para ver el precio.'; return; }
@@ -935,6 +949,22 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
             document.getElementById('modal-agenda').style.display = 'none';
         }
 
+        document.getElementById('motivo-consulta').addEventListener('change', function() {
+            const val = this.value;
+            const wrOtro = document.getElementById('wrapper-motivo-otro');
+            const inpOtro = document.getElementById('motivo-otro-texto');
+            if (wrOtro && inpOtro) {
+                if (val === 'Otro motivo') {
+                    wrOtro.style.display = 'block';
+                    inpOtro.setAttribute('required', 'required');
+                } else {
+                    wrOtro.style.display = 'none';
+                    inpOtro.value = '';
+                    inpOtro.removeAttribute('required');
+                }
+            }
+        });
+
         document.getElementById('form-agendar').onsubmit = async (e) => {
             e.preventDefault();
             if (!precioCurrency) {
@@ -942,7 +972,17 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
                 return;
             }
             const motivoEl = document.getElementById('motivo-consulta');
-            const motivoVal = (motivoEl && motivoEl.value && motivoEl.value.trim()) ? motivoEl.value.trim() : null;
+            let motivoVal = (motivoEl && motivoEl.value && motivoEl.value.trim()) ? motivoEl.value.trim() : null;
+            if (motivoVal === 'Otro motivo') {
+                const motivoOtroEl = document.getElementById('motivo-otro-texto');
+                const textoOtro = (motivoOtroEl && motivoOtroEl.value) ? motivoOtroEl.value.trim() : '';
+                if (!textoOtro) {
+                    alert('Por favor escribe tu motivo de consulta.');
+                    if (motivoOtroEl) motivoOtroEl.focus();
+                    return;
+                }
+                motivoVal = textoOtro.slice(0, 200);
+            }
             const data = {
                 psicologo_id: parseInt(document.getElementById('psico-id-input').value, 10),
                 fecha: document.getElementById('fecha-cita').value,
