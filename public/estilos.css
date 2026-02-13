@@ -275,13 +275,13 @@ body {
     50% { transform: translate(-50%, -50%) translateY(-20px); }
 }
 
-/* Listón / ribbon del hero: "Nuevo diseño" */
+/* Listón / banda del hero: "Estrenamos Plataforma Digital" */
 .hero-ribbon {
     position: absolute;
-    top: 42px;
-    right: -52px;
-    width: 340px;
-    padding: 14px 28px 16px;
+    top: 72px;
+    right: -120px;
+    width: 420px;
+    padding: 14px 32px 16px;
     background: linear-gradient(135deg, var(--acento-dorado) 0%, #b8923f 50%, var(--acento-dorado) 100%);
     color: #fff;
     text-align: center;
@@ -293,16 +293,16 @@ body {
 }
 .hero-ribbon-text {
     display: block;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 800;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     white-space: nowrap;
 }
 .hero-ribbon-sub {
     display: block;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 600;
     opacity: 0.95;
     margin-top: 2px;
@@ -314,28 +314,33 @@ body {
 }
 @media (max-width: 768px) {
     .hero-ribbon {
-        top: 32px;
-        right: -58px;
-        width: 300px;
-        padding: 12px 22px 14px;
+        top: 58px;
+        right: -95px;
+        width: 360px;
+        padding: 12px 26px 14px;
     }
-    .hero-ribbon-text { font-size: 0.85rem; }
-    .hero-ribbon-sub { font-size: 0.62rem; }
+    .hero-ribbon-text { font-size: 0.82rem; }
+    .hero-ribbon-sub { font-size: 0.6rem; }
 }
-/* En pantallas < 400px: listón horizontal arriba de las letras, sin rotar */
+/* En pantallas < 400px: banda horizontal a todo lo ancho de la pantalla */
 @media (max-width: 400px) {
     .hero-ribbon {
         position: relative;
         top: auto;
         right: auto;
-        width: 100%;
+        left: 50%;
+        width: 100vw;
+        max-width: 100vw;
+        margin-left: -50vw;
+        margin-right: 0;
         transform: none;
         padding: 10px 16px 12px;
         margin-bottom: 0.75rem;
         border-radius: 0;
+        box-sizing: border-box;
     }
     .hero-ribbon-text {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         white-space: normal;
     }
     .hero-ribbon-sub {
