@@ -4235,6 +4235,48 @@ select {
     margin: 2% auto;
 }
 
+/* Modal agendar: más compacto en pantallas ≤500px */
+@media (max-width: 500px) {
+    #modal-agenda .modal-content {
+        width: 92%;
+        max-width: 340px;
+        margin: 4% auto;
+        padding: 20px 18px 24px;
+        border-radius: 18px;
+        max-height: 85vh;
+    }
+    #modal-agenda .modal-header-pico h2 {
+        font-size: 1.25rem;
+        margin: 6px 0 4px 0;
+    }
+    #modal-agenda .modal-header-pico p {
+        font-size: 0.85rem;
+        margin-bottom: 14px;
+    }
+    #modal-agenda .calendar-icon {
+        font-size: 2.5rem;
+        margin-bottom: 6px;
+    }
+    #modal-agenda .form-group label,
+    #modal-agenda .input-calendario,
+    #modal-agenda select {
+        font-size: 0.9rem;
+    }
+    #modal-agenda .input-calendario,
+    #modal-agenda select {
+        padding: 10px 12px;
+    }
+    #modal-agenda .btn-confirmar {
+        padding: 12px;
+        font-size: 1rem;
+        margin-top: 16px;
+    }
+    #modal-agenda .nota-seguridad {
+        font-size: 0.75rem;
+        margin-top: 10px;
+    }
+}
+
 .modal-header-pico h2 {
     color: var(--primario-dorado);
     margin: 10px 0 5px 0;
@@ -4367,7 +4409,7 @@ select {
 @media (max-width: 768px) {
     .academia-container {
         padding-left: 1rem;
-        padding-right: 1.25rem;
+        padding-right: 2.25rem;
     }
     .curso-grid {
         justify-items: center;
