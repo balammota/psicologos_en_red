@@ -4367,7 +4367,7 @@ select {
 @media (max-width: 768px) {
     .academia-container {
         padding-left: 1rem;
-        padding-right: 2.25rem;
+        padding-right: 1.25rem;
     }
     .curso-grid {
         justify-items: center;
