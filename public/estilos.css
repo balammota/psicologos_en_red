@@ -280,8 +280,8 @@ body {
     position: absolute;
     top: 42px;
     right: -72px;
-    width: 280px;
-    padding: 10px 16px 12px;
+    width: 320px;
+    padding: 12px 24px 14px;
     background: linear-gradient(135deg, var(--acento-dorado) 0%, #b8923f 50%, var(--acento-dorado) 100%);
     color: #fff;
     text-align: center;
@@ -289,6 +289,7 @@ body {
     z-index: 20;
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    box-sizing: border-box;
 }
 .hero-ribbon-text {
     display: block;
@@ -297,6 +298,7 @@ body {
     letter-spacing: 0.04em;
     text-transform: uppercase;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
 }
 .hero-ribbon-sub {
     display: block;
@@ -305,16 +307,30 @@ body {
     opacity: 0.95;
     margin-top: 2px;
     letter-spacing: 0.02em;
+    line-height: 1.25;
+    max-width: 100%;
+    word-wrap: break-word;
+    white-space: normal;
 }
 @media (max-width: 768px) {
     .hero-ribbon {
         top: 32px;
-        right: -78px;
-        width: 260px;
-        padding: 8px 12px 10px;
+        right: -70px;
+        width: 280px;
+        padding: 10px 18px 12px;
     }
     .hero-ribbon-text { font-size: 0.85rem; }
     .hero-ribbon-sub { font-size: 0.62rem; }
+}
+@media (max-width: 400px) {
+    .hero-ribbon {
+        top: 28px;
+        right: -68px;
+        width: 260px;
+        padding: 10px 16px 12px;
+    }
+    .hero-ribbon-text { font-size: 0.8rem; }
+    .hero-ribbon-sub { font-size: 0.58rem; line-height: 1.2; }
 }
 
 .index-hero-content {
@@ -5271,6 +5287,29 @@ select {
 
 /* Pantallas extra pequeñas (menos de 400px) */
 @media (max-width: 400px) {
+    .hero.hero-modern {
+        min-height: auto;
+        padding-top: 1.25rem;
+        padding-bottom: 1.25rem;
+        align-items: flex-start;
+    }
+    .index-hero-content {
+        gap: 1.25rem;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    .index-hero-title {
+        margin-top: 0;
+        margin-bottom: 0.6rem;
+    }
+    .index-hero-subtitle {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    .index-hero-buttons {
+        margin-top: 0.5rem;
+    }
+
     .agenda-card-responsive,
     .dash-card {
         padding: 10px !important;
