@@ -46,7 +46,7 @@
                     Descubre un espacio seguro para explorar, sanar y crecer con el apoyo de profesionales expertos en salud mental.
                 </p>
                 <div class="index-hero-buttons">
-                    <a href="#" id="btn-comenzar-ahora" class="btn-hero-primary glass-effect" data-i18n="index_hero_cta_primary">Comenzar Ahora</a>
+                    <a href="#" id="btn-comenzar-ahora" class="btn-hero-primary glass-effect" data-i18n="index_hero_cta_primary">Agendar Ahora</a>
                     <a href="#servicios" class="btn-hero-secondary" data-i18n="index_hero_cta_secondary">Conocer Más</a>
                 </div>
             </div>
@@ -61,13 +61,13 @@
         <h2 class="index-section-title" data-i18n="index_servicios_titulo">Nuestros Servicios</h2>
         <p class="index-section-desc" data-i18n="index_servicios_desc">Ofrecemos una amplia gama de servicios terapéuticos adaptados a tus necesidades específicas.</p>
         <div class="servicios-grid servicios-grid-modern">
-            <a href="/catalogo" class="servicio-card-modern servicio-card-v2">
+            <a href="#" class="servicio-card-modern servicio-card-v2 btn-abrir-modal-agendar">
                 <div class="servicio-icon-wrap servicio-icon-rosa">
                     <span class="servicio-card-icon servicio-card-icon-rosa">💻</span>
                 </div>
                 <h3 data-i18n="index_servicio_online_titulo">Psicoterapia Online</h3>
                 <p data-i18n="index_servicio_online_texto">Apoyo profesional, seguro y confidencial. Acompañamiento efectivo para ansiedad, depresión, estrés y diversos desafíos emocionales, con la flexibilidad que necesitas.</p>
-                <span class="servicio-card-link" data-i18n="index_servicio_online_cta">Ver especialistas →</span>
+                <span class="servicio-card-link" data-i18n="index_servicio_online_cta">Agendar Ahora →</span>
             </a>
             <a href="/academia" class="servicio-card-modern servicio-card-v2">
                 <div class="servicio-icon-wrap servicio-icon-azul">
@@ -77,13 +77,13 @@
                 <p data-i18n="index_servicio_academia_texto">Cursos y diplomados en línea para psicólogos y estudiantes, fortaleciendo competencias con enfoque ético actualizado.</p>
                 <span class="servicio-card-link" data-i18n="index_servicio_academia_cta">Explorar diplomados →</span>
             </a>
-            <a href="/catalogo?servicio=Asesoria%20de%20crianza" class="servicio-card-modern servicio-card-v2">
+            <a href="#" class="servicio-card-modern servicio-card-v2 btn-abrir-modal-agendar">
                 <div class="servicio-icon-wrap servicio-icon-dorado">
                     <span class="servicio-card-icon servicio-card-icon-dorado">👩‍🍼</span>
                 </div>
                 <h3 data-i18n="index_servicio_crianza_titulo">Asesoría de Crianza</h3>
                 <p data-i18n="index_servicio_crianza_texto">Asesoría en crianza con psicólogos: espacio seguro, herramientas prácticas, vínculo familiar y acompañamiento consciente real.</p>
-                <span class="servicio-card-link" data-i18n="index_servicio_crianza_cta">Ver especialistas →</span>
+                <span class="servicio-card-link" data-i18n="index_servicio_crianza_cta">Agendar Ahora →</span>
             </a>
         </div>
     </section>
@@ -407,6 +407,9 @@
 
             if (btnComenzar) btnComenzar.addEventListener('click', function(e) { e.preventDefault(); abrirModal(); });
             if (btnCtaAgendar) btnCtaAgendar.addEventListener('click', function(e) { e.preventDefault(); abrirModal(); });
+            document.querySelectorAll('.btn-abrir-modal-agendar').forEach(function(btn) {
+                btn.addEventListener('click', function(e) { e.preventDefault(); abrirModal(); });
+            });
             if (btnCerrar) btnCerrar.addEventListener('click', cerrarModal);
             if (btnCerrarBienvenida) btnCerrarBienvenida.addEventListener('click', cerrarModal);
 
