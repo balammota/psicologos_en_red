@@ -591,11 +591,12 @@
                                     <th>Total Citas</th>
                                     <th>Días sin cita</th>
                                     <th>Psicólogo</th>
+                                    <th>Motivo consulta</th>
                                     <th>Acepta Promo</th>
                                 </tr>
                             </thead>
                             <tbody id="tabla-pacientes">
-                                <tr><td colspan="9" style="text-align: center;">Cargando...</td></tr>
+                                <tr><td colspan="10" style="text-align: center;">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -919,7 +920,7 @@
         function renderizarPacientes(pacientes) {
             const tbody = document.getElementById('tabla-pacientes');
             if (pacientes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center;">No hay pacientes registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">No hay pacientes registrados</td></tr>';
                 return;
             }
             tbody.innerHTML = pacientes.map(p => {
@@ -953,6 +954,7 @@
                     <td>${p.total_citas}</td>
                     <td style="color: ${colorDias}; font-weight: 500;">${diasSinCita}</td>
                     <td>${(p.psicologo || '').trim() || '—'}</td>
+                    <td>${(p.motivo_consulta || '').trim() || '—'}</td>
                     <td>${p.acepto_publicidad ? '✅' : '❌'}</td>
                 </tr>
             `}).join('');
