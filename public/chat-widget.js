@@ -3,6 +3,8 @@
 
     var apiUrl = '/api/chat';
     var history = [];
+    var hasOpenedBefore = false;
+    var welcomeText = 'Hola, soy Redi, tu asistente de Psicólogos en Red. ¿En qué puedo ayudarte? Puedes preguntarme por horarios, cómo agendar una cita, servicios, precios o que te recomiende un especialista según lo que busques.';
 
     var wrap = document.createElement('div');
     wrap.className = 'chat-widget-wrap';
@@ -129,6 +131,17 @@
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    function addCrisisNotice(text) {
+        var row = document.createElement('div');
+        row.className = 'chat-widget-msg-row chat-widget-crisis-row';
+        var box = document.createElement('div');
+        box.className = 'chat-widget-crisis-notice';
+        box.textContent = text;
+        row.appendChild(box);
+        messagesEl.appendChild(row);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
     function setLoading(show) {
         var existing = messagesEl.querySelector('.chat-widget-typing-row');
         if (existing) existing.remove();
@@ -166,6 +179,9 @@
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 setLoading(false);
+                if (data.crisisNotice) {
+                    addCrisisNotice(data.crisisNotice);
+                }
                 if (data.fallback && data.whatsappUrl) {
                     addMessage(data.message || 'Para más información, contáctanos por WhatsApp.', 'bot', {
                         className: 'bot fallback',
@@ -190,13 +206,25 @@
             });
     }
 
+    function showWelcomeIfEmpty() {
+        if (messagesEl.children.length === 0) {
+            addMessage(welcomeText, 'bot');
+        }
+    }
+    setTimeout(function () {
+        if (!hasOpenedBefore) {
+            hasOpenedBefore = true;
+            panel.classList.add('open');
+            showWelcomeIfEmpty();
+        }
+    }, 10000);
+
     btn.addEventListener('click', function () {
+        hasOpenedBefore = true;
         panel.classList.toggle('open');
         if (panel.classList.contains('open')) {
             inputEl.focus();
-            if (messagesEl.children.length === 0) {
-                addMessage('Hola, soy Redi, tu asistente de Psicólogos en Red. ¿En qué puedo ayudarte? Puedes preguntarme por horarios, cómo agendar una cita, servicios, precios o que te recomiende un especialista según lo que busques.', 'bot');
-            }
+            showWelcomeIfEmpty();
         }
     });
     sendBtn.addEventListener('click', send);
