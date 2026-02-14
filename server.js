@@ -1178,6 +1178,8 @@ const BASE_URL_CHAT = process.env.BASE_URL || process.env.PUBLIC_URL || 'http://
 const CHAT_SYSTEM_BASE = `Eres Redi, la asistente virtual de Psicólogos en Red. Eres mujer, amable y profesional. Te presentas como Redi.
 Respondes SIEMPRE en español, de forma clara y concisa. No des consejos clínicos ni diagnósticos; solo orientas sobre la plataforma y recomiendas especialistas según la información que tienes.
 
+ALCANCE (obligatorio): Solo respondes a preguntas RELACIONADAS con Psicólogos en Red: agendar citas, horarios, precios, servicios (terapia individual, pareja, asesoría de crianza, academia), registro, inicio de sesión, recomendación de psicólogos de la lista, ubicación (México vs extranjero), contacto, cómo usar la plataforma. Si la persona pregunta sobre otro tema (clima, recetas, noticias, temas generales, consejos personales no relacionados con usar la plataforma), responde brevemente que solo puedes ayudar con temas de la plataforma y los psicólogos, e invítala a preguntar por horarios, citas, servicios o recomendación de especialista. No respondas contenido ajenos a la plataforma.
+
 FORMATO Y LONGITUD DE TUS RESPUESTAS:
 - Da formato a tus mensajes: usa listas con guión (-) cuando des pasos o opciones; separa ideas en párrafos cortos.
 - Máximo unas 6 líneas por párrafo. No escribas bloques largos seguidos. Si son pasos o varias opciones, usa lista con guiones.
@@ -1225,17 +1227,33 @@ async function getPsicologosContextForChat() {
     }
 }
 
+// Detección de temas de crisis (vida/muerte, crimen) para mostrar aviso de emergencia
+const CRISIS_KEYWORDS = /\b(suicidio|suicida|suicidar|matar|muerte|morir(?:me)?|matanza|asesinato|crimen|autolesi[oó]n|querer morir|acabar con (?:todo|migo)|emergencia de vida|pensamientos de muerte|ideaci[oó]n suicida|intento de suicidio)\b/i;
+const CRISIS_NOTICE = 'Te recomendamos acudir a los servicios de emergencia de tu localidad. En México puedes marcar 911 o la Línea de la Vida: 800 911 2000.';
+
+function detectCrisis(userMessage, messageHistory) {
+    if (!userMessage || typeof userMessage !== 'string') return false;
+    const text = userMessage.toLowerCase();
+    if (CRISIS_KEYWORDS.test(text)) return true;
+    if (!Array.isArray(messageHistory)) return false;
+    const lastUser = messageHistory.filter(m => m.role === 'user').slice(-2).map(m => String(m.content || '').toLowerCase()).join(' ');
+    return CRISIS_KEYWORDS.test(lastUser);
+}
+
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body || {};
     if (!message || typeof message !== 'string') {
         return res.status(400).json({ error: 'Falta el mensaje' });
     }
     const userMessage = message.trim().slice(0, 1000);
+    const showCrisisNotice = detectCrisis(userMessage, history);
+
     if (!GROQ_API_KEY) {
         return res.json({
             fallback: true,
             message: 'Para recibir respuesta a tu pregunta, dirígete con nuestros especialistas por WhatsApp.',
-            whatsappUrl: CHAT_WHATSAPP_URL
+            whatsappUrl: CHAT_WHATSAPP_URL,
+            ...(showCrisisNotice && { crisisNotice: CRISIS_NOTICE })
         });
     }
     const psicologosContext = await getPsicologosContextForChat();
@@ -1266,7 +1284,8 @@ app.post('/api/chat', async (req, res) => {
                 return res.json({
                     fallback: true,
                     message: 'Para recibir respuesta a tu pregunta, dirígete con nuestros especialistas por WhatsApp.',
-                    whatsappUrl: CHAT_WHATSAPP_URL
+                    whatsappUrl: CHAT_WHATSAPP_URL,
+                    ...(showCrisisNotice && { crisisNotice: CRISIS_NOTICE })
                 });
             }
             console.error('Groq API error:', groqRes.status, data);
@@ -1277,14 +1296,16 @@ app.post('/api/chat', async (req, res) => {
             : '';
         res.json({
             text: text || 'No pude generar una respuesta. ¿Quieres que te pasemos con un especialista por WhatsApp?',
-            whatsappUrl: CHAT_WHATSAPP_URL
+            whatsappUrl: CHAT_WHATSAPP_URL,
+            ...(showCrisisNotice && { crisisNotice: CRISIS_NOTICE })
         });
     } catch (err) {
         console.error('Error llamando Groq:', err.message);
         res.json({
             fallback: true,
             message: 'Para recibir respuesta a tu pregunta, dirígete con nuestros especialistas por WhatsApp.',
-            whatsappUrl: CHAT_WHATSAPP_URL
+            whatsappUrl: CHAT_WHATSAPP_URL,
+            ...(showCrisisNotice && { crisisNotice: CRISIS_NOTICE })
         });
     }
 });
