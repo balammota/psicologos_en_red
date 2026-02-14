@@ -18,6 +18,7 @@
         '<img class="chat-widget-header-avatar" src="' + rediAvatar + '" alt="" onerror="this.style.display=\'none\'; this.nextElementSibling && (this.nextElementSibling.style.display=\'block\');">' +
         '<svg class="chat-widget-header-icon-fallback" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' +
         '<span>Redi</span>' +
+        '<button type="button" class="chat-widget-minimize" aria-label="Minimizar chat"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg></button>' +
         '</div>' +
         '<div class="chat-widget-messages" id="chat-widget-messages"></div>' +
         '<div class="chat-widget-input-wrap">' +
@@ -217,13 +218,23 @@
             addMessage(welcomeText, 'bot');
         }
     }
-    setTimeout(function () {
-        if (!hasOpenedBefore) {
+    var autoOpenedKey = 'rediAutoOpened';
+    if (!sessionStorage.getItem(autoOpenedKey)) {
+        setTimeout(function () {
+            if (sessionStorage.getItem(autoOpenedKey)) return;
+            sessionStorage.setItem(autoOpenedKey, '1');
             hasOpenedBefore = true;
             panel.classList.add('open');
             showWelcomeIfEmpty();
-        }
-    }, 10000);
+        }, 10000);
+    }
+
+    var minimizeBtn = panel.querySelector('.chat-widget-minimize');
+    if (minimizeBtn) {
+        minimizeBtn.addEventListener('click', function () {
+            panel.classList.remove('open');
+        });
+    }
 
     btn.addEventListener('click', function () {
         hasOpenedBefore = true;
