@@ -59,6 +59,26 @@
     align-items: center;
     gap: 10px;
 }
+.chat-widget-minimize {
+    margin-left: auto;
+    padding: 6px;
+    background: rgba(255,255,255,0.25);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+.chat-widget-minimize:hover {
+    background: rgba(255,255,255,0.4);
+}
+.chat-widget-minimize svg {
+    width: 20px;
+    height: 20px;
+}
 .chat-widget-header-avatar {
     width: 36px;
     height: 36px;
