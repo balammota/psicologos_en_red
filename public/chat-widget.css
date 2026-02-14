@@ -196,6 +196,22 @@
     color: #fff;
 }
 
+.chat-widget-crisis-row {
+    justify-content: flex-start;
+    margin: 8px 0;
+}
+.chat-widget-crisis-notice {
+    max-width: 100%;
+    padding: 12px 14px;
+    background: #fff5f5;
+    border: 1px solid #e57373;
+    border-radius: 10px;
+    color: #b71c1c;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
 .chat-widget-input-wrap {
     padding: 12px;
     background: #fff;
