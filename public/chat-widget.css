@@ -169,6 +169,32 @@
 .chat-widget-msg-link:hover {
     color: #a8841f;
 }
+.chat-widget-p {
+    margin: 0.35em 0;
+    line-height: 1.4;
+}
+.chat-widget-p:first-child { margin-top: 0; }
+.chat-widget-p:last-child { margin-bottom: 0; }
+.chat-widget-list {
+    margin: 0.35em 0;
+    padding-left: 1.25em;
+    line-height: 1.4;
+}
+.chat-widget-profile-btn {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 8px 14px;
+    background: var(--acento-dorado, #c9a227);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.chat-widget-profile-btn:hover {
+    background: #a8841f;
+    color: #fff;
+}
 
 .chat-widget-input-wrap {
     padding: 12px;
