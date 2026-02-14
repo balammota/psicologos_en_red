@@ -33,6 +33,7 @@
     var inputEl = document.getElementById('chat-widget-input');
     var sendBtn = document.getElementById('chat-widget-send');
 
+    var profileLinkDomain = 'psicologosenred.com';
     function escapeHtml(s) {
         var div = document.createElement('div');
         div.textContent = s;
@@ -43,10 +44,55 @@
         var parts = text.split(re);
         var out = '';
         for (var i = 0; i < parts.length; i++) {
-            if (parts[i].match(re)) out += '<a href="' + escapeHtml(parts[i]) + '" target="_blank" rel="noopener noreferrer" class="chat-widget-msg-link">' + escapeHtml(parts[i]) + '</a>';
-            else out += escapeHtml(parts[i]);
+            if (parts[i].match(re)) {
+                var href = parts[i];
+                var isProfile = href.indexOf(profileLinkDomain) !== -1 && href.indexOf('catalogo') !== -1 && href.indexOf('ver=') !== -1;
+                var label = isProfile ? 'Ver perfil' : escapeHtml(href);
+                var cls = isProfile ? 'chat-widget-msg-link chat-widget-profile-btn' : 'chat-widget-msg-link';
+                out += '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer" class="' + cls + '">' + label + '</a>';
+            } else {
+                out += escapeHtml(parts[i]);
+            }
         }
         return out;
+    }
+    function formatBotMessage(text) {
+        if (!text) return '';
+        var lines = text.split(/\n/);
+        var out = [];
+        var inList = false;
+        var listTag = null;
+        var ulOl = /^\s*[-*]\s+/;
+        var olRe = /^\s*\d+\.\s+/;
+        for (var i = 0; i < lines.length; i++) {
+            var raw = lines[i];
+            var trimmed = raw.trim();
+            if (ulOl.test(raw)) {
+                if (!inList || listTag !== 'ul') {
+                    if (inList) out.push(listTag === 'ul' ? '</ul>' : '</ol>');
+                    out.push('<ul class="chat-widget-list">');
+                    listTag = 'ul';
+                    inList = true;
+                }
+                out.push('<li>' + linkify(escapeHtml(trimmed.replace(ulOl, ''))) + '</li>');
+            } else if (olRe.test(raw)) {
+                if (!inList || listTag !== 'ol') {
+                    if (inList) out.push(listTag === 'ul' ? '</ul>' : '</ol>');
+                    out.push('<ol class="chat-widget-list">');
+                    listTag = 'ol';
+                    inList = true;
+                }
+                out.push('<li>' + linkify(escapeHtml(trimmed.replace(olRe, ''))) + '</li>');
+            } else {
+                if (inList) {
+                    out.push(listTag === 'ul' ? '</ul>' : '</ol>');
+                    inList = false;
+                }
+                if (trimmed) out.push('<p class="chat-widget-p">' + linkify(escapeHtml(trimmed)) + '</p>');
+            }
+        }
+        if (inList) out.push(listTag === 'ul' ? '</ul>' : '</ol>');
+        return out.join('');
     }
     function addMessage(text, role, opts) {
         opts = opts || {};
@@ -56,7 +102,7 @@
         var div = document.createElement('div');
         div.className = 'chat-widget-msg ' + (opts.className || role);
         if (isBot && text) {
-            div.innerHTML = linkify(text);
+            div.innerHTML = formatBotMessage(text);
         } else {
             div.textContent = text;
         }
