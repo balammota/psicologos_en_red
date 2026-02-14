@@ -41,6 +41,9 @@
         div.textContent = s;
         return div.innerHTML;
     }
+    function boldify(s) {
+        return s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    }
     function linkify(text) {
         var re = /(https?:\/\/[^\s<]+)/g;
         var parts = text.split(re);
@@ -76,7 +79,7 @@
                     listTag = 'ul';
                     inList = true;
                 }
-                out.push('<li>' + linkify(escapeHtml(trimmed.replace(ulOl, ''))) + '</li>');
+                out.push('<li>' + linkify(boldify(escapeHtml(trimmed.replace(ulOl, '')))) + '</li>');
             } else if (olRe.test(raw)) {
                 if (!inList || listTag !== 'ol') {
                     if (inList) out.push(listTag === 'ul' ? '</ul>' : '</ol>');
@@ -84,13 +87,13 @@
                     listTag = 'ol';
                     inList = true;
                 }
-                out.push('<li>' + linkify(escapeHtml(trimmed.replace(olRe, ''))) + '</li>');
+                out.push('<li>' + linkify(boldify(escapeHtml(trimmed.replace(olRe, '')))) + '</li>');
             } else {
                 if (inList) {
                     out.push(listTag === 'ul' ? '</ul>' : '</ol>');
                     inList = false;
                 }
-                if (trimmed) out.push('<p class="chat-widget-p">' + linkify(escapeHtml(trimmed)) + '</p>');
+                if (trimmed) out.push('<p class="chat-widget-p">' + linkify(boldify(escapeHtml(trimmed))) + '</p>');
             }
         }
         if (inList) out.push(listTag === 'ul' ? '</ul>' : '</ol>');
