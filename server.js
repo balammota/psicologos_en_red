@@ -1169,15 +1169,56 @@ app.post('/api/contacto', async (req, res) => {
     }
 });
 
-// Chatbot Groq: respuestas con IA. Si se acaba la cuota (429), redirigir a WhatsApp
+// Chatbot Groq: Redi (asistente mujer). Contexto de psicólogos + guía de navegación. Si 429 → WhatsApp
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const CHAT_WHATSAPP_NUMBER = (process.env.CHAT_WHATSAPP_NUMBER || '5215530776194').replace(/\D/g, '') || '5215530776194';
 const CHAT_WHATSAPP_URL = 'https://wa.me/' + (CHAT_WHATSAPP_NUMBER.startsWith('52') ? CHAT_WHATSAPP_NUMBER : '52' + CHAT_WHATSAPP_NUMBER);
+const BASE_URL_CHAT = process.env.BASE_URL || 'http://localhost:3000';
 
-const CHAT_SYSTEM_PROMPT = `Eres el asistente virtual de Psicólogos en Red, una plataforma de terapia psicológica en línea en México.
-Respondes en español, de forma breve y amable. Solo informas sobre: horarios de atención, cómo agendar citas, tipos de servicio (terapia individual, pareja, asesoría de crianza), que pueden explorar el catálogo de psicólogos en el sitio, y la Academia Virtual para formación de psicólogos.
-No das consejos clínicos ni diagnósticos. Si preguntan por precios, indica que pueden verlos en el catálogo o contactar por WhatsApp para información personalizada.
-Si no sabes algo, sugiere escribir por WhatsApp o visitar el sitio.`;
+const CHAT_SYSTEM_BASE = `Eres Redi, la asistente virtual de Psicólogos en Red. Eres mujer, amable y profesional. Te presentas como Redi.
+Respondes SIEMPRE en español, de forma clara y concisa. No des consejos clínicos ni diagnósticos; solo orientas sobre la plataforma y recomiendas especialistas según la información que tienes.
+
+MÉXICO vs EXTRANJERO (importante, acláralo cuando pregunten por el tipo de servicio o ubicación):
+- En MÉXICO: el servicio es atención psicológica con profesionales titulados (psicólogos con cédula profesional). Ofrecemos terapia individual, de pareja y asesoría de crianza en el marco de la práctica clínica y el código ético de la profesión.
+- En el EXTRANJERO (fuera de México): el servicio se ofrece como WELLNESS COACHING (acompañamiento en bienestar emocional y desarrollo personal). No es terapia psicológica clínica ni sustituye atención en salud mental; es un servicio de acompañamiento. Los precios suelen mostrarse en USD.
+Cuando te pregunten si son psicólogos o qué servicio es en otro país, explica esta diferencia con claridad.
+
+GUÍA DE NAVEGACIÓN (usa esta información para explicar cómo hacer las cosas):
+- Ver psicólogos y filtrar: Menú "Psicólogos" o ${BASE_URL_CHAT}/catalogo. Ahí pueden filtrar por especialidad, áreas de intervención y servicios. Cada tarjeta tiene "Ver perfil" y "Agendar cita".
+- Enlace directo al perfil de un psicólogo: Cuando recomiendes a alguien, SIEMPRE incluye el enlace a su perfil en este formato exacto: ${BASE_URL_CHAT}/catalogo?ver=ID (reemplaza ID por el número de id del psicólogo de la lista). Ejemplo: para el id 3 es ${BASE_URL_CHAT}/catalogo?ver=3. Escribe el enlace completo en tu respuesta para que la persona pueda hacer clic.
+- Agendar una cita: En el catálogo, elegir un psicólogo y "Agendar cita". Seleccionar fecha, hora y tipo de servicio; si no tienen cuenta, se les pedirá registrarse o iniciar sesión. El pago es en línea (Stripe).
+- Registrarse: ${BASE_URL_CHAT}/registro. Deben verificar el correo.
+- Iniciar sesión: ${BASE_URL_CHAT}/login. Opción "¿Olvidaste tu contraseña?" disponible.
+- Perfil del paciente: ${BASE_URL_CHAT}/perfil. Ahí ven sus citas y pueden entrar a la videollamada el día de la cita.
+- Academia (cursos/diplomados para psicólogos): ${BASE_URL_CHAT}/academia. Formación para profesionales, no para pacientes.
+- Contacto por WhatsApp: Cuando des el contacto o sugieras escribir por WhatsApp, di algo como "Puedes escribirnos por WhatsApp para más información" o "Te dejo el enlace para contactarnos por WhatsApp". No escribas el número de teléfono tal cual; el sistema mostrará un botón para enviar mensaje. Si te piden el número explícitamente, puedes indicarlo pero añade que abajo aparecerá un botón para abrir WhatsApp.
+
+RECOMENDACIÓN DE PSICÓLOGOS: Usa ÚNICAMENTE la lista de especialistas del siguiente bloque. Recomienda según lo que la persona busque (problema, tipo de terapia, enfoque), biografía y áreas de intervención. Cuando recomiendes a uno o más psicólogos, incluye SIEMPRE el enlace directo a su perfil: ${BASE_URL_CHAT}/catalogo?ver=ID (con el id numérico de cada uno). Ejemplo: "Puedes ver su perfil aquí: ${BASE_URL_CHAT}/catalogo?ver=5". No inventes nombres ni datos que no estén en la lista.
+PRECIOS: Varían por psicólogo y servicio (individual, pareja, asesoría de crianza). En el catálogo se ve el precio en cada tarjeta y al elegir "Agendar cita" el desglose antes de pagar.`;
+
+/** Construye el texto de psicólogos para inyectar en el prompt (nombre, especialidad, biografía, áreas, servicios). */
+async function getPsicologosContextForChat() {
+    try {
+        const r = await pool.query(`
+            SELECT id, nombre, especialidad, biografia, problemas_principales, servicios,
+                   precio_terapia_individual, precio_terapia_pareja, precio_asesoria_crianza
+            FROM psicologos
+            WHERE (COALESCE(visible_mexico, true) = true OR COALESCE(visible_internacional, false) = true)
+            ORDER BY nombre
+        `);
+        if (!r.rows.length) return '\n[Lista de psicólogos: no hay datos disponibles en este momento.]';
+        const lines = r.rows.map(p => {
+            const areas = Array.isArray(p.problemas_principales) ? p.problemas_principales.join(', ') : (p.problemas_principales || '');
+            const serv = Array.isArray(p.servicios) ? p.servicios.join(', ') : (p.servicios || '');
+            const bio = (p.biografia || '').replace(/\s+/g, ' ').slice(0, 400);
+            return `- ${p.nombre || '—'} (ID ${p.id}). Especialidad: ${p.especialidad || '—'}. Áreas de intervención: ${areas || '—'}. Servicios: ${serv || '—'}. Biografía: ${bio || '—'}. Precios (MXN): individual ${p.precio_terapia_individual != null ? p.precio_terapia_individual : 'consultar'}, pareja ${p.precio_terapia_pareja != null ? p.precio_terapia_pareja : 'consultar'}, crianza ${p.precio_asesoria_crianza != null ? p.precio_asesoria_crianza : 'consultar'}.`;
+        });
+        return '\nLISTA DE ESPECIALISTAS (usa solo estos datos para recomendar):\n' + lines.join('\n');
+    } catch (e) {
+        console.error('Error obteniendo psicólogos para chat:', e.message);
+        return '\n[Lista de psicólogos temporalmente no disponible.]';
+    }
+}
 
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body || {};
@@ -1192,8 +1233,10 @@ app.post('/api/chat', async (req, res) => {
             whatsappUrl: CHAT_WHATSAPP_URL
         });
     }
+    const psicologosContext = await getPsicologosContextForChat();
+    const systemContent = CHAT_SYSTEM_BASE + psicologosContext;
     const messages = [
-        { role: 'system', content: CHAT_SYSTEM_PROMPT },
+        { role: 'system', content: systemContent },
         ...(Array.isArray(history) ? history.slice(-10).map(m => ({ role: m.role, content: String(m.content || '').slice(0, 500) })) : []),
         { role: 'user', content: userMessage }
     ];
@@ -1207,8 +1250,8 @@ app.post('/api/chat', async (req, res) => {
             body: JSON.stringify({
                 model: 'llama-3.1-8b-instant',
                 messages,
-                max_tokens: 400,
-                temperature: 0.6
+                max_tokens: 500,
+                temperature: 0.5
             })
         });
         const data = await groqRes.json();
@@ -1227,7 +1270,10 @@ app.post('/api/chat', async (req, res) => {
         const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
             ? String(data.choices[0].message.content).trim()
             : '';
-        res.json({ text: text || 'No pude generar una respuesta. ¿Quieres que te pasemos con un especialista por WhatsApp?' });
+        res.json({
+            text: text || 'No pude generar una respuesta. ¿Quieres que te pasemos con un especialista por WhatsApp?',
+            whatsappUrl: CHAT_WHATSAPP_URL
+        });
     } catch (err) {
         console.error('Error llamando Groq:', err.message);
         res.json({
