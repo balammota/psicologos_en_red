@@ -2408,14 +2408,49 @@ summary::after {
     flex-direction: column;
 }
 
+#chat-header-info {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    background: white;
+}
+
+#chat-header-info h4 {
+    margin: 0;
+}
+
 #chat-messages {
     flex: 1;
+    min-height: 0;
     padding: 20px;
     overflow-y: auto;
     background: #f9f9f9;
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.chat-input-area {
+    padding: 15px;
+    background: white;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.chat-input-area button:not([type="file"]) {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: white;
+    cursor: pointer;
 }
 
 .grid-citas-panel {
