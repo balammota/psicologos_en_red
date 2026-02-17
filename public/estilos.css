@@ -5156,7 +5156,7 @@ select {
         width: 100% !important;
         border-right: none !important;
         border-bottom: 1px solid #eee;
-        max-height: 260px !important;
+        max-height: 180px !important;
         overflow-y: auto !important;
         flex-shrink: 0 !important;
     }
@@ -5188,7 +5188,8 @@ select {
         flex: 1 !important;
         min-height: 0 !important;
         overflow-y: auto !important;
-        height: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 32px !important;
     }
 
     .chat-input-area {
