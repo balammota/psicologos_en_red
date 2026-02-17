@@ -5492,6 +5492,12 @@ select {
         max-width: 100% !important;
         box-sizing: border-box !important;
     }
+    /* La tarjeta en móvil debe ser columna para que título, form y lista se apilen */
+    #seccion-agenda .dash-card,
+    #seccion-agenda .agenda-card-responsive {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
     #seccion-agenda .form-horario-simple .form-row {
         flex-direction: column !important;
         align-items: stretch !important;
