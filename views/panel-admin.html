@@ -1613,6 +1613,7 @@ function cargarMensajes(idSocio) {
                 return;
             }
 
+            var estabaAbajo = (contenedor.scrollTop + contenedor.clientHeight) >= (contenedor.scrollHeight - 80);
             contenedor.innerHTML = mensajes.map(m => {
                 const soyYo = m.remitente_id == miId;
                 const adjunto = (m.ruta_adjunto && m.nombre_adjunto)
@@ -1635,8 +1636,7 @@ function cargarMensajes(idSocio) {
                     </div>`;
             }).join('');
             
-            // Auto-scroll al final
-            contenedor.scrollTop = contenedor.scrollHeight;
+            if (estabaAbajo) contenedor.scrollTop = contenedor.scrollHeight;
             if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
             if (typeof actualizarBurbujasPorContacto === 'function') actualizarBurbujasPorContacto();
         })
