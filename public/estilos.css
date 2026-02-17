@@ -5480,51 +5480,51 @@ select {
     }
 }
 
-/* ========== Agenda psicólogo: móvil (un solo bloque, máxima prioridad) ========== */
+/* ========== Agenda psicólogo: móvil (prioridad sobre otros 768px con !important) ========== */
 @media (max-width: 768px) {
     #seccion-agenda {
-        overflow-x: hidden;
+        overflow-x: hidden !important;
     }
     #seccion-agenda .agenda-container,
     #seccion-agenda .dash-card,
     #seccion-agenda .agenda-card-responsive {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
     }
     #seccion-agenda .form-horario-simple .form-row {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: column !important;
+        align-items: stretch !important;
     }
     #seccion-agenda .form-horario-simple .form-group {
-        width: 100%;
-        min-width: 0;
+        width: 100% !important;
+        min-width: 0 !important;
     }
     #seccion-agenda .form-horario-simple .btn-agregar-bloque {
-        width: 100%;
+        width: 100% !important;
     }
     #seccion-agenda .horario-dia {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
     }
     #seccion-agenda .horario-dia__nombre {
-        width: 100%;
-        padding-bottom: 6px;
-        border-bottom: 1px solid #eee;
+        width: 100% !important;
+        padding-bottom: 6px !important;
+        border-bottom: 1px solid #eee !important;
     }
     #seccion-agenda .horario-dia__bloques {
-        flex-direction: column;
-        width: 100%;
-        gap: 8px;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 8px !important;
     }
     #seccion-agenda .bloque-horario {
-        width: 100%;
-        box-sizing: border-box;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
     #seccion-agenda .bloqueo-item {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
     }
 }
