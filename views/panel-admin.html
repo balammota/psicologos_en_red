@@ -3,1110 +3,1705 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administrador - Psicólogos en Red</title>
+    <title>Panel de Control - Especialista</title>
     <link rel="stylesheet" href="/estilos.css">
-    <style>
-        * { box-sizing: border-box; }
-        
-        .admin-container {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .admin-sidebar {
-            width: 250px;
-            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-            color: white;
-            padding: 20px 0;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-        }
-
-        .admin-logo {
-            padding: 0 20px 30px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            margin-bottom: 20px;
-        }
-
-        .admin-logo h2 {
-            font-size: 1.2rem;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .admin-logo img {
-            height: 35px;
-            border-radius: 8px;
-        }
-
-        .admin-logo span {
-            font-size: 0.7rem;
-            background: #e74c3c;
-            padding: 2px 8px;
-            border-radius: 10px;
-            margin-left: 5px;
-        }
-
-        .admin-nav {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .admin-nav li a {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 14px 25px;
-            color: rgba(255,255,255,0.7);
-            text-decoration: none;
-            transition: all 0.3s;
-            border-left: 3px solid transparent;
-        }
-
-        .admin-nav li a:hover,
-        .admin-nav li a.active {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border-left-color: var(--primario-rosa);
-        }
-
-        .admin-nav li a .icon {
-            font-size: 1.2rem;
-        }
-
-        .admin-main {
-            flex: 1;
-            margin-left: 250px;
-            background: #f5f6fa;
-            min-height: 100vh;
-        }
-
-        .admin-header {
-            background: white;
-            padding: 20px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .admin-header h1 {
-            font-size: 1.5rem;
-            margin: 0;
-            color: #1a1a2e;
-        }
-
-        .admin-user {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .admin-user .avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--primario-rosa), #667eea);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        .btn-logout {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-
-        .admin-content {
-            padding: 30px;
-        }
-
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-        }
-
-        .stat-icon.rosa { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
-        .stat-icon.azul { background: linear-gradient(135deg, #667eea, #764ba2); }
-        .stat-icon.verde { background: linear-gradient(135deg, #11998e, #38ef7d); }
-        .stat-icon.naranja { background: linear-gradient(135deg, #f093fb, #f5576c); }
-
-        .stat-info h3 {
-            font-size: 1.8rem;
-            margin: 0;
-            color: #1a1a2e;
-        }
-
-        .stat-info p {
-            margin: 5px 0 0;
-            color: #888;
-            font-size: 0.9rem;
-        }
-
-        /* Sections */
-        .admin-section {
-            display: none;
-        }
-
-        .admin-section.active {
-            display: block;
-        }
-
-        /* Tables */
-        .admin-table-container {
-            background: white;
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            overflow-x: auto;
-        }
-
-        .admin-table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .admin-table-header h2 {
-            margin: 0;
-            font-size: 1.3rem;
-            color: #1a1a2e;
-        }
-
-        .search-box {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: #f5f6fa;
-            padding: 10px 15px;
-            border-radius: 10px;
-        }
-
-        .search-box input {
-            border: none;
-            background: none;
-            outline: none;
-            font-size: 0.95rem;
-            width: 200px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 14px 12px;
-            border-bottom: 1px solid #eee;
-        }
-
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #555;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-        }
-
-        td {
-            color: #333;
-            font-size: 0.95rem;
-        }
-
-        tr:hover {
-            background: #fafbfc;
-        }
-
-        .badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        .badge-confirmada { background: #d4edda; color: #155724; }
-        .badge-pendiente { background: #fff3cd; color: #856404; }
-        .badge-cancelada { background: #f8d7da; color: #721c24; }
-        .badge-realizada { background: #d4edda; color: #155724; }
-        .badge-no-realizada { background: #e3f2fd; color: #0d47a1; }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .admin-sidebar {
-                width: 70px;
-                padding: 15px 0;
-            }
-
-            .admin-sidebar .admin-logo h2 span,
-            .admin-nav li a span:not(.icon) {
-                display: none;
-            }
-
-            .admin-logo {
-                padding: 0 10px 20px;
-                text-align: center;
-            }
-
-            .admin-nav li a {
-                justify-content: center;
-                padding: 14px;
-            }
-
-            .admin-main {
-                margin-left: 70px;
-            }
-
-            .admin-header h1 {
-                font-size: 1.1rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .stat-card {
-                flex-direction: column;
-                text-align: center;
-                padding: 20px 15px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <!-- Daily.co script se carga dinámicamente al iniciar video -->
 </head>
-<body>
-    <div class="admin-container">
-        <!-- Sidebar -->
-        <aside class="admin-sidebar">
-            <div class="admin-logo">
-                <h2>
-                    <img src="/images/logo.png" alt="Logo">
-                    Admin <span>PRO</span>
-                </h2>
+<body class="perfil-body">
+
+    <div class="perfil-layout" id="perfil-layout">
+        <!-- Solo móvil: menú hamburguesa como en el index -->
+        <header class="perfil-mobile-header">
+            <span class="perfil-mobile-title">Panel Especialista</span>
+            <input type="checkbox" id="perfil-nav-toggle" class="perfil-nav-toggle" aria-hidden="true" tabindex="-1">
+            <label for="perfil-nav-toggle" class="perfil-nav-toggle-label" aria-label="Abrir menú"><span></span><span></span><span></span></label>
+            <nav class="perfil-mobile-nav">
+                <ul class="perfil-mobile-nav-list">
+                    <li><button type="button" class="perfil-mobile-nav-btn active" data-seccion="dashboard">📊 Dashboard</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="chat">💬 Mis Mensajes <span class="nav-badge nav-badge-mobile" id="nav-badge-mensajes-mobile" aria-hidden="true">0</span></button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="video">🎥 Sala de Video</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="pacientes">👥 Pacientes</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="documentos">📄 Documentos</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-seccion="agenda">⚙️ Configuración</button></li>
+                    <li><a href="/" class="perfil-mobile-nav-link">🌐 Volver al Sitio</a></li>
+                    <li><a href="/logout" class="perfil-mobile-nav-link perfil-mobile-logout">🚪 Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <aside class="perfil-sidebar" id="perfil-sidebar">
+            <div class="sidebar-header">
+                <div class="user-avatar" id="avatar-doctor">D</div>
+                <h3 class="sidebar-nombre" id="nombre-doctor">Especialista</h3>
+                <span class="status-badge sidebar-texto">Modo Especialista</span>
             </div>
-            <ul class="admin-nav">
-                <li><a href="#" class="active" data-section="dashboard"><span class="icon">📊</span> <span>Dashboard</span></a></li>
-                <li><a href="#" data-section="citas"><span class="icon">📅</span> <span>Citas</span></a></li>
-                <li><a href="#" data-section="psicologos"><span class="icon">👨‍⚕️</span> <span>Psicólogos</span></a></li>
-                <li><a href="#" data-section="pacientes"><span class="icon">👥</span> <span>Pacientes</span></a></li>
-                <li><a href="#" data-section="configuracion"><span class="icon">⚙️</span> <span>Configuración</span></a></li>
-                <li><a href="/logout"><span class="icon">🚪</span> <span>Cerrar Sesión</span></a></li>
-            </ul>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-item active" onclick="mostrarSeccion('dashboard')">
+                    <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('chat'); cargarContactosChat();">
+                    <span class="nav-icon">💬</span><span class="nav-label">Mis Mensajes</span>
+                    <span class="nav-badge" id="nav-badge-mensajes" aria-hidden="true">0</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('video')">
+                    <span class="nav-icon">🎥</span><span class="nav-label">Sala de Video</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('pacientes'); cargarPacientesDoctor();">
+                    <span class="nav-icon">👥</span><span class="nav-label">Pacientes</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('documentos'); cargarDocumentos();">
+                    <span class="nav-icon">📄</span><span class="nav-label">Documentos</span>
+                </button>
+                <button class="nav-item" onclick="mostrarSeccion('agenda')">
+                    <span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span>
+                </button>
+                <a href="/" class="nav-item-link">
+                    <span class="nav-icon">🌐</span><span class="nav-label">Volver al Sitio</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/logout" class="btn-logout">
+                    <span class="nav-icon">🚪</span><span class="nav-label">Cerrar Sesión</span>
+                </a>
+            </div>
         </aside>
-
-        <!-- Main Content -->
-        <main class="admin-main">
-            <header class="admin-header">
-                <h1 id="header-title">Dashboard</h1>
-                <div class="admin-user">
-                    <div class="avatar">A</div>
-                    <a href="/logout" class="btn-logout">Salir</a>
+        <main class="perfil-main">
+            <div id="seccion-dashboard" class="seccion-panel">
+                <div class="welcome-banner">
+                    <h1>Panel del Especialista 👋</h1>
+                    <p>Gestiona tus consultas y pacientes.</p>
                 </div>
-            </header>
-
-            <div class="admin-content">
-                <!-- Dashboard Section -->
-                <section id="dashboard" class="admin-section active">
-                    <!-- Usuarios -->
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon azul">👨‍⚕️</div>
-                            <div class="stat-info">
-                                <h3 id="stat-psicologos">0</h3>
-                                <p>Psicólogos</p>
-                            </div>
+            
+                <div class="listas-citas-container">
+                    <!-- Filtros -->
+                    <div class="filtros-citas">
+                        <div class="filtro-item filtro-paciente">
+                            <label>Paciente</label>
+                            <input id="filtro-paciente" type="text" placeholder="Buscar por nombre...">
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-icon rosa">👥</div>
-                            <div class="stat-info">
-                                <h3 id="stat-pacientes">0</h3>
-                                <p>Pacientes</p>
-                            </div>
+                        <div class="filtro-item">
+                            <label>Desde</label>
+                            <input id="filtro-desde" type="date">
+                        </div>
+                        <div class="filtro-item">
+                            <label>Hasta</label>
+                            <input id="filtro-hasta" type="date">
+                        </div>
+                        <div class="filtro-item filtro-acciones">
+                            <button id="btn-limpiar-filtros" class="btn-cita-secundario" type="button">Limpiar</button>
                         </div>
                     </div>
 
-                    <!-- Tabla de Citas por Estado y Período -->
-                    <div class="admin-table-container" style="margin-bottom: 25px;">
-                        <div class="admin-table-header">
-                            <h2>📊 Resumen de Citas por Estado</h2>
+                    <h2 class="titulo-seccion">📅 Próximas Citas</h2>
+                    <div id="contenedor-citas-futuras" class="grid-citas-panel"></div>
+                
+                    <hr style="margin: 40px 0; border: 0; border-top: 1px solid #ddd;">
+                
+                    <h2 class="titulo-seccion" style="color: #888;">⌛ Historial de Sesiones</h2>
+                    <div id="contenedor-citas-pasadas" class="grid-citas-panel historial"></div>
+                    <div id="historial-doctor-cargar-mas-wrap" style="display: none; text-align: center; margin-top: 1rem;">
+                        <button type="button" id="btn-historial-doctor-cargar-mas" class="btn-cita-secundario">Cargar más</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Notas (para historial) -->
+            <div id="modal-notas" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; align-items:center; justify-content:center;">
+                <div style="background:white; padding:30px; border-radius:20px; width:90%; max-width:520px; position:relative;">
+                    <h3 id="modal-notas-titulo" style="margin-top:0; color:var(--primario-rosa);">📝 Notas</h3>
+                    <p id="modal-notas-subtitulo" style="margin-top:0; color:#666; font-size:0.9rem;"></p>
+                    <textarea id="modal-notas-textarea" rows="8" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; resize:vertical;" placeholder="Notas..." ></textarea>
+                    <div style="display:flex; gap:10px; margin-top:10px; justify-content:flex-end;">
+                        <button onclick="cerrarModalNotas()" class="btn-cita-secundario" type="button">Cerrar</button>
+                        <button id="btn-guardar-notas-modal" class="btn-guardar" type="button">Guardar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal general (reemplazo de alert) -->
+            <div id="modal-feedback" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:4000; align-items:center; justify-content:center;">
+                <div style="background:white; padding:26px; border-radius:18px; width:90%; max-width:460px; position:relative;">
+                    <h3 id="modal-feedback-titulo" style="margin-top:0; color:var(--primario-rosa);">Aviso</h3>
+                    <div id="modal-feedback-mensaje" style="color:#444; line-height:1.5;"></div>
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+                        <button onclick="cerrarPopup()" class="btn-cita-secundario" type="button">OK</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="seccion-chat" class="seccion-panel" style="display: none;">
+                <div class="chat-main-container">
+                    <aside class="chat-sidebar">
+                        <h3>Mis Pacientes</h3>
+                        <div id="lista-contactos-chat"></div>
+                    </aside>
+                    <section class="chat-window">
+                        <div id="chat-header-info">
+                            <h4 id="nombre-paciente-chat" style="margin:0">Selecciona un paciente</h4>
                         </div>
-                        <table style="margin-top: 15px;">
+                        <div id="chat-messages"></div>
+                        <div class="chat-input-area">
+                            <input type="file" id="input-chat-pdf" accept=".pdf" style="display:none;">
+                            <button type="button" id="btn-adjuntar-pdf-chat" title="Adjuntar PDF" disabled>📎 PDF</button>
+                            <input type="text" id="input-mensaje" placeholder="Escribe un mensaje..." disabled>
+                            <button id="btn-enviar-chat" class="btn-entrar-sesion" disabled>Enviar</button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div id="seccion-video" class="seccion-panel" style="display: none;">
+                <header class="video-header">
+                    <h2 id="info-video-titulo">Sala de Espera</h2>
+                    <p>Inicia la sesión cuando estés listo.</p>
+                </header>
+                <div id="jitsi-container" style="height: 70vh; background: #000; border-radius: 15px;"></div>
+
+                <div class="dash-card" style="margin-top: 15px;">
+                    <h3 style="margin-top:0;">📝 Notas de la sesión</h3>
+                    <p id="nota-ayuda" style="margin-top:0; color:#666; font-size:0.9rem;">Selecciona una cita para escribir notas.</p>
+                    <textarea id="notas-textarea" rows="6" style="width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; resize:vertical;" placeholder="Escribe tus notas aquí..." disabled></textarea>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button id="btn-guardar-notas" class="btn-guardar" style="max-width:220px;" disabled>Guardar notas</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="seccion-pacientes" class="seccion-panel" style="display: none;">
+                <div class="documentos-container" style="max-width: 100%;">
+                    <div class="documentos-header" style="margin-bottom: 16px;">
+                        <h2>👥 Mis Pacientes</h2>
+                        <p>Pacientes que han agendado cita contigo.</p>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
+                            <span style="font-size: 1.2rem;">🔍</span>
+                            <input type="text" id="buscar-paciente-doctor" placeholder="Buscar por nombre o email..." style="padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; min-width: 220px;">
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);">
+                        <table style="width: 100%; border-collapse: collapse;">
                             <thead>
-                                <tr>
-                                    <th>Período</th>
-                                    <th style="text-align: center;">⏳ Pendiente</th>
-                                    <th style="text-align: center;">✅ Confirmada</th>
-                                    <th style="text-align: center;">🎯 Realizada</th>
-                                    <th style="text-align: center;">⏭️ No realizada</th>
-                                    <th style="text-align: center;">❌ Cancelada</th>
-                                    <th style="text-align: center; font-weight: 700;">TOTAL</th>
+                                <tr style="background: #f8f9fa; border-bottom: 2px solid #eee;">
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">ID</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Nombre</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Email</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Teléfono</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Contacto emergencia</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Total Citas</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Días sin cita</th>
+                                    <th style="padding: 12px; text-align: left; font-size: 0.85rem;">Motivo consulta</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td style="font-weight: 600;">📅 Hoy</td>
-                                    <td style="text-align: center;" id="hoy-pendiente">0</td>
-                                    <td style="text-align: center;" id="hoy-confirmada">0</td>
-                                    <td style="text-align: center;" id="hoy-realizada">0</td>
-                                    <td style="text-align: center;" id="hoy-no-realizada">0</td>
-                                    <td style="text-align: center;" id="hoy-cancelada">0</td>
-                                    <td style="text-align: center; font-weight: 700; background: #f8f9fa;" id="hoy-total">0</td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: 600;">📆 Esta Semana</td>
-                                    <td style="text-align: center;" id="semana-pendiente">0</td>
-                                    <td style="text-align: center;" id="semana-confirmada">0</td>
-                                    <td style="text-align: center;" id="semana-realizada">0</td>
-                                    <td style="text-align: center;" id="semana-no-realizada">0</td>
-                                    <td style="text-align: center;" id="semana-cancelada">0</td>
-                                    <td style="text-align: center; font-weight: 700; background: #f8f9fa;" id="semana-total">0</td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: 600;">📊 Este Mes</td>
-                                    <td style="text-align: center;" id="mes-pendiente">0</td>
-                                    <td style="text-align: center;" id="mes-confirmada">0</td>
-                                    <td style="text-align: center;" id="mes-realizada">0</td>
-                                    <td style="text-align: center;" id="mes-no-realizada">0</td>
-                                    <td style="text-align: center;" id="mes-cancelada">0</td>
-                                    <td style="text-align: center; font-weight: 700; background: #f8f9fa;" id="mes-total">0</td>
-                                </tr>
-                                <tr style="background: #f0f4ff;">
-                                    <td style="font-weight: 700;">🎯 Histórico</td>
-                                    <td style="text-align: center; font-weight: 600;" id="historico-pendiente">0</td>
-                                    <td style="text-align: center; font-weight: 600;" id="historico-confirmada">0</td>
-                                    <td style="text-align: center; font-weight: 600;" id="historico-realizada">0</td>
-                                    <td style="text-align: center; font-weight: 600;" id="historico-no-realizada">0</td>
-                                    <td style="text-align: center; font-weight: 600;" id="historico-cancelada">0</td>
-                                    <td style="text-align: center; font-weight: 700; background: #e8f0fe;" id="historico-total">0</td>
-                                </tr>
+                            <tbody id="tabla-pacientes-doctor">
+                                <tr><td colspan="8" style="text-align: center; padding: 24px;">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
 
-                    <div class="admin-table-container">
-                        <div class="admin-table-header">
-                            <h2>Últimas Citas</h2>
-                        </div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Hora</th>
-                                    <th>Paciente</th>
-                                    <th>Psicólogo</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-ultimas-citas">
-                                <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Gráfico de Cartera de Psicólogos -->
-                    <div class="admin-table-container" style="margin-top: 25px;">
-                        <div class="admin-table-header">
-                            <h2>📊 Cartera de Pacientes por Psicólogo</h2>
-                        </div>
-                        <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="width: 16px; height: 16px; background: #27ae60; border-radius: 3px;"></span>
-                                <span style="font-size: 0.85rem; color: #666;">Con cita agendada</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="width: 16px; height: 16px; background: #f1c40f; border-radius: 3px;"></span>
-                                <span style="font-size: 0.85rem; color: #666;">En seguimiento (&lt;15 días)</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="width: 16px; height: 16px; background: #e74c3c; border-radius: 3px;"></span>
-                                <span style="font-size: 0.85rem; color: #666;">En riesgo (&gt;30 días)</span>
-                            </div>
-                        </div>
-                        <div id="grafico-cartera" style="display: flex; flex-direction: column; gap: 15px;">
-                            <p style="text-align: center; color: #888;">Cargando gráfico...</p>
+            <div id="seccion-documentos" class="seccion-panel" style="display: none;">
+                <div class="documentos-container">
+                    <div class="documentos-header">
+                        <h2>📄 Mis Documentos</h2>
+                        <p>Crea y gestiona tus notas y bitácoras.</p>
+                        <div class="documentos-header-botones">
+                            <input type="file" id="input-subir-doc" accept=".pdf,.doc,.docx" style="display:none;">
+                            <button type="button" class="btn-agregar-bloque btn-subir-archivo" onclick="document.getElementById('input-subir-doc').click()">📤 Subir archivo (Word/PDF)</button>
+                            <button id="btn-nuevo-doc" class="btn-agregar-bloque" onclick="crearDocumento()">+ Nuevo Documento</button>
+                            <button type="button" id="btn-ordenar-docs" class="btn-ordenar-docs" onclick="toggleOrdenarDocumentos()">Ordenar</button>
                         </div>
                     </div>
-                </section>
 
-                <!-- Citas Section -->
-                <section id="citas" class="admin-section">
-                    <div class="admin-table-container">
-                        <div class="admin-table-header">
-                            <h2>Todas las Citas</h2>
-                        </div>
-                        
-                        <!-- Filtros -->
-                        <div class="filtros-citas" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
-                            <div class="filtro-grupo" style="display: flex; flex-direction: column; gap: 5px;">
-                                <label style="font-size: 0.8rem; color: #666; font-weight: 600;">Fecha Desde</label>
-                                <input type="date" id="filtro-fecha-desde" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem;">
+                    <div class="documentos-layout">
+                        <!-- Lista de documentos -->
+                        <aside class="documentos-lista">
+                            <div id="lista-documentos">
+                                <p class="texto-vacio">Cargando documentos...</p>
                             </div>
-                            <div class="filtro-grupo" style="display: flex; flex-direction: column; gap: 5px;">
-                                <label style="font-size: 0.8rem; color: #666; font-weight: 600;">Fecha Hasta</label>
-                                <input type="date" id="filtro-fecha-hasta" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem;">
-                            </div>
-                            <div class="filtro-grupo" style="display: flex; flex-direction: column; gap: 5px;">
-                                <label style="font-size: 0.8rem; color: #666; font-weight: 600;">Paciente</label>
-                                <input type="text" id="filtro-paciente" placeholder="Nombre o email..." style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; width: 180px;">
-                            </div>
-                            <div class="filtro-grupo" style="display: flex; flex-direction: column; gap: 5px;">
-                                <label style="font-size: 0.8rem; color: #666; font-weight: 600;">Psicólogo</label>
-                                <select id="filtro-psicologo" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; min-width: 150px;">
-                                    <option value="">Todos</option>
-                                </select>
-                            </div>
-                            <div class="filtro-grupo" style="display: flex; flex-direction: column; gap: 5px;">
-                                <label style="font-size: 0.8rem; color: #666; font-weight: 600;">Estado</label>
-                                <select id="filtro-estado" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem;">
-                                    <option value="">Todos</option>
-                                    <option value="pendiente">Pendiente</option>
-                                    <option value="confirmada">Confirmada</option>
-                                    <option value="realizada">Realizada</option>
-                                    <option value="no realizada">No realizada</option>
-                                    <option value="cancelada">Cancelada</option>
-                                </select>
-                            </div>
-                            <div class="filtro-grupo" style="display: flex; flex-direction: column; gap: 5px; justify-content: flex-end;">
-                                <button id="btn-limpiar-filtros" style="padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">Limpiar</button>
-                            </div>
-                        </div>
+                        </aside>
 
-                        <p id="conteo-citas" style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Mostrando <strong id="num-citas">0</strong> citas</p>
-
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Fecha</th>
-                                    <th>Hora</th>
-                                    <th>Paciente</th>
-                                    <th>Email Paciente</th>
-                                    <th>Psicólogo</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-todas-citas">
-                                <tr><td colspan="7" style="text-align: center;">Cargando...</td></tr>
-                            </tbody>
-                        </table>
+                        <!-- Editor de documento / Visor PDF -->
+                        <section class="documento-editor">
+                            <div id="editor-vacio" class="editor-placeholder">
+                                <p>📝 Selecciona un documento de la lista o crea uno nuevo</p>
+                            </div>
+                            <div id="editor-activo" style="display: none;">
+                                <div class="editor-toolbar">
+                                    <input type="text" id="doc-titulo" class="input-titulo-doc" placeholder="Título del documento">
+                                    <div class="editor-acciones">
+                                        <a id="doc-link-archivo" href="#" target="_blank" rel="noopener" class="btn-link-archivo" style="display:none;">Abrir archivo</a>
+                                        <button id="btn-guardar-doc" class="btn-guardar-doc" onclick="guardarDocumento()">💾 Guardar</button>
+                                        <button id="btn-eliminar-doc" class="btn-eliminar-doc" onclick="eliminarDocumento()">🗑️ Eliminar</button>
+                                    </div>
+                                </div>
+                                <div id="doc-area-editable" style="display:block;">
+                                    <textarea id="doc-contenido" class="textarea-documento" placeholder="Escribe aquí tu contenido..."></textarea>
+                                </div>
+                                <div id="doc-visor-pdf" style="display:none;">
+                                    <iframe id="iframe-pdf" title="Vista previa PDF" style="width:100%; height:70vh; border:1px solid #ddd; border-radius:8px;"></iframe>
+                                </div>
+                                <p id="doc-estado" class="doc-estado-guardado"></p>
+                            </div>
+                        </section>
                     </div>
-                </section>
+                </div>
+            </div>
 
-                <!-- Psicólogos Section -->
-                <section id="psicologos" class="admin-section">
-                    <div class="admin-table-container">
-                        <div class="admin-table-header">
-                            <h2>Psicólogos Registrados</h2>
-                            <div class="search-box">
-                                <span>🔍</span>
-                                <input type="text" id="buscar-psicologo" placeholder="Buscar psicólogo...">
-                            </div>
-                        </div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Email</th>
-                                    <th>Teléfono</th>
-                                    <th title="Visible en catálogo para México (MXN)">🇲🇽 México</th>
-                                    <th title="Visible en catálogo para internacional (USD)">🌎 Internacional</th>
-                                    <th>Citas Hoy</th>
-                                    <th>Total Citas</th>
-                                    <th>Calificación</th>
-                                    <th>Opiniones &lt;3⭐</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-psicologos">
-                                <tr><td colspan="10" style="text-align: center;">Cargando...</td></tr>
-                            </tbody>
-                        </table>
+            <div id="seccion-agenda" class="seccion-panel" style="display: none;">
+                <div class="agenda-container">
+                    <div class="agenda-header">
+                        <h2>🗓️ Configuración de Agenda</h2>
+                        <p>Define tu horario laboral semanal y registra vacaciones/bloqueos de fechas.</p>
                     </div>
-                </section>
 
-                <!-- Pacientes Section -->
-                <section id="pacientes" class="admin-section">
-                    <div class="admin-table-container">
-                        <div class="admin-table-header">
-                            <h2>Pacientes Registrados</h2>
-                            <div class="search-box">
-                                <span>🔍</span>
-                                <input type="text" id="buscar-paciente" placeholder="Buscar paciente...">
+                    <!-- Horario laboral -->
+                    <div class="dash-card agenda-card-responsive">
+                        <h3 style="margin-top:0;">🕒 Horario de trabajo</h3>
+                        <p style="margin:0 0 16px 0; color:#666; font-size:0.95rem;">
+                            Agrega los bloques de tiempo en los que atiendes pacientes cada semana.
+                        </p>
+
+                        <form id="form-horario" class="form-horario-simple">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="hl-dia">Día</label>
+                                    <select id="hl-dia" required>
+                                        <option value="1">Lunes</option>
+                                        <option value="2">Martes</option>
+                                        <option value="3">Miércoles</option>
+                                        <option value="4">Jueves</option>
+                                        <option value="5">Viernes</option>
+                                        <option value="6">Sábado</option>
+                                        <option value="0">Domingo</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="hl-inicio">Desde</label>
+                                    <input type="time" id="hl-inicio" value="09:00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="hl-fin">Hasta</label>
+                                    <input type="time" id="hl-fin" value="13:00" required>
+                                </div>
+                                <button type="submit" class="btn-agregar-bloque">+ Agregar</button>
                             </div>
+                        </form>
+
+                        <div id="lista-horarios" style="margin-top: 20px;">
+                            <p class="texto-vacio">Cargando...</p>
                         </div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Email</th>
-                                    <th>Teléfono</th>
-                                    <th>Contacto emergencia</th>
-                                    <th>Total Citas</th>
-                                    <th>Días sin cita</th>
-                                    <th>Psicólogo</th>
-                                    <th>Motivo consulta</th>
-                                    <th>Acepta Promo</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-pacientes">
-                                <tr><td colspan="10" style="text-align: center;">Cargando...</td></tr>
-                            </tbody>
-                        </table>
                     </div>
-                </section>
 
-                <!-- Configuración Section -->
-                <section id="configuracion" class="admin-section">
-                    <div class="admin-table-container" style="max-width: 600px;">
-                        <div class="admin-table-header">
-                            <h2>👤 Mi Perfil</h2>
-                            <button id="btn-editar-admin" onclick="activarEdicionAdmin()" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
-                                ✏️ Editar
-                            </button>
+                    <!-- Vacaciones / Bloqueos -->
+                    <div class="dash-card agenda-card-responsive" style="margin-top: 24px;">
+                        <h3 style="margin-top:0;">🏖️ Vacaciones / Bloqueos</h3>
+                        <p style="margin:0 0 16px 0; color:#666; font-size:0.95rem;">
+                            Bloquea días o rangos de fechas donde no estarás disponible.
+                        </p>
+
+                        <form id="form-vacaciones" class="form-horario-simple">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="vac-inicio">Desde</label>
+                                    <input type="date" id="vac-inicio" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="vac-fin">Hasta (opcional)</label>
+                                    <input type="date" id="vac-fin">
+                                </div>
+                                <div class="form-group form-group-motivo">
+                                    <label for="vac-motivo">Motivo (opcional)</label>
+                                    <input type="text" id="vac-motivo" placeholder="Ej: Vacaciones, Congreso...">
+                                </div>
+                                <button type="submit" class="btn-agregar-bloque btn-bloquear">Bloquear</button>
+                            </div>
+                        </form>
+
+                        <div id="lista-vacaciones" style="margin-top: 20px;">
+                            <p class="texto-vacio">Cargando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Editar Perfil -->
+                    <div class="dash-card agenda-card-responsive" style="margin-top: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3 style="margin:0;">👤 Mi Perfil</h3>
+                            <button type="button" id="btn-editar-perfil-doc" onclick="activarEdicionDoc()" class="btn-editar-v2">Editar Perfil</button>
                         </div>
 
-                        <form id="form-config-admin" style="margin-top: 20px;">
-                            <div style="margin-bottom: 20px;">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Nombre Completo</label>
-                                <input type="text" id="admin-nombre" readonly style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 1rem; background: #f9f9f9; box-sizing: border-box;">
+                        <form id="form-perfil-doctor" class="form-perfil-doctor">
+                            <div class="form-group-perfil">
+                                <label>Nombre (no modificable)</label>
+                                <input type="text" id="doc-nombre" readonly disabled class="input-readonly-doc">
                             </div>
 
-                            <div style="margin-bottom: 20px;">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Correo Electrónico</label>
-                                <input type="email" id="admin-email" readonly disabled style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 1rem; background: #e9e9e9; color: #888; cursor: not-allowed; box-sizing: border-box;">
-                                <small style="color: #888; font-size: 0.8rem;">El correo no se puede modificar</small>
+                            <div class="form-group-perfil">
+                                <label>Correo electrónico (no modificable)</label>
+                                <input type="email" id="doc-email" readonly disabled class="input-readonly-doc">
                             </div>
 
-                            <div style="margin-bottom: 20px;">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Teléfono</label>
-                                <input type="tel" id="admin-telefono" readonly placeholder="No registrado" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 1rem; background: #f9f9f9; box-sizing: border-box;">
+                            <div class="form-group-perfil">
+                                <label>Teléfono</label>
+                                <input type="tel" id="doc-telefono" readonly class="input-readonly-doc" placeholder="No registrado">
                             </div>
 
-                            <div style="margin-bottom: 20px;">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Nueva Contraseña</label>
-                                <div style="position: relative;">
-                                    <input type="password" id="admin-password" readonly placeholder="Dejar vacío para no cambiar" style="width: 100%; padding: 12px; padding-right: 50px; border: 2px solid #eee; border-radius: 10px; font-size: 1rem; background: #f9f9f9; box-sizing: border-box;">
-                                    <button type="button" id="eye-btn-admin" onclick="togglePasswordAdmin()" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2rem;">👁️</button>
+                            <div class="form-group-perfil">
+                                <label>Contraseña</label>
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <input type="password" id="doc-password" readonly class="input-readonly-doc" 
+                                           value="********" placeholder="Escribe nueva contraseña para cambiar">
+                                    <button type="button" onclick="togglePasswordDoc()" id="eye-btn-doc" 
+                                            style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; display: none; font-size: 1.2rem;">
+                                        👁️
+                                    </button>
                                 </div>
                             </div>
 
-                            <div id="acciones-admin" style="display: none; gap: 10px; margin-top: 25px;">
-                                <button type="submit" style="flex: 1; padding: 12px 20px; background: linear-gradient(135deg, #11998e, #38ef7d); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem; font-weight: 600;">
-                                    💾 Guardar Cambios
-                                </button>
-                                <button type="button" onclick="cancelarEdicionAdmin()" style="flex: 1; padding: 12px 20px; background: #e74c3c; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem; font-weight: 600;">
-                                    ✖️ Cancelar
-                                </button>
+                            <div id="acciones-edicion-doc" style="display: none; margin-top: 16px; gap: 10px;">
+                                <button type="submit" class="btn-agregar-bloque">Guardar Cambios</button>
+                                <button type="button" onclick="cancelarEdicionDoc()" class="btn-agregar-bloque" style="background:#ccc; color:#333;">Cancelar</button>
                             </div>
                         </form>
                     </div>
-                </section>
+
+                </div>
             </div>
         </main>
     </div>
 
-    <script>
+    <!-- Modal encuesta de satisfacción (6to inicio de sesión) -->
+    <div id="modal-encuesta" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; border-radius: 16px; padding: 28px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); border-top: 6px solid var(--primario-rosa);">
+            <h3 style="margin: 0 0 8px 0; color: var(--primario-rosa);">Encuesta de satisfacción</h3>
+            <p style="color: #666; font-size: 0.95rem; margin-bottom: 20px;">¿Qué tan satisfecho estás con la plataforma?</p>
+            <div style="display: flex; gap: 8px; margin-bottom: 20px; font-size: 1.8rem;" id="encuesta-estrellas">
+                <span data-valor="1" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="2" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="3" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="4" style="cursor: pointer; opacity: 0.4;">★</span>
+                <span data-valor="5" style="cursor: pointer; opacity: 0.4;">★</span>
+            </div>
+            <textarea id="encuesta-comentario" placeholder="Comentario (opcional)" style="width: 100%; min-height: 80px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 16px; box-sizing: border-box; resize: vertical;"></textarea>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" id="encuesta-cerrar-sin-enviar" style="padding: 10px 20px; background: #eee; border: none; border-radius: 10px; cursor: pointer;">Cerrar</button>
+                <button type="button" id="encuesta-enviar" style="padding: 10px 24px; background: var(--primario-rosa); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+        // Móvil: al elegir opción en el hamburguesa, cerrar menú y marcar activo
         document.addEventListener('DOMContentLoaded', function() {
-            // Navegación entre secciones
-            document.querySelectorAll('.admin-nav a[data-section]').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const section = this.dataset.section;
-                    
-                    // Actualizar navegación activa
-                    document.querySelectorAll('.admin-nav a').forEach(l => l.classList.remove('active'));
+            var toggle = document.getElementById('perfil-nav-toggle');
+            document.querySelectorAll('.perfil-mobile-nav-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var sec = this.getAttribute('data-seccion');
+                    if (sec) {
+                        mostrarSeccion(sec);
+                        if (sec === 'chat') cargarContactosChat();
+                        if (sec === 'pacientes') cargarPacientesDoctor();
+                        if (sec === 'documentos') cargarDocumentos();
+                    }
+                    if (toggle) toggle.checked = false;
+                    document.querySelectorAll('.perfil-mobile-nav-btn').forEach(function(b) { b.classList.remove('active'); });
                     this.classList.add('active');
-                    
-                    // Mostrar sección
-                    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-                    document.getElementById(section).classList.add('active');
-                    
-                    // Actualizar título
-                    const titles = {
-                        dashboard: 'Dashboard',
-                        citas: 'Gestión de Citas',
-                        psicologos: 'Psicólogos',
-                        pacientes: 'Pacientes',
-                        configuracion: 'Configuración'
-                    };
-                    document.getElementById('header-title').textContent = titles[section];
                 });
             });
+            document.querySelectorAll('.perfil-mobile-nav-link').forEach(function(a) {
+                a.addEventListener('click', function() { if (toggle) toggle.checked = false; });
+            });
+            var layout = document.getElementById('perfil-layout');
+            if (layout) document.querySelectorAll('.perfil-sidebar .nav-item, .perfil-sidebar .nav-item-link, .perfil-sidebar .btn-logout').forEach(function(el) {
+                el.addEventListener('click', function() { layout.classList.remove('sidebar-open'); });
+            });
+        });
+        let dailyCallFrame = null;
+        let miIdUsuario = null;    // ID de la tabla 'usuarios' (ej. 6)
+        let miIdProfesional = null; // ID de la tabla 'psicologos' (ej. 1)
+        let pacienteSeleccionadoId = null;
+        let intervaloChat = null;
+        let citasDoctorOriginales = [];
+        let citaActualId = null;
+        const notasDrafts = new Map(); // citaId -> string
 
-            // Cargar datos
-            cargarEstadisticas();
-            cargarCitas();
-            cargarPsicologos();
-            cargarPacientes();
-            cargarPerfilAdmin();
-            cargarGraficoCartera();
-
-            // Búsqueda en tiempo real
-            document.getElementById('buscar-psicologo').addEventListener('input', filtrarPsicologos);
-            document.getElementById('buscar-paciente').addEventListener('input', filtrarPacientes);
-
-            // Filtros de citas
-            document.getElementById('filtro-fecha-desde').addEventListener('change', aplicarFiltrosCitas);
-            document.getElementById('filtro-fecha-hasta').addEventListener('change', aplicarFiltrosCitas);
-            document.getElementById('filtro-paciente').addEventListener('input', aplicarFiltrosCitas);
-            document.getElementById('filtro-psicologo').addEventListener('change', aplicarFiltrosCitas);
-            document.getElementById('filtro-estado').addEventListener('change', aplicarFiltrosCitas);
-            document.getElementById('btn-limpiar-filtros').addEventListener('click', limpiarFiltrosCitas);
+        // Burbuja de mensajes no leídos en el sidebar
+        function actualizarBurbujaMensajes() {
+            fetch('/api/mensajes-no-leidos').then(function(r) { return r.json(); }).then(function(data) {
+                var count = (data && data.count) ? data.count : 0;
+                var badge = document.getElementById('nav-badge-mensajes');
+                var badgeMobile = document.getElementById('nav-badge-mensajes-mobile');
+                if (badge) {
+                    badge.textContent = count > 99 ? '99+' : String(count);
+                    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+                    badge.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
+                }
+                if (badgeMobile) {
+                    badgeMobile.textContent = count > 99 ? '99+' : String(count);
+                    badgeMobile.style.display = count > 0 ? 'inline-flex' : 'none';
+                    badgeMobile.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
+                }
+            }).catch(function() {});
+        }
+        actualizarBurbujaMensajes();
+        setInterval(function() {
+            actualizarBurbujaMensajes();
+            actualizarBurbujasPorContacto();
+        }, 15000);
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                actualizarBurbujaMensajes();
+                actualizarBurbujasPorContacto();
+            }
         });
 
-        let todasLasCitas = [];
-        let todosLosPsicologos = [];
-        let todosLosPacientes = [];
+// --- POPUP (reemplazo de alert) ---
+function mostrarPopup(mensaje, titulo = 'Aviso') {
+    const t = document.getElementById('modal-feedback-titulo');
+    const m = document.getElementById('modal-feedback-mensaje');
+    if (t) t.innerText = titulo;
+    if (m) m.innerText = mensaje;
+    document.getElementById('modal-feedback').style.display = 'flex';
+}
 
-        async function cargarEstadisticas() {
-            try {
-                const res = await fetch('/api/admin/estadisticas');
-                const data = await res.json();
-                
-                // Usuarios
-                const psicologos = data.usuarios.find(u => u.rol === 'psicologo');
-                const pacientes = data.usuarios.find(u => u.rol === 'paciente');
-                document.getElementById('stat-psicologos').textContent = psicologos ? psicologos.total : 0;
-                document.getElementById('stat-pacientes').textContent = pacientes ? pacientes.total : 0;
+function cerrarPopup() {
+    document.getElementById('modal-feedback').style.display = 'none';
+}
 
-                // Citas por período y estado
-                const periodos = ['hoy', 'semana', 'mes', 'historico'];
-                const estados = ['pendiente', 'confirmada', 'realizada', 'no-realizada', 'cancelada', 'total'];
+async function fetchJsonSafe(url, options) {
+    const res = await fetch(url, options);
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+    let data = null;
+    let text = '';
+    if (contentType.includes('application/json')) {
+        data = await res.json().catch(() => null);
+    } else {
+        text = await res.text().catch(() => '');
+    }
+    return { res, data, text };
+}
+
+// Pedir mi ID al cargar la página
+fetch('/api/quien-soy')
+    .then(res => res.json())
+    .then(data => {
+        miIdUsuario = data.id;
+        console.log("Identificado como usuario:", miIdUsuario);
+    })
+    .catch(err => console.error("Error al identificarse:", err));
+
+        // 1. CARGA INICIAL
+        fetch('/api/user-data')
+            .then(res => res.json())
+            .then(data => {
+                // Guardamos los dos IDs que nos manda el servidor
+                miIdUsuario = data.id; 
+                miIdProfesional = data.psicologo_id; 
                 
-                const estadoToKey = { 'no-realizada': 'no realizada' };
-                periodos.forEach(periodo => {
-                    estados.forEach(estado => {
-                        const el = document.getElementById(`${periodo}-${estado}`);
-                        if (el && data[periodo]) {
-                            const key = estadoToKey[estado] || estado;
-                            el.textContent = data[periodo][key] ?? 0;
-                        }
-                    });
+                document.getElementById('nombre-doctor').innerText = data.nombre;
+                document.getElementById('avatar-doctor').innerText = data.nombre.charAt(0).toUpperCase();
+                
+                console.log("Sesión: Usuario ID", miIdUsuario, "Profesional ID", miIdProfesional);
+                cargarCitasDoctor();
+            })
+            .catch(err => console.error("Error cargando user-data:", err));
+
+        // Encuesta de satisfacción (6to inicio de sesión)
+        fetch('/api/encuesta-satisfaccion/estado').then(r => r.json()).then(data => {
+            if (!data.mostrarEncuesta) return;
+            const modal = document.getElementById('modal-encuesta');
+            const estrellas = document.querySelectorAll('#encuesta-estrellas span');
+            let valoracion = 0;
+            estrellas.forEach((s, i) => {
+                s.addEventListener('mouseenter', () => {
+                    estrellas.forEach((e, j) => { e.style.opacity = j <= i ? '1' : '0.4'; });
                 });
-            } catch (error) {
-                console.error('Error cargando estadísticas:', error);
-            }
-        }
-
-        async function cargarCitas() {
-            try {
-                const res = await fetch('/api/admin/citas');
-                todasLasCitas = await res.json();
-                renderizarCitas(todasLasCitas);
-                renderizarUltimasCitas(todasLasCitas.slice(0, 5));
-                poblarFiltroPsicologos();
-            } catch (error) {
-                console.error('Error cargando citas:', error);
-            }
-        }
-
-        function poblarFiltroPsicologos() {
-            const select = document.getElementById('filtro-psicologo');
-            const psicologosUnicos = [...new Set(todasLasCitas.map(c => c.psicologo_nombre))];
-            select.innerHTML = '<option value="">Todos</option>' + 
-                psicologosUnicos.map(p => `<option value="${p}">${p}</option>`).join('');
-        }
-
-        function renderizarCitas(citas) {
-            const tbody = document.getElementById('tabla-todas-citas');
-            document.getElementById('num-citas').textContent = citas.length;
-            
-            if (citas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay citas que coincidan con los filtros</td></tr>';
-                return;
-            }
-            tbody.innerHTML = citas.map(c => `
-                <tr>
-                    <td>${c.id}</td>
-                    <td>${formatearFecha(c.fecha)}</td>
-                    <td>${c.hora}</td>
-                    <td>${c.paciente_nombre}</td>
-                    <td>${c.paciente_email}</td>
-                    <td>${c.psicologo_nombre}</td>
-                    <td><span class="badge badge-${(c.estado || 'pendiente').replace(/\s/g, '-')}">${c.estado || 'pendiente'}</span></td>
-                </tr>
-            `).join('');
-        }
-
-        function renderizarUltimasCitas(citas) {
-            const tbody = document.getElementById('tabla-ultimas-citas');
-            if (citas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay citas</td></tr>';
-                return;
-            }
-            tbody.innerHTML = citas.map(c => `
-                <tr>
-                    <td>${formatearFecha(c.fecha)}</td>
-                    <td>${c.hora}</td>
-                    <td>${c.paciente_nombre}</td>
-                    <td>${c.psicologo_nombre}</td>
-                    <td><span class="badge badge-${(c.estado || 'pendiente').replace(/\s/g, '-')}">${c.estado || 'pendiente'}</span></td>
-                </tr>
-            `).join('');
-        }
-
-        function aplicarFiltrosCitas() {
-            const fechaDesde = document.getElementById('filtro-fecha-desde').value;
-            const fechaHasta = document.getElementById('filtro-fecha-hasta').value;
-            const paciente = document.getElementById('filtro-paciente').value.toLowerCase();
-            const psicologo = document.getElementById('filtro-psicologo').value;
-            const estado = document.getElementById('filtro-estado').value;
-
-            let filtradas = todasLasCitas.filter(c => {
-                // Filtro por fecha desde
-                if (fechaDesde) {
-                    const citaFecha = new Date(c.fecha).toISOString().split('T')[0];
-                    if (citaFecha < fechaDesde) return false;
-                }
-                // Filtro por fecha hasta
-                if (fechaHasta) {
-                    const citaFecha = new Date(c.fecha).toISOString().split('T')[0];
-                    if (citaFecha > fechaHasta) return false;
-                }
-                // Filtro por paciente
-                if (paciente) {
-                    if (!c.paciente_nombre.toLowerCase().includes(paciente) && 
-                        !c.paciente_email.toLowerCase().includes(paciente)) {
-                        return false;
-                    }
-                }
-                // Filtro por psicólogo
-                if (psicologo && c.psicologo_nombre !== psicologo) return false;
-                // Filtro por estado
-                if (estado && (c.estado || 'pendiente') !== estado) return false;
-                
-                return true;
+                s.addEventListener('click', () => { valoracion = i + 1; });
             });
-
-            renderizarCitas(filtradas);
-        }
-
-        function limpiarFiltrosCitas() {
-            document.getElementById('filtro-fecha-desde').value = '';
-            document.getElementById('filtro-fecha-hasta').value = '';
-            document.getElementById('filtro-paciente').value = '';
-            document.getElementById('filtro-psicologo').value = '';
-            document.getElementById('filtro-estado').value = '';
-            renderizarCitas(todasLasCitas);
-        }
-
-        async function cargarPsicologos() {
-            try {
-                const res = await fetch('/api/admin/psicologos');
-                todosLosPsicologos = await res.json();
-                renderizarPsicologos(todosLosPsicologos);
-            } catch (error) {
-                console.error('Error cargando psicólogos:', error);
-            }
-        }
-
-        function renderizarPsicologos(psicologos) {
-            const tbody = document.getElementById('tabla-psicologos');
-            if (psicologos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">No hay psicólogos registrados</td></tr>';
-                return;
-            }
-            tbody.innerHTML = psicologos.map(p => {
-                const vm = p.visible_mexico !== false;
-                const vi = p.visible_internacional === true;
-                return `
-                <tr>
-                    <td>${p.id}</td>
-                    <td>${p.nombre}</td>
-                    <td>${p.email}</td>
-                    <td>${p.telefono || '-'}</td>
-                    <td style="text-align: center;"><input type="checkbox" class="cb-visible-mexico" data-id="${p.id}" ${vm ? 'checked' : ''} title="Visible en México"></td>
-                    <td style="text-align: center;"><input type="checkbox" class="cb-visible-internacional" data-id="${p.id}" ${vi ? 'checked' : ''} title="Visible internacional"></td>
-                    <td>${p.citas_hoy}</td>
-                    <td>${p.total_citas}</td>
-                    <td>${p.calificacion > 0 ? p.calificacion + ' ⭐' : 'Sin opiniones'}</td>
-                    <td style="color: ${p.opiniones_negativas > 0 ? '#e74c3c' : '#27ae60'}; font-weight: 600;">${p.opiniones_negativas}</td>
-                </tr>
-            `;
-            }).join('');
-            tbody.querySelectorAll('.cb-visible-mexico, .cb-visible-internacional').forEach(cb => {
-                cb.addEventListener('change', function() { actualizarVisibilidad(this); });
+            document.getElementById('encuesta-estrellas').addEventListener('mouseleave', () => {
+                estrellas.forEach((e, j) => { e.style.opacity = j < valoracion ? '1' : '0.4'; });
             });
-        }
-
-        async function actualizarVisibilidad(checkbox) {
-            const id = parseInt(checkbox.dataset.id, 10);
-            const row = checkbox.closest('tr');
-            const cbMexico = row.querySelector('.cb-visible-mexico');
-            const cbInt = row.querySelector('.cb-visible-internacional');
-            const visible_mexico = cbMexico.checked;
-            const visible_internacional = cbInt.checked;
-            try {
-                const res = await fetch('/api/admin/psicologos/' + id + '/visibilidad', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ visible_mexico, visible_internacional })
-                });
-                if (!res.ok) throw new Error('Error al guardar');
-            } catch (e) {
-                console.error(e);
-                cbMexico.checked = !visible_mexico;
-                cbInt.checked = !visible_internacional;
-                alert('No se pudo guardar la visibilidad. Intenta de nuevo.');
-            }
-        }
-
-        function filtrarPsicologos() {
-            const busqueda = document.getElementById('buscar-psicologo').value.toLowerCase();
-            const filtrados = todosLosPsicologos.filter(p => 
-                p.nombre.toLowerCase().includes(busqueda) ||
-                p.email.toLowerCase().includes(busqueda)
-            );
-            renderizarPsicologos(filtrados);
-        }
-
-        async function cargarPacientes() {
-            try {
-                const res = await fetch('/api/admin/pacientes');
-                todosLosPacientes = await res.json();
-                renderizarPacientes(todosLosPacientes);
-            } catch (error) {
-                console.error('Error cargando pacientes:', error);
-            }
-        }
-
-        function renderizarPacientes(pacientes) {
-            const tbody = document.getElementById('tabla-pacientes');
-            if (pacientes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">No hay pacientes registrados</td></tr>';
-                return;
-            }
-            tbody.innerHTML = pacientes.map(p => {
-                let diasSinCita = '-';
-                let colorDias = '#666';
-                
-                if (p.citas_futuras > 0) {
-                    diasSinCita = '📅 Cita agendada';
-                    colorDias = '#27ae60';
-                } else if (p.ultima_cita) {
-                    const ultimaCita = new Date(p.ultima_cita);
-                    const hoy = new Date();
-                    const diffTime = hoy - ultimaCita;
-                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                    diasSinCita = diffDays + ' días';
-                    
-                    if (diffDays > 90) colorDias = '#e74c3c';
-                    else if (diffDays > 30) colorDias = '#f39c12';
-                    else colorDias = '#27ae60';
-                } else {
-                    diasSinCita = 'Sin citas';
-                }
-                
-                return `
-                <tr>
-                    <td>${p.id}</td>
-                    <td>${p.nombre}</td>
-                    <td>${p.email}</td>
-                    <td>${p.telefono || '-'}</td>
-                    <td>${(p.contacto_emergencia || '').trim() || '—'}</td>
-                    <td>${p.total_citas}</td>
-                    <td style="color: ${colorDias}; font-weight: 500;">${diasSinCita}</td>
-                    <td>${(p.psicologo || '').trim() || '—'}</td>
-                    <td>${(p.motivo_consulta || '').trim() || '—'}</td>
-                    <td>${p.acepto_publicidad ? '✅' : '❌'}</td>
-                </tr>
-            `}).join('');
-        }
-
-        function filtrarPacientes() {
-            const busqueda = document.getElementById('buscar-paciente').value.toLowerCase();
-            const filtrados = todosLosPacientes.filter(p => 
-                p.nombre.toLowerCase().includes(busqueda) ||
-                p.email.toLowerCase().includes(busqueda)
-            );
-            renderizarPacientes(filtrados);
-        }
-
-        function formatearFecha(fecha) {
-            if (!fecha) return '-';
-            const d = new Date(fecha);
-            return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
-        }
-
-        // ========== GRÁFICO DE CARTERA ==========
-        async function cargarGraficoCartera() {
-            try {
-                const res = await fetch('/api/admin/cartera-psicologos');
-                const data = await res.json();
-                renderizarGraficoCartera(data);
-            } catch (error) {
-                console.error('Error cargando gráfico:', error);
-                document.getElementById('grafico-cartera').innerHTML = '<p style="color: #e74c3c;">Error al cargar el gráfico</p>';
-            }
-        }
-
-        function renderizarGraficoCartera(psicologos) {
-            const container = document.getElementById('grafico-cartera');
-            
-            if (psicologos.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #888;">No hay datos disponibles</p>';
-                return;
-            }
-
-            let html = '';
-            
-            psicologos.forEach(psi => {
-                const conCita = parseInt(psi.con_cita) || 0;
-                const enSeguimiento = parseInt(psi.en_seguimiento) || 0;
-                const enRiesgo = parseInt(psi.en_riesgo) || 0;
-                const total = conCita + enSeguimiento + enRiesgo;
-                
-                if (total === 0) {
-                    html += `
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <div style="width: 150px; font-weight: 500; color: #333; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${psi.nombre}">${psi.nombre}</div>
-                            <div style="flex: 1; height: 30px; background: #f0f0f0; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                                <span style="color: #888; font-size: 0.8rem;">Sin pacientes</span>
-                            </div>
-                            <div style="width: 60px; text-align: right; font-size: 0.85rem; color: #888;">0</div>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                const pctConCita = (conCita / total * 100).toFixed(1);
-                const pctSeguimiento = (enSeguimiento / total * 100).toFixed(1);
-                const pctRiesgo = (enRiesgo / total * 100).toFixed(1);
-                
-                html += `
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <div style="width: 150px; font-weight: 500; color: #333; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${psi.nombre}">${psi.nombre}</div>
-                        <div style="flex: 1; height: 30px; background: #f0f0f0; border-radius: 6px; overflow: hidden; display: flex;">
-                            ${conCita > 0 ? `<div style="width: ${pctConCita}%; background: #27ae60; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600;" title="Con cita: ${conCita} (${pctConCita}%)">${pctConCita > 10 ? conCita : ''}</div>` : ''}
-                            ${enSeguimiento > 0 ? `<div style="width: ${pctSeguimiento}%; background: #f1c40f; display: flex; align-items: center; justify-content: center; color: #333; font-size: 0.75rem; font-weight: 600;" title="En seguimiento: ${enSeguimiento} (${pctSeguimiento}%)">${pctSeguimiento > 10 ? enSeguimiento : ''}</div>` : ''}
-                            ${enRiesgo > 0 ? `<div style="width: ${pctRiesgo}%; background: #e74c3c; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600;" title="En riesgo: ${enRiesgo} (${pctRiesgo}%)">${pctRiesgo > 10 ? enRiesgo : ''}</div>` : ''}
-                        </div>
-                        <div style="width: 60px; text-align: right; font-size: 0.85rem; color: #666; font-weight: 500;">${total} pac.</div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-
-        // ========== PERFIL ADMIN ==========
-        async function cargarPerfilAdmin() {
-            try {
-                const res = await fetch('/api/user-data');
-                const data = await res.json();
-                
-                document.getElementById('admin-nombre').value = data.nombre || '';
-                document.getElementById('admin-email').value = data.email || '';
-                document.getElementById('admin-telefono').value = data.telefono || '';
-                
-                // Actualizar avatar con inicial
-                document.querySelector('.admin-user .avatar').textContent = data.nombre ? data.nombre[0].toUpperCase() : 'A';
-            } catch (error) {
-                console.error('Error cargando perfil admin:', error);
-            }
-        }
-
-        function activarEdicionAdmin() {
-            document.getElementById('btn-editar-admin').style.display = 'none';
-            document.getElementById('acciones-admin').style.display = 'flex';
-            document.getElementById('eye-btn-admin').style.display = 'block';
-            
-            const inputs = ['admin-nombre', 'admin-telefono', 'admin-password'];
-            inputs.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.readOnly = false;
-                    el.style.background = '#fff';
-                    el.style.borderColor = '#667eea';
-                }
-            });
-        }
-
-        function cancelarEdicionAdmin() {
-            location.reload();
-        }
-
-        function togglePasswordAdmin() {
-            const passInput = document.getElementById('admin-password');
-            const eyeBtn = document.getElementById('eye-btn-admin');
-            passInput.type = (passInput.type === 'password') ? 'text' : 'password';
-            eyeBtn.textContent = (passInput.type === 'password') ? '👁️' : '🔒';
-        }
-
-        document.getElementById('form-config-admin').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const data = {
-                nombre: document.getElementById('admin-nombre').value,
-                telefono: document.getElementById('admin-telefono').value,
-                password: document.getElementById('admin-password').value
+            const cerrarYMarcar = () => {
+                fetch('/api/encuesta-satisfaccion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valoracion: valoracion || null, comentario: document.getElementById('encuesta-comentario').value.trim() }) }).catch(() => {});
+                modal.style.display = 'none';
             };
+            document.getElementById('encuesta-enviar').onclick = cerrarYMarcar;
+            document.getElementById('encuesta-cerrar-sin-enviar').onclick = cerrarYMarcar;
+            modal.style.display = 'flex';
+        }).catch(() => {});
+
+        // 2. NAVEGACIÓN
+        function mostrarSeccion(seccionId) {
+    // 1. Ocultar todas las secciones
+    document.querySelectorAll('.seccion-panel').forEach(sec => {
+        sec.style.display = 'none';
+    });
+
+    // 2. Mostrar la sección seleccionada
+    const seleccionada = document.getElementById('seccion-' + seccionId);
+    if (seleccionada) {
+        seleccionada.style.display = 'block';
+    }
+
+    // 3. ¡EL TRUCO AQUÍ!: Si vuelve al dashboard, refrescamos las listas
+    if (seccionId === 'dashboard') {
+        cargarCitasDoctor();
+    }
+
+    // Si abre la agenda, cargamos horarios y vacaciones
+    if (seccionId === 'agenda') {
+        cargarHorarioLaboral();
+        cargarVacaciones();
+        cargarPerfilDoctor();
+    }
+
+    // 4. Al salir de video, cerrar Daily o limpiar contenedor
+    if (seccionId !== 'video') {
+        if (dailyCallFrame) { dailyCallFrame.destroy(); dailyCallFrame = null; }
+        const cont = document.getElementById('jitsi-container');
+        if (cont) cont.innerHTML = '';
+    }
+
+    // 5. Actualizar botones del sidebar (opcional pero recomendado)
+    document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+    // Si tienes el evento, marcamos el botón como activo
+    if (window.event && window.event.currentTarget) {
+        window.event.currentTarget.classList.add('active');
+    }
+    // 6. Cerrar menú lateral (desktop) y hamburguesa (móvil), marcar activo
+    var layout = document.getElementById('perfil-layout');
+    if (layout) layout.classList.remove('sidebar-open');
+    var toggle = document.getElementById('perfil-nav-toggle');
+    if (toggle) toggle.checked = false;
+    document.querySelectorAll('.perfil-mobile-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+    var btn = document.querySelector('.perfil-mobile-nav-btn[data-seccion="' + seccionId + '"]');
+    if (btn) btn.classList.add('active');
+}
+
+// --- PACIENTES DEL PSICÓLOGO (solo quienes han agendado cita con él) ---
+let todosLosPacientesDoctor = [];
+
+async function cargarPacientesDoctor() {
+    const tbody = document.getElementById('tabla-pacientes-doctor');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px;">Cargando...</td></tr>';
+    try {
+        const res = await fetch('/api/doctor/pacientes', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Error al cargar');
+        todosLosPacientesDoctor = await res.json();
+        filtrarPacientesDoctor();
+    } catch (err) {
+        console.error('Error cargando pacientes:', err);
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px; color: #c00;">Error al cargar la lista.</td></tr>';
+    }
+}
+
+function renderizarPacientesDoctor(pacientes) {
+    const tbody = document.getElementById('tabla-pacientes-doctor');
+    if (!tbody) return;
+    if (pacientes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px;">No hay pacientes que hayan agendado cita contigo.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = pacientes.map(function(p) {
+        var diasSinCita = '-';
+        var colorDias = '#666';
+        if (p.citas_futuras > 0) {
+            diasSinCita = '📅 Cita agendada';
+            colorDias = '#27ae60';
+        } else if (p.ultima_cita) {
+            var ultimaCita = new Date(p.ultima_cita);
+            var hoy = new Date();
+            var diffDays = Math.floor((hoy - ultimaCita) / (1000 * 60 * 60 * 24));
+            diasSinCita = diffDays + ' días';
+            if (diffDays > 90) colorDias = '#e74c3c';
+            else if (diffDays > 30) colorDias = '#f39c12';
+            else colorDias = '#27ae60';
+        } else {
+            diasSinCita = 'Sin citas';
+        }
+        return '<tr style="border-bottom: 1px solid #eee;">' +
+            '<td style="padding: 12px;">' + p.id + '</td>' +
+            '<td style="padding: 12px;">' + (p.nombre || '') + '</td>' +
+            '<td style="padding: 12px;">' + (p.email || '') + '</td>' +
+            '<td style="padding: 12px;">' + (p.telefono || '—') + '</td>' +
+            '<td style="padding: 12px;">' + ((p.contacto_emergencia || '').trim() || '—') + '</td>' +
+            '<td style="padding: 12px;">' + p.total_citas + '</td>' +
+            '<td style="padding: 12px; color: ' + colorDias + '; font-weight: 500;">' + diasSinCita + '</td>' +
+            '<td style="padding: 12px;">' + ((p.motivo_consulta || '').trim() || '—') + '</td>' +
+            '</tr>';
+    }).join('');
+}
+
+function filtrarPacientesDoctor() {
+    var busqueda = (document.getElementById('buscar-paciente-doctor') && document.getElementById('buscar-paciente-doctor').value) ? document.getElementById('buscar-paciente-doctor').value.toLowerCase() : '';
+    var filtrados = busqueda
+        ? todosLosPacientesDoctor.filter(function(p) {
+            return (p.nombre && p.nombre.toLowerCase().indexOf(busqueda) !== -1) ||
+                   (p.email && p.email.toLowerCase().indexOf(busqueda) !== -1);
+        })
+        : todosLosPacientesDoctor;
+    renderizarPacientesDoctor(filtrados);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var inp = document.getElementById('buscar-paciente-doctor');
+    if (inp) inp.addEventListener('input', filtrarPacientesDoctor);
+});
+
+// --- HORARIO LABORAL (simple) ---
+const DIAS_SEMANA = {
+    0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles',
+    4: 'Jueves', 5: 'Viernes', 6: 'Sábado'
+};
+
+async function cargarHorarioLaboral() {
+    const cont = document.getElementById('lista-horarios');
+    if (!cont) return;
+    cont.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+
+    try {
+        const { res, data } = await fetchJsonSafe('/api/horario-laboral');
+        if (!res.ok) {
+            cont.innerHTML = '<p class="texto-vacio">Error al cargar horarios.</p>';
+            return;
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+            cont.innerHTML = '<p class="texto-vacio">No tienes horarios definidos aún.</p>';
+            return;
+        }
+
+        // Agrupar por día
+        const porDia = {};
+        for (const row of data) {
+            const d = Number(row.dia_semana);
+            if (!porDia[d]) porDia[d] = [];
+            porDia[d].push(row);
+        }
+
+        // Ordenar días (Lun..Dom)
+        const ordenDias = [1, 2, 3, 4, 5, 6, 0];
+        let html = '';
+
+        for (const dia of ordenDias) {
+            if (!porDia[dia]) continue;
+            const bloques = porDia[dia].sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+
+            html += `<div class="horario-dia">
+                <div class="horario-dia__nombre">${DIAS_SEMANA[dia]}</div>
+                <div class="horario-dia__bloques">`;
+
+            for (const b of bloques) {
+                const ini = String(b.hora_inicio).slice(0, 5);
+                const fin = String(b.hora_fin).slice(0, 5);
+                html += `
+                    <div class="bloque-horario">
+                        <span>${ini} – ${fin}</span>
+                        <button type="button" class="btn-quitar" onclick="eliminarHorario(${b.id})" title="Eliminar">×</button>
+                    </div>`;
+            }
+
+            html += `</div></div>`;
+        }
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<p class="texto-vacio">Error de conexión.</p>';
+    }
+}
+
+async function eliminarHorario(id) {
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/horario-laboral/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || 'Error al eliminar');
+            return mostrarPopup(msg, 'Horario');
+        }
+        cargarHorarioLaboral();
+    } catch (e) {
+        mostrarPopup('Error de conexión.', 'Horario');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('form-horario');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const dia_semana = Number(document.getElementById('hl-dia').value);
+            const hora_inicio = document.getElementById('hl-inicio').value;
+            const hora_fin = document.getElementById('hl-fin').value;
+
+            if (!hora_inicio || !hora_fin) {
+                return mostrarPopup('Completa ambas horas.', 'Horario');
+            }
+            if (hora_fin <= hora_inicio) {
+                return mostrarPopup('La hora de fin debe ser mayor a la de inicio.', 'Horario');
+            }
 
             try {
-                const res = await fetch('/api/update-profile', {
+                const { res, data, text } = await fetchJsonSafe('/api/horario-laboral', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({ dia_semana, hora_inicio, hora_fin })
                 });
-
-                if (res.ok) {
-                    alert('¡Cambios guardados exitosamente!');
-                    location.reload();
-                } else {
-                    alert('Error al guardar los cambios');
+                if (!res.ok) {
+                    const msg = (data && data.error) ? data.error : (text || 'Error al guardar');
+                    return mostrarPopup(msg, 'Horario');
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error de conexión');
+                mostrarPopup('Bloque agregado.', 'Horario');
+                cargarHorarioLaboral();
+            } catch (err) {
+                mostrarPopup('Error de conexión.', 'Horario');
             }
         });
+    }
+    // --- VACACIONES ---
+    const formVac = document.getElementById('form-vacaciones');
+    if (formVac) {
+        formVac.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fecha_inicio = document.getElementById('vac-inicio').value;
+            const fecha_fin = document.getElementById('vac-fin').value || fecha_inicio;
+            const motivo = document.getElementById('vac-motivo').value.trim();
+
+            if (!fecha_inicio) {
+                return mostrarPopup('Selecciona una fecha de inicio.', 'Vacaciones');
+            }
+            if (fecha_fin < fecha_inicio) {
+                return mostrarPopup('La fecha de fin no puede ser anterior a la de inicio.', 'Vacaciones');
+            }
+
+            try {
+                const { res, data, text } = await fetchJsonSafe('/api/vacaciones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fecha_inicio, fecha_fin, motivo: motivo || null })
+                });
+                if (!res.ok) {
+                    const msg = (data && data.error) ? data.error : (text || 'Error al guardar');
+                    return mostrarPopup(msg, 'Vacaciones');
+                }
+                mostrarPopup('Bloqueo guardado.', 'Vacaciones');
+                document.getElementById('vac-inicio').value = '';
+                document.getElementById('vac-fin').value = '';
+                document.getElementById('vac-motivo').value = '';
+                cargarVacaciones();
+            } catch (err) {
+                mostrarPopup('Error de conexión.', 'Vacaciones');
+            }
+        });
+    }
+});
+
+// --- VACACIONES (lista) ---
+async function cargarVacaciones() {
+    const cont = document.getElementById('lista-vacaciones');
+    if (!cont) return;
+    cont.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+
+    try {
+        const { res, data } = await fetchJsonSafe('/api/vacaciones');
+        if (!res.ok) {
+            cont.innerHTML = '<p class="texto-vacio">Error al cargar bloqueos.</p>';
+            return;
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+            cont.innerHTML = '<p class="texto-vacio">No tienes bloqueos registrados.</p>';
+            return;
+        }
+
+        // Ordenar por fecha_inicio
+        data.sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
+
+        let html = '';
+        for (const row of data) {
+            const ini = new Date(row.fecha_inicio).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+            const fin = new Date(row.fecha_fin).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+            const rango = (row.fecha_inicio === row.fecha_fin) ? ini : `${ini} → ${fin}`;
+            const motivo = row.motivo ? `<span class="bloqueo-motivo">${row.motivo}</span>` : '';
+
+            html += `
+                <div class="bloqueo-item">
+                    <div class="bloqueo-info">
+                        <span class="bloqueo-fechas">${rango}</span>
+                        ${motivo}
+                    </div>
+                    <button type="button" class="btn-quitar" onclick="eliminarVacacion(${row.id})" title="Eliminar">×</button>
+                </div>`;
+        }
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<p class="texto-vacio">Error de conexión.</p>';
+    }
+}
+
+async function eliminarVacacion(id) {
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/vacaciones/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || 'Error al eliminar');
+            return mostrarPopup(msg, 'Vacaciones');
+        }
+        cargarVacaciones();
+    } catch (e) {
+        mostrarPopup('Error de conexión.', 'Vacaciones');
+    }
+}
+
+// ============================
+// DOCUMENTOS
+// ============================
+let documentoActualId = null;
+
+let documentosOrdenando = false;
+
+async function cargarDocumentos() {
+    const lista = document.getElementById('lista-documentos');
+    lista.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+    try {
+        const { res, data } = await fetchJsonSafe('/api/documentos');
+        if (!res.ok || !data) {
+            lista.innerHTML = '<p class="texto-vacio">Error al cargar documentos</p>';
+            return;
+        }
+        if (data.length === 0) {
+            lista.innerHTML = '<p class="texto-vacio">No tienes documentos. Crea uno nuevo.</p>';
+            return;
+        }
+        const tipoLabel = (t) => (!t || t === 'texto' ? 'Texto' : t === 'pdf' ? 'PDF' : 'Word');
+        lista.innerHTML = data.map(doc => {
+            const fecha = new Date(doc.updated_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+            const tipo = (doc.tipo || 'texto').toLowerCase();
+            const badge = `<span class="doc-item-tipo doc-item-tipo-${tipo}">${tipoLabel(doc.tipo)}</span>`;
+            return `
+                <div class="doc-item ${doc.id === documentoActualId ? 'doc-item-activo' : ''}" 
+                     data-doc-id="${doc.id}" 
+                     onclick="if(!documentosOrdenando) abrirDocumento(${doc.id})">
+                    ${badge}
+                    <span class="doc-item-titulo">${(doc.titulo || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+                    <span class="doc-item-fecha">${fecha}</span>
+                </div>
+            `;
+        }).join('');
+        if (documentosOrdenando) activarDragDocumentos();
+    } catch (e) {
+        lista.innerHTML = '<p class="texto-vacio">Error de conexión</p>';
+    }
+}
+
+function toggleOrdenarDocumentos() {
+    documentosOrdenando = !documentosOrdenando;
+    const btn = document.getElementById('btn-ordenar-docs');
+    const lista = document.getElementById('lista-documentos');
+    if (documentosOrdenando) {
+        btn.textContent = 'Finalizar';
+        lista.classList.add('documentos-ordenando');
+        activarDragDocumentos();
+    } else {
+        btn.textContent = 'Ordenar';
+        lista.classList.remove('documentos-ordenando');
+        finalizarOrdenDocumentos();
+    }
+}
+
+function activarDragDocumentos() {
+    const items = document.querySelectorAll('#lista-documentos .doc-item');
+    items.forEach(el => {
+        el.setAttribute('draggable', 'true');
+        el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', el.dataset.docId); e.dataTransfer.effectAllowed = 'move'; };
+        el.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('doc-item-drag-over'); };
+        el.ondragleave = () => el.classList.remove('doc-item-drag-over');
+        el.ondrop = (e) => {
+            e.preventDefault();
+            el.classList.remove('doc-item-drag-over');
+            const id = e.dataTransfer.getData('text/plain');
+            const dragEl = document.querySelector(`[data-doc-id="${id}"]`);
+            if (dragEl && dragEl !== el) {
+                const parent = el.parentNode;
+                const all = [...parent.querySelectorAll('.doc-item')];
+                const idxEl = all.indexOf(el);
+                const idxDrag = all.indexOf(dragEl);
+                if (idxDrag < idxEl) parent.insertBefore(dragEl, el.nextSibling);
+                else parent.insertBefore(dragEl, el);
+            }
+        };
+    });
+}
+
+async function finalizarOrdenDocumentos() {
+    const items = document.querySelectorAll('#lista-documentos .doc-item');
+    const ids = [...items].map(el => parseInt(el.dataset.docId, 10)).filter(n => !isNaN(n));
+    if (ids.length === 0) return;
+    try {
+        const { res } = await fetchJsonSafe('/api/documentos/orden', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+        if (!res.ok) mostrarPopup('Error al guardar el orden', 'Documentos');
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+    const items2 = document.querySelectorAll('#lista-documentos .doc-item');
+    items2.forEach(el => { el.removeAttribute('draggable'); el.ondragstart = el.ondragover = el.ondragleave = el.ondrop = null; });
+}
+
+async function crearDocumento() {
+    try {
+        const { res, data } = await fetchJsonSafe('/api/documentos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ titulo: 'Nuevo documento', contenido: '' })
+        });
+        if (!res.ok) {
+            return mostrarPopup('Error al crear documento', 'Documentos');
+        }
+        await cargarDocumentos();
+        abrirDocumento(data.id);
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+}
+
+async function abrirDocumento(id) {
+    documentoActualId = id;
+    try {
+        const { res, data } = await fetchJsonSafe(`/api/documentos/${id}`);
+        if (!res.ok || !data) {
+            return mostrarPopup('Error al abrir documento', 'Documentos');
+        }
+        document.getElementById('editor-vacio').style.display = 'none';
+        document.getElementById('editor-activo').style.display = 'block';
+        document.getElementById('doc-titulo').value = data.titulo || '';
+        document.getElementById('doc-contenido').value = data.contenido || '';
+        document.getElementById('doc-estado').innerText = '';
+
+        const tipo = (data.tipo || 'texto').toLowerCase();
+        const areaEditable = document.getElementById('doc-area-editable');
+        const visorPdf = document.getElementById('doc-visor-pdf');
+        const iframePdf = document.getElementById('iframe-pdf');
+        const linkArchivo = document.getElementById('doc-link-archivo');
+        const btnGuardar = document.getElementById('btn-guardar-doc');
+
+        if (tipo === 'pdf') {
+            areaEditable.style.display = 'none';
+            visorPdf.style.display = 'block';
+            btnGuardar.style.display = 'none';
+            document.getElementById('doc-titulo').readOnly = true;
+            iframePdf.src = '/api/documentos/' + id + '/archivo';
+            linkArchivo.href = '/api/documentos/' + id + '/archivo';
+            linkArchivo.style.display = 'inline-block';
+        } else {
+            areaEditable.style.display = 'block';
+            visorPdf.style.display = 'none';
+            iframePdf.src = 'about:blank';
+            btnGuardar.style.display = 'inline-block';
+            document.getElementById('doc-titulo').readOnly = false;
+            if (data.ruta_archivo) {
+                linkArchivo.href = '/api/documentos/' + id + '/archivo';
+                linkArchivo.style.display = 'inline-block';
+            } else {
+                linkArchivo.style.display = 'none';
+            }
+        }
+        cargarDocumentos();
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+}
+
+async function guardarDocumento() {
+    if (!documentoActualId) return;
+    const titulo = document.getElementById('doc-titulo').value.trim() || 'Sin título';
+    const contenido = document.getElementById('doc-contenido').value;
+    const estado = document.getElementById('doc-estado');
+    estado.innerText = 'Guardando...';
+    estado.style.color = '#999';
+    try {
+        const { res, data } = await fetchJsonSafe(`/api/documentos/${documentoActualId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ titulo, contenido })
+        });
+        if (!res.ok) {
+            estado.innerText = 'Error al guardar';
+            estado.style.color = '#e74c3c';
+            return;
+        }
+        estado.innerText = 'Guardado ✓';
+        estado.style.color = '#27ae60';
+        cargarDocumentos();
+    } catch (e) {
+        estado.innerText = 'Error de conexión';
+        estado.style.color = '#e74c3c';
+    }
+}
+
+async function eliminarDocumento() {
+    if (!documentoActualId) return;
+    if (!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
+    try {
+        const { res } = await fetchJsonSafe(`/api/documentos/${documentoActualId}`, { method: 'DELETE' });
+        if (!res.ok) {
+            return mostrarPopup('Error al eliminar documento', 'Documentos');
+        }
+        documentoActualId = null;
+        document.getElementById('editor-activo').style.display = 'none';
+        document.getElementById('editor-vacio').style.display = 'block';
+        cargarDocumentos();
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+}
+
+document.getElementById('input-subir-doc').addEventListener('change', async function() {
+    const file = this.files && this.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('archivo', file);
+    try {
+        const res = await fetch('/api/documentos/upload', { method: 'POST', body: formData, credentials: 'same-origin' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            mostrarPopup(data.error || 'Error al subir', 'Documentos');
+            return;
+        }
+        this.value = '';
+        await cargarDocumentos();
+        abrirDocumento(data.id);
+    } catch (e) {
+        mostrarPopup('Error de conexión', 'Documentos');
+    }
+});
+
+// --- PERFIL DEL DOCTOR ---
+async function cargarPerfilDoctor() {
+    try {
+        const { res, data } = await fetchJsonSafe('/api/user-data');
+        if (!res.ok || !data) return;
+
+        document.getElementById('doc-nombre').value = data.nombre || '';
+        document.getElementById('doc-email').value = data.email || '';
+        document.getElementById('doc-telefono').value = data.telefono || '';
+        document.getElementById('doc-password').value = '********';
+    } catch (e) {
+        console.error('Error cargando perfil:', e);
+    }
+}
+
+function activarEdicionDoc() {
+    // Habilitar campos editables
+    document.getElementById('doc-telefono').removeAttribute('readonly');
+    document.getElementById('doc-telefono').classList.remove('input-readonly-doc');
+
+    const passInput = document.getElementById('doc-password');
+    passInput.removeAttribute('readonly');
+    passInput.classList.remove('input-readonly-doc');
+    passInput.value = '';
+    passInput.placeholder = 'Escribe nueva contraseña para cambiar';
+
+    // Mostrar botón del ojo y acciones
+    document.getElementById('eye-btn-doc').style.display = 'block';
+    document.getElementById('acciones-edicion-doc').style.display = 'flex';
+    document.getElementById('btn-editar-perfil-doc').style.display = 'none';
+}
+
+function cancelarEdicionDoc() {
+    // Recargar para restaurar estado
+    cargarPerfilDoctor();
+    
+    // Volver a modo solo lectura
+    document.getElementById('doc-telefono').setAttribute('readonly', true);
+    document.getElementById('doc-telefono').classList.add('input-readonly-doc');
+
+    const passInput = document.getElementById('doc-password');
+    passInput.setAttribute('readonly', true);
+    passInput.classList.add('input-readonly-doc');
+    passInput.value = '********';
+    passInput.type = 'password';
+
+    // Ocultar botón del ojo y acciones
+    document.getElementById('eye-btn-doc').style.display = 'none';
+    document.getElementById('acciones-edicion-doc').style.display = 'none';
+    document.getElementById('btn-editar-perfil-doc').style.display = 'inline-block';
+}
+
+function togglePasswordDoc() {
+    const passInput = document.getElementById('doc-password');
+    const eyeBtn = document.getElementById('eye-btn-doc');
+    passInput.type = (passInput.type === 'password') ? 'text' : 'password';
+    eyeBtn.innerText = (passInput.type === 'password') ? '👁️' : '🔒';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const formPerfil = document.getElementById('form-perfil-doctor');
+    if (formPerfil) {
+        formPerfil.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const telefono = document.getElementById('doc-telefono').value.trim();
+            const password = document.getElementById('doc-password').value;
+
+            // Necesitamos enviar el nombre aunque no cambie (el endpoint lo requiere)
+            const nombre = document.getElementById('doc-nombre').value;
+
+            try {
+                const { res, data, text } = await fetchJsonSafe('/api/update-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, telefono, password: password || '********' })
+                });
+
+                if (!res.ok) {
+                    const msg = (data && data.error) ? data.error : (text || 'Error al guardar');
+                    return mostrarPopup(msg, 'Perfil');
+                }
+
+                mostrarPopup('¡Cambios guardados!', 'Perfil');
+                cancelarEdicionDoc();
+            } catch (err) {
+                mostrarPopup('Error de conexión.', 'Perfil');
+            }
+        });
+    }
+});
+
+        // 3. CARGAR CITAS Y CONTACTOS
+        function cargarCitasDoctor() {
+    fetch('/api/mis-citas-doctor')
+        .then(res => res.json())
+        .then(citas => {
+            citasDoctorOriginales = Array.isArray(citas) ? citas : [];
+            aplicarFiltrosYRenderizarCitasDoctor();
+        })
+        .catch(err => console.error("Error cargando citas:", err));
+}
+
+function getCitaDateTimeDoctor(c) {
+    const fechaCita = new Date(c.fecha);
+    const [horas, minutos] = (c.hora || "00:00:00").split(':');
+    fechaCita.setHours(parseInt(horas, 10), parseInt(minutos, 10), 0, 0);
+    return fechaCita;
+}
+
+function aplicarFiltrosYRenderizarCitasDoctor() {
+    const futurasDiv = document.getElementById('contenedor-citas-futuras');
+    const pasadasDiv = document.getElementById('contenedor-citas-pasadas');
+
+    const filtroPaciente = (document.getElementById('filtro-paciente')?.value || '').trim().toLowerCase();
+    const desde = document.getElementById('filtro-desde')?.value || '';
+    const hasta = document.getElementById('filtro-hasta')?.value || '';
+
+    const desdeDate = desde ? new Date(`${desde}T00:00:00`) : null;
+    const hastaDate = hasta ? new Date(`${hasta}T23:59:59.999`) : null;
+
+    const filtradas = citasDoctorOriginales.filter(c => {
+        const nombre = (c.paciente_nombre || '').toString().toLowerCase();
+        if (filtroPaciente && !nombre.includes(filtroPaciente)) return false;
+
+        const dt = getCitaDateTimeDoctor(c);
+        if (desdeDate && dt < desdeDate) return false;
+        if (hastaDate && dt > hastaDate) return false;
+
+        return true;
+    });
+
+    const ahora = new Date();
+    const noCancelada = c => (c.estado || '').toLowerCase() !== 'cancelada';
+    const futuras = filtradas.filter(c => getCitaDateTimeDoctor(c) >= ahora && noCancelada(c));
+    // Historial: citas pasadas O citas canceladas
+    const pasadas = filtradas.filter(c => getCitaDateTimeDoctor(c) < ahora || !noCancelada(c));
+
+    // Render Futuras
+    futurasDiv.innerHTML = futuras.length
+        ? futuras.map(c => generarTarjetaCita(c, true)).join('')
+        : `<p class="vacio">No hay próximas citas con esos filtros.</p>`;
+
+    // Render Historial: por defecto solo las de este mes; "Cargar más" muestra todas
+    const historialCargarMasWrap = document.getElementById('historial-doctor-cargar-mas-wrap');
+    const btnHistorialCargarMas = document.getElementById('btn-historial-doctor-cargar-mas');
+    if (pasadas.length === 0) {
+        pasadasDiv.innerHTML = '<p class="vacio">No hay historial con esos filtros.</p>';
+        if (historialCargarMasWrap) historialCargarMasWrap.style.display = 'none';
+    } else {
+        const mesActual = ahora.getMonth();
+        const anioActual = ahora.getFullYear();
+        const pasadasEsteMes = pasadas.filter(c => {
+            const d = new Date(c.fecha);
+            return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+        });
+        const citasIniciales = pasadasEsteMes.length > 0 ? pasadasEsteMes : pasadas.slice(0, 1);
+        const hayMas = pasadas.length > citasIniciales.length;
+
+        pasadasDiv.innerHTML = citasIniciales.map(c => generarTarjetaCita(c, false)).join('');
+
+        if (historialCargarMasWrap && btnHistorialCargarMas) {
+            if (hayMas) {
+                historialCargarMasWrap.style.display = 'block';
+                btnHistorialCargarMas.onclick = function() {
+                    pasadasDiv.innerHTML = pasadas.map(c => generarTarjetaCita(c, false)).join('');
+                    historialCargarMasWrap.style.display = 'none';
+                };
+            } else {
+                historialCargarMasWrap.style.display = 'none';
+            }
+        }
+    }
+}
+
+// Listeners de filtros (dashboard)
+document.addEventListener('DOMContentLoaded', () => {
+    const paciente = document.getElementById('filtro-paciente');
+    const desde = document.getElementById('filtro-desde');
+    const hasta = document.getElementById('filtro-hasta');
+    const limpiar = document.getElementById('btn-limpiar-filtros');
+
+    const onChange = () => aplicarFiltrosYRenderizarCitasDoctor();
+    if (paciente) paciente.addEventListener('input', onChange);
+    if (desde) desde.addEventListener('change', onChange);
+    if (hasta) hasta.addEventListener('change', onChange);
+    if (limpiar) limpiar.addEventListener('click', () => {
+        if (paciente) paciente.value = '';
+        if (desde) desde.value = '';
+        if (hasta) hasta.value = '';
+        aplicarFiltrosYRenderizarCitasDoctor();
+    });
+});
+
+// Función auxiliar para no repetir código de diseño
+function generarTarjetaCita(cita, esFutura) {
+    const fechaFormateada = new Date(cita.fecha).toLocaleDateString('es-MX', { 
+        weekday: 'long', day: 'numeric', month: 'long' 
+    });
+
+    return `
+        <div class="cita-card ${esFutura ? 'border-dorado' : 'grisaceo'}">
+            <div class="cita-info">
+                <h4>${cita.paciente_nombre}</h4>
+                <span>${fechaFormateada} | ${cita.hora.slice(0,5)}</span>
+                <p><strong>Motivo:</strong> ${cita.motivo || 'No especificado'}</p>
+            </div>
+            <div class="cita-acciones">
+                ${esFutura 
+                    ? (() => { const escJs = (s) => (s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r/g,'').replace(/\n/g,' '); return `<button onclick="iniciarVideo('${escJs(cita.link_sesion || '')}', '${escJs(cita.paciente_nombre || '')}', ${cita.cita_id})" class="btn-entrar">🎥 Iniciar Sesión</button>`; })()
+                    : (() => { const e = (cita.estado || 'pendiente').toLowerCase(); const esCancelada = e === 'cancelada'; const esRealizada = e === 'realizada'; return `<span class="badge-${esCancelada ? 'cancelada' : esRealizada ? 'finalizada' : 'no-realizada'}">${esCancelada ? 'Cancelada' : esRealizada ? 'Realizada' : 'No realizada'}</span>`; })()
+                }
+                ${esFutura
+                    ? `<button onclick="abrirNotasEnVideo(${cita.cita_id}, '${cita.paciente_nombre}')" class="btn-chat-icon">📝</button>`
+                    : `<button onclick="abrirModalNotas(${cita.cita_id}, '${cita.paciente_nombre}', '${new Date(cita.fecha).toISOString()}', '${cita.hora}')" class="btn-chat-icon">📝</button>`
+                }
+            </div>
+        </div>
+    `;
+}
+
+function cargarContactosChat() {
+    const lista = document.getElementById('lista-contactos-chat');
+    if (!lista) return;
+
+    Promise.all([
+        fetch('/api/mis-citas-doctor').then(function(r) { return r.json(); }),
+        fetch('/api/mensajes-no-leidos-por-contacto').then(function(r) { return r.json(); })
+    ]).then(function([citas, unreadPorContacto]) {
+        if (!Array.isArray(citas) || citas.length === 0) {
+            lista.innerHTML = "<p style='padding:10px; color:#666;'>No hay pacientes con citas programadas.</p>";
+            return;
+        }
+
+        var mapaPacientes = new Map();
+        citas.forEach(function(cita) {
+            var id = cita.id_para_chat || cita.paciente_id || cita.id;
+            if (id && (cita.paciente_nombre || cita.nombre)) mapaPacientes.set(id, { nombre: cita.paciente_nombre || cita.nombre });
+        });
+
+        if (mapaPacientes.size === 0) {
+            lista.innerHTML = "<p style='padding:10px; color:red;'>Error: No se detectó el ID del usuario paciente.</p>";
+            return;
+        }
+
+        var html = '';
+        mapaPacientes.forEach(function(info, id) {
+            var count = unreadPorContacto && (unreadPorContacto[String(id)] != null || unreadPorContacto[id] != null) ? parseInt(unreadPorContacto[String(id)] || unreadPorContacto[id], 10) : 0;
+            var badgeHtml = count > 0
+                ? '<span class="chat-contacto-badge" data-contact-id="' + id + '">' + (count > 99 ? '99+' : count) + '</span>'
+                : '<span class="chat-contacto-badge chat-contacto-badge-hidden" data-contact-id="' + id + '">0</span>';
+            var nombreAttr = (info.nombre || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html += '<div class="contacto-item contacto-item-chat" data-contact-id="' + id + '" data-nombre="' + nombreAttr + '" onclick="abrirChatDesdeItem(this)" style="padding: 15px; cursor: pointer; border-bottom: 1px solid #eee; background: white; margin-bottom: 5px; border-radius: 8px; transition: background 0.2s; border-left: 4px solid #2563eb; display: flex; align-items: center; justify-content: space-between; gap: 8px;">' +
+                '<div><strong style="display: block; color: #1e40af;">' + (info.nombre.replace(/</g, '&lt;').replace(/>/g, '&gt;')) + '</strong><small style="color: #64748b;">Paciente ID: ' + id + '</small></div>' +
+                badgeHtml + '</div>';
+        });
+        lista.innerHTML = html;
+    }).catch(function(err) {
+        console.error("Error en cargarContactosChat:", err);
+        lista.innerHTML = "<p>Error de conexión.</p>";
+    });
+}
+
+function actualizarBurbujasPorContacto() {
+    var lista = document.getElementById('lista-contactos-chat');
+    if (!lista || !lista.querySelector('.contacto-item-chat')) return;
+    fetch('/api/mensajes-no-leidos-por-contacto').then(function(r) { return r.json(); }).then(function(unreadPorContacto) {
+        lista.querySelectorAll('.chat-contacto-badge').forEach(function(badge) {
+            var id = badge.getAttribute('data-contact-id');
+            var count = (unreadPorContacto && (unreadPorContacto[String(id)] != null ? unreadPorContacto[String(id)] : unreadPorContacto[id])) ? parseInt(unreadPorContacto[String(id)] || unreadPorContacto[id], 10) : 0;
+            badge.textContent = count > 99 ? '99+' : String(count);
+            badge.classList.toggle('chat-contacto-badge-hidden', count === 0);
+        });
+    }).catch(function() {});
+}
+
+        // 4. FUNCIONES DE VIDEO (Daily.co) — unpkg (recomendado por Daily) y jsdelivr como respaldo
+        function loadDailyScript() {
+            if (window.Daily) return Promise.resolve();
+            var urls = [
+                'https://unpkg.com/@daily-co/daily-js/dist/daily.js',
+                'https://cdn.jsdelivr.net/npm/@daily-co/daily-js/dist/daily.js'
+            ];
+            function tryLoad(idx) {
+                if (idx >= urls.length) return Promise.reject(new Error('No se pudo cargar el script de video. Revisa tu conexión o prueba sin bloqueadores de anuncios.'));
+                return new Promise((resolve, reject) => {
+                    var s = document.createElement('script');
+                    s.src = urls[idx];
+                    s.onload = () => resolve();
+                    s.onerror = () => { s.remove(); tryLoad(idx + 1).then(resolve, reject); };
+                    document.head.appendChild(s);
+                });
+            }
+            return tryLoad(0);
+        }
+
+        async function iniciarVideo(url, nombre, citaId) {
+    mostrarSeccion('video');
+    document.getElementById('info-video-titulo').innerText = "Sesión con " + (nombre || 'paciente');
+    if (citaId) seleccionarCitaParaNotas(citaId, nombre);
+
+    if (!citaId) {
+        mostrarPopup("Selecciona una cita para iniciar la videollamada. Puedes escribir notas de todos modos.", "Sin cita seleccionada");
+        return;
+    }
+
+    const cont = document.getElementById('jitsi-container');
+    if (cont) cont.innerHTML = '';
+    if (dailyCallFrame) dailyCallFrame.destroy();
+
+    try {
+        const displayName = (document.getElementById('nombre-doctor') && document.getElementById('nombre-doctor').innerText) || "Especialista";
+        const res = await fetch('/api/daily-meeting', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ citaId, rol: 'psicologo', displayName })
+        });
+        const text = await res.text();
+        var body = (typeof text === 'string' ? text : '').replace(/^\uFEFF/, '').trim();
+        if (body.charAt(0) === '<' || body.slice(0, 9) === '<!DOCTYPE' || body.slice(0, 6).toLowerCase() === '<html ') {
+            throw new Error('El servidor devolvió una página HTML en lugar de datos de video. Suele ser un error 502/503 de Railway. Revisa los logs del servicio y que DAILY_API_KEY esté configurada; redeploya si hace falta.');
+        }
+        if (body.charAt(0) !== '{' && body.charAt(0) !== '[') {
+            throw new Error('El servidor no respondió con datos válidos. Cierra sesión, vuelve a entrar e inténtalo de nuevo.');
+        }
+        var data;
+        try {
+            data = JSON.parse(body);
+        } catch (parseErr) {
+            throw new Error('El servidor no respondió correctamente. Cierra sesión, vuelve a entrar e inténtalo de nuevo.');
+        }
+        if (data && data.error) {
+            throw new Error(data.error);
+        }
+        if (!res.ok) {
+            throw new Error('No se pudo preparar la videollamada');
+        }
+        const meetingUrl = data.url;
+        const token = data.token;
+        if (!meetingUrl) throw new Error('No se recibió enlace de video');
+        await loadDailyScript();
+        if (!window.Daily || !window.Daily.createFrame) throw new Error('No se cargó el reproductor de video');
+        dailyCallFrame = window.Daily.createFrame(document.getElementById('jitsi-container'), { showLeaveButton: true });
+        dailyCallFrame.on('joined-meeting', () => {
+            fetch(`/api/citas/${citaId}/registrar-entrada`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rol: 'psicologo' })
+            }).catch(() => {});
+        });
+        await dailyCallFrame.join({ url: meetingUrl, token });
+    } catch (e) {
+        console.error('Error videollamada:', e);
+        mostrarPopup("Error al cargar la videollamada: " + (e.message || 'Intenta de nuevo.'), "Error");
+    }
+}
+
+// --- NOTAS ---
+let modalNotasCitaId = null;
+
+function abrirModalNotas(citaId, pacienteNombre, fechaISO, hora) {
+    modalNotasCitaId = citaId;
+
+    const fechaFormateada = new Date(fechaISO).toLocaleDateString('es-MX', {
+        weekday:'long', day:'numeric', month:'long', year:'numeric'
+    });
+
+    document.getElementById('modal-notas-titulo').innerText = `📝 Notas (Cita #${citaId})`;
+    document.getElementById('modal-notas-subtitulo').innerText = `Paciente: ${pacienteNombre} — ${fechaFormateada} ${hora.slice(0,5)}`;
+
+    const textarea = document.getElementById('modal-notas-textarea');
+    const btn = document.getElementById('btn-guardar-notas-modal');
+    textarea.value = 'Cargando...';
+    textarea.disabled = true;
+    btn.disabled = true;
+
+    document.getElementById('modal-notas').style.display = 'flex';
+
+    // Cargar notas
+    fetchJsonSafe(`/api/citas/${citaId}/notas`)
+        .then(({ res, data, text }) => {
+            if (!res.ok) {
+                const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+                throw new Error(msg);
+            }
+            textarea.value = (data && data.notas) ? data.notas : '';
+            textarea.disabled = false;
+            btn.disabled = false;
+        })
+        .catch(err => {
+            textarea.value = '';
+            mostrarPopup(err.message || 'No se pudieron cargar las notas.', 'Notas');
+        });
+}
+
+function cerrarModalNotas() {
+    document.getElementById('modal-notas').style.display = 'none';
+    modalNotasCitaId = null;
+}
+
+async function seleccionarCitaParaNotas(citaId, pacienteNombre) {
+    // Guardar draft de la cita anterior antes de cambiar
+    const textareaPrev = document.getElementById('notas-textarea');
+    if (citaActualId && textareaPrev) {
+        notasDrafts.set(citaActualId, textareaPrev.value || '');
+    }
+
+    citaActualId = citaId;
+    const textarea = document.getElementById('notas-textarea');
+    const btnGuardar = document.getElementById('btn-guardar-notas');
+    const ayuda = document.getElementById('nota-ayuda');
+
+    ayuda.innerText = `Cita #${citaId} - Paciente: ${pacienteNombre}`;
+    // Permitir escribir de inmediato, aunque esté cargando (mejor UX)
+    textarea.disabled = false;
+    btnGuardar.disabled = false;
+    textarea.placeholder = 'Escribe tus notas aquí...';
+    textarea.value = notasDrafts.get(citaId) || '';
+
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/citas/${citaId}/notas`);
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+            console.error(msg);
+            return mostrarPopup('No se pudieron cargar las notas. Puedes escribir y guardar de todas formas.', 'Notas');
+        }
+        // Solo aplicar lo de servidor si no hay draft local
+        if (!notasDrafts.has(citaId) || !textarea.value) {
+            textarea.value = (data && data.notas) ? data.notas : '';
+        }
+    } catch (e) {
+        mostrarPopup('Error de conexión al cargar notas. Puedes escribir y guardar de todas formas.', 'Notas');
+    }
+}
+
+document.getElementById('btn-guardar-notas').onclick = async () => {
+    if (!citaActualId) return;
+    const textarea = document.getElementById('notas-textarea');
+    const notas = textarea.value;
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/citas/${citaActualId}/notas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notas })
+        });
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+            return mostrarPopup(msg, 'Notas');
+        }
+        notasDrafts.set(citaActualId, notas || '');
+        mostrarPopup('Notas guardadas.', 'Notas');
+    } catch (e) {
+        mostrarPopup('Error de conexión al guardar notas.', 'Notas');
+    }
+};
+
+document.getElementById('btn-guardar-notas-modal').onclick = async () => {
+    if (!modalNotasCitaId) return;
+    const textarea = document.getElementById('modal-notas-textarea');
+    const notas = textarea.value;
+    try {
+        const { res, data, text } = await fetchJsonSafe(`/api/citas/${modalNotasCitaId}/notas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notas })
+        });
+        if (!res.ok) {
+            const msg = (data && data.error) ? data.error : (text || `Error ${res.status}`);
+            return mostrarPopup(msg, 'Notas');
+        }
+        mostrarPopup('Notas guardadas.', 'Notas');
+    } catch (e) {
+        mostrarPopup('Error de conexión al guardar notas.', 'Notas');
+    }
+};
+
+function abrirNotasEnVideo(citaId, pacienteNombre) {
+    mostrarSeccion('video');
+    seleccionarCitaParaNotas(citaId, pacienteNombre);
+}
+
+        // 5. CHAT
+        function abrirChatDesdeItem(el) {
+            var id = el.getAttribute('data-contact-id');
+            var nombre = el.getAttribute('data-nombre') || '';
+            if (id) abrirChat(parseInt(id, 10), nombre);
+        }
+
+        function abrirChat(id, nombre) {
+    pacienteSeleccionadoId = id; 
+    document.getElementById('nombre-paciente-chat').innerText = nombre;
+    
+    document.getElementById('input-mensaje').disabled = false;
+    document.getElementById('btn-enviar-chat').disabled = false;
+    const btnPdfChat = document.getElementById('btn-adjuntar-pdf-chat');
+    if (btnPdfChat) btnPdfChat.disabled = false;
+    if (window.innerWidth > 768) document.getElementById('input-mensaje').focus();
+
+    // 1. LIMPIEZA: Si Lucy cambia de paciente, detenemos el reloj del paciente anterior
+    if (intervaloChat) clearInterval(intervaloChat);
+
+    // 2. CARGA INICIAL: Traemos los mensajes de inmediato para que no se vea vacío
+    cargarMensajes(id);
+
+    // 3. RELOJ (Polling): Preguntamos al servidor por mensajes nuevos cada 3 segundos
+    intervaloChat = setInterval(() => {
+        console.log("Actualizando chat automáticamente...");
+        cargarMensajes(id);
+    }, 3000); 
+}
+
+function cargarMensajes(idSocio) {
+    if (!idSocio || idSocio === 'undefined') return;
+
+    fetch(`/api/mensajes/${idSocio}`)
+        .then(res => res.json())
+        .then(data => {
+            // data es el objeto { mensajes: [...], miId: X } que viene del servidor
+            const mensajes = data.mensajes || [];
+            const miId = data.miId; 
+
+            const contenedor = document.getElementById('chat-messages');
+            
+            if (!contenedor) {
+                console.warn("ADVERTENCIA: No encontré el elemento 'chat-messages' en el HTML.");
+                return;
+            }
+
+            // Si no hay mensajes, limpiamos el contenedor o ponemos un aviso
+            if (mensajes.length === 0) {
+                contenedor.innerHTML = "<p style='text-align:center; color:gray; padding:20px;'>No hay mensajes en esta conversación.</p>";
+                return;
+            }
+
+            contenedor.innerHTML = mensajes.map(m => {
+                const soyYo = m.remitente_id == miId;
+                const adjunto = (m.ruta_adjunto && m.nombre_adjunto)
+                    ? `<a href="/api/chat/archivo/${m.id}" target="_blank" rel="noopener" style="display:block; margin-bottom:4px; text-decoration:underline;">📎 ${(m.nombre_adjunto || 'documento.pdf').replace(/</g, '&lt;')}</a>`
+                    : '';
+                const texto = (m.contenido || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return `
+                    <div style="
+                        padding: 10px 15px; 
+                        margin: 5px; 
+                        border-radius: 15px; 
+                        max-width: 75%;
+                        word-wrap: break-word;
+                        font-family: sans-serif;
+                        ${soyYo 
+                            ? 'background: #007bff; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px;' 
+                            : 'background: #e9e9eb; color: black; align-self: flex-start; border-bottom-left-radius: 2px;'}">
+                        ${adjunto}
+                        ${texto ? '<span>' + texto + '</span>' : ''}
+                    </div>`;
+            }).join('');
+            
+            // Auto-scroll al final
+            contenedor.scrollTop = contenedor.scrollHeight;
+            if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
+            if (typeof actualizarBurbujasPorContacto === 'function') actualizarBurbujasPorContacto();
+        })
+        .catch(err => console.error("Error al cargar mensajes:", err));
+}
+
+        // Listener infalible para el botón de enviar
+// 1. La función que hace el trabajo sucio
+async function enviarMensaje() {
+    const input = document.getElementById('input-mensaje');
+    const contenido = input.value.trim();
+    
+    if (!contenido || !pacienteSeleccionadoId) return;
+
+    try {
+        const res = await fetch('/api/enviar-mensaje', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                destinatarioId: pacienteSeleccionadoId, 
+                contenido: contenido 
+            })
+        });
+        
+        if (res.ok) {
+            input.value = '';
+            cargarMensajes(pacienteSeleccionadoId); // Refresca los globos
+        }
+    } catch (error) { 
+        console.error("Error al enviar:", error); 
+    }
+}
+
+document.getElementById('btn-enviar-chat').onclick = enviarMensaje;
+
+document.getElementById('input-mensaje').onkeydown = (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        enviarMensaje();
+    }
+};
+
+document.getElementById('btn-adjuntar-pdf-chat').onclick = () => document.getElementById('input-chat-pdf').click();
+document.getElementById('input-chat-pdf').addEventListener('change', async function() {
+    const file = this.files && this.files[0];
+    if (!file || !pacienteSeleccionadoId) return;
+    const formData = new FormData();
+    formData.append('archivo', file);
+    formData.append('destinatarioId', pacienteSeleccionadoId);
+    try {
+        const res = await fetch('/api/chat/adjunto', { method: 'POST', body: formData, credentials: 'same-origin' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { mostrarPopup(data.error || 'Error al enviar el PDF', 'Chat'); return; }
+        this.value = '';
+        cargarMensajes(pacienteSeleccionadoId);
+    } catch (e) { mostrarPopup('Error de conexión', 'Chat'); }
+});
+
+        // Refresco automático del chat cada 3 segundos
+        setInterval(() => {
+            const seccionChat = document.getElementById('seccion-chat');
+            if(pacienteSeleccionadoId && seccionChat && seccionChat.style.display !== 'none') {
+                cargarMensajes(pacienteSeleccionadoId);
+            }
+        }, 3000);
     </script>
 </body>
 </html>
