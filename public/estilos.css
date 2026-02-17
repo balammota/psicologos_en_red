@@ -2275,10 +2275,10 @@ summary::after {
     box-sizing: border-box;
 }
 
-/* Móvil: espacio arriba (header) y abajo (scroll llega al final + safe-area) */
+/* Móvil: espacio arriba (títulos no tapados por header) y abajo (scroll + safe-area) */
 @media (max-width: 768px) {
     .perfil-main {
-        padding: calc(100px + env(safe-area-inset-top, 0px)) 30px calc(100px + env(safe-area-inset-bottom, 0px)) 30px;
+        padding: calc(120px + env(safe-area-inset-top, 0px)) 30px calc(100px + env(safe-area-inset-bottom, 0px)) 30px;
     }
 }
 
@@ -2458,6 +2458,11 @@ summary::after {
     border: 1px solid #ddd;
     background: white;
     cursor: pointer;
+}
+.chat-input-area #btn-enviar-chat.btn-entrar-sesion {
+    background-color: var(--primario-rosa) !important;
+    color: white !important;
+    border-color: var(--primario-rosa);
 }
 
 .grid-citas-panel {
@@ -5243,27 +5248,37 @@ select {
         flex-wrap: wrap !important;
         flex-shrink: 0 !important;
         gap: 10px !important;
+        align-items: stretch !important;
     }
 
     .chat-input-area input,
     #input-mensaje {
-        flex: 1 !important;
+        flex: 1 1 0 !important;
         min-width: 0 !important;
         width: auto !important;
         box-sizing: border-box !important;
         font-size: 16px !important;
+        min-height: 44px !important;
     }
 
     .chat-input-area #btn-adjuntar-pdf-chat {
         flex: 0 0 auto !important;
         min-height: 44px !important;
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
     }
 
+    /* Enviar en segunda fila, ancho completo; mantener rosa y texto visible */
     .chat-input-area #btn-enviar-chat {
-        flex: 0 0 auto !important;
-        width: auto !important;
-        min-width: 80px !important;
+        flex: 1 1 100% !important;
+        width: 100% !important;
         min-height: 44px !important;
+        background: var(--primario-rosa) !important;
+        color: white !important;
+        border: none !important;
+        font-weight: bold !important;
+        padding: 12px 20px !important;
+        border-radius: 10px !important;
     }
 
     /* --- VIDEO Y NOTAS --- */
@@ -5620,12 +5635,14 @@ select {
         gap: 8px !important;
     }
 
-    /* ========== Sala de video + Notas: móvil ========== */
+    /* ========== Sala de video + Notas: móvil (misma longitud que Agenda, scroll en .perfil-main) ========== */
     #seccion-video {
+        max-height: none !important;
+        overflow-y: visible !important;
         overflow-x: hidden !important;
         padding-left: 12px !important;
         padding-right: 12px !important;
-        padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
+        padding-bottom: 40px !important;
         box-sizing: border-box !important;
     }
     #seccion-video .video-header {
