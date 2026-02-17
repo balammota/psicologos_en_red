@@ -1576,7 +1576,7 @@ function abrirNotasEnVideo(citaId, pacienteNombre) {
     document.getElementById('btn-enviar-chat').disabled = false;
     const btnPdfChat = document.getElementById('btn-adjuntar-pdf-chat');
     if (btnPdfChat) btnPdfChat.disabled = false;
-    document.getElementById('input-mensaje').focus();
+    if (window.innerWidth > 768) document.getElementById('input-mensaje').focus();
 
     // 1. LIMPIEZA: Si Lucy cambia de paciente, detenemos el reloj del paciente anterior
     if (intervaloChat) clearInterval(intervaloChat);
