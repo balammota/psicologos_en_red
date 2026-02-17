@@ -2421,12 +2421,18 @@ summary::after {
 #chat-messages {
     flex: 1;
     min-height: 0;
-    padding: 20px;
     overflow-y: auto;
+    overflow-x: hidden;
     background: #f9f9f9;
+}
+
+.chat-messages-inner {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    padding: 20px;
+    padding-bottom: 40px;
+    min-height: min-content;
 }
 
 .chat-input-area {
@@ -5224,7 +5230,10 @@ select {
         min-height: 0 !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
-        padding-bottom: 32px !important;
+    }
+
+    .chat-messages-inner {
+        padding-bottom: 48px !important;
     }
 
     .chat-input-area {
