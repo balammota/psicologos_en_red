@@ -338,6 +338,7 @@
         let miId = null; 
         let psicologoSeleccionadoId = null;
         let intervaloChat = null;
+        let ultimoPayloadChat = null;
         let miIdUsuario = null;
 
 // Pedir mi ID al cargar la página
@@ -795,7 +796,8 @@ fetch('/api/quien-soy')
 
 function abrirChat(psicologoTablaId, nombre, psicologoUsuarioId) {
     // IMPORTANTE: 'psicologoUsuarioId' es el ID de usuario del psicólogo (el que va en los mensajes)
-    psicologoSeleccionadoId = psicologoUsuarioId; 
+    psicologoSeleccionadoId = psicologoUsuarioId;
+    ultimoPayloadChat = null; 
     
     const titulo = document.getElementById('nombre-psicologo-chat');
     const input = document.getElementById('input-mensaje');
@@ -829,13 +831,21 @@ function cargarMensajes(destinatarioId) {
     fetch(`/api/mensajes/${destinatarioId}`)
         .then(res => res.json())
         .then(data => {
-            // Extraemos los datos del objeto { mensajes, miId }
             const mensajes = data.mensajes || [];
-            const miIdDesdeServidor = data.miId; 
+            const miIdDesdeServidor = data.miId;
+
+            var payload = destinatarioId + '.' + mensajes.length + (mensajes.length ? '.' + (mensajes[mensajes.length - 1].id || '') : '');
+            if (ultimoPayloadChat === payload) {
+                if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
+                return;
+            }
+            ultimoPayloadChat = payload;
 
             const contenedor = document.getElementById('chat-messages');
             if (!contenedor) return;
             const target = contenedor.querySelector('.chat-messages-inner') || contenedor;
+
+            var estabaAbajo = (contenedor.scrollTop + contenedor.clientHeight) >= (contenedor.scrollHeight - 100);
 
             if (mensajes.length === 0) {
                 target.innerHTML = '<p class="chat-welcome-msg">Aún no hay mensajes. Escribe algo para comenzar.</p>';
@@ -855,7 +865,7 @@ function cargarMensajes(destinatarioId) {
                 }).join('');
             }
 
-            contenedor.scrollTop = contenedor.scrollHeight;
+            if (estabaAbajo) contenedor.scrollTop = contenedor.scrollHeight;
             if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
         })
         .catch(err => console.error("Error cargando mensajes:", err));
