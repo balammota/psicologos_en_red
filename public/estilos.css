@@ -2274,10 +2274,10 @@ summary::after {
     overflow-y: auto;
 }
 
-/* Móvil: padding-top debe ir DESPUÉS de .perfil-main para no ser anulado por padding: 30px */
+/* Móvil: espacio arriba para que el header fijo no tape los títulos de sección (safe-area por notch) */
 @media (max-width: 768px) {
     .perfil-main {
-        padding: 90px 30px 30px 30px;
+        padding: calc(100px + env(safe-area-inset-top, 0px)) 30px 30px 30px;
     }
 }
 
@@ -5144,36 +5144,63 @@ select {
         font-size: 0.85rem !important;
     }
 
-    /* --- CHAT / MENSAJES --- */
+    /* --- CHAT / MENSAJES (móvil amigable) --- */
     .chat-main-container {
         flex-direction: column !important;
-        height: auto !important;
-        min-height: 80vh;
+        height: calc(100vh - 100px - env(safe-area-inset-top, 0px)) !important;
+        min-height: 60vh !important;
+        max-height: calc(100vh - 100px - env(safe-area-inset-top, 0px)) !important;
     }
 
     .chat-sidebar {
         width: 100% !important;
         border-right: none !important;
         border-bottom: 1px solid #eee;
-        max-height: 200px;
-        overflow-y: auto;
+        max-height: 260px !important;
+        overflow-y: auto !important;
+        flex-shrink: 0 !important;
+    }
+
+    .chat-sidebar .contacto-item-chat,
+    .chat-sidebar .contacto-item {
+        padding: 10px 12px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .chat-sidebar .contacto-item-chat strong,
+    .chat-sidebar .contacto-item strong {
+        font-size: 0.95rem !important;
+    }
+
+    .chat-sidebar .contacto-item-chat small,
+    .chat-sidebar .contacto-item small {
+        font-size: 0.75rem !important;
     }
 
     .chat-window {
-        min-height: 400px;
+        flex: 1 !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 
     #chat-messages {
-        height: 300px !important;
+        flex: 1 !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        height: auto !important;
     }
 
     .chat-input-area {
         flex-direction: column !important;
+        flex-shrink: 0 !important;
     }
 
-    .chat-input-area input {
+    .chat-input-area input,
+    #input-mensaje {
         width: 100% !important;
         box-sizing: border-box !important;
+        font-size: 16px !important;
     }
 
     .chat-input-area button {
