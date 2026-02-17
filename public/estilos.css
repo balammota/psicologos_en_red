@@ -5228,19 +5228,31 @@ select {
     }
 
     .chat-input-area {
-        flex-direction: column !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
         flex-shrink: 0 !important;
+        gap: 10px !important;
     }
 
     .chat-input-area input,
     #input-mensaje {
-        width: 100% !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+        width: auto !important;
         box-sizing: border-box !important;
         font-size: 16px !important;
     }
 
-    .chat-input-area button {
-        width: 100% !important;
+    .chat-input-area #btn-adjuntar-pdf-chat {
+        flex: 0 0 auto !important;
+        min-height: 44px !important;
+    }
+
+    .chat-input-area #btn-enviar-chat {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 80px !important;
+        min-height: 44px !important;
     }
 
     /* --- VIDEO Y NOTAS --- */
