@@ -217,8 +217,10 @@
                         <div id="chat-header-info" style="padding: 15px; border-bottom: 1px solid #eee; background: white;">
                             <h4 id="nombre-psicologo-chat" style="margin:0">Selecciona un especialista</h4>
                         </div>
-                        <div id="chat-messages" style="height: 400px; overflow-y: auto; background: #f9f9f9; display: flex; flex-direction: column; padding: 10px;">
-                            <p style="text-align: center; color: #ccc; margin-top: 20%;">Bienvenido a tu chat privado.</p>
+                        <div id="chat-messages" class="chat-messages-container">
+                            <div class="chat-messages-inner">
+                                <p class="chat-welcome-msg">Bienvenido a tu chat privado.</p>
+                            </div>
                         </div>
                         <div class="chat-input-area" style="padding: 15px; background: white; display: flex; gap: 10px; align-items: center;">
                             <input type="file" id="input-chat-pdf" accept=".pdf" style="display:none;">
@@ -446,7 +448,13 @@ fetch('/api/quien-soy')
         cargarContactosChat();
     }
 
-    // 4. Actualizar botones del sidebar
+    // 4. Al salir del chat, scroll al inicio para que el header no tape títulos (sobre todo tras zoom/focus en input)
+    if (seccionId !== 'chat') {
+        const main = document.querySelector('.perfil-main');
+        if (main) main.scrollTop = 0;
+    }
+
+    // 5. Actualizar botones del sidebar
     document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
     
     // El 'window.event' es para cuando haces clic directo en el menú
@@ -454,13 +462,13 @@ fetch('/api/quien-soy')
         window.event.currentTarget.classList.add('active');
     }
 
-    // 5. Cerrar Daily o limpiar contenedor de video si salimos de la sección
+    // 6. Cerrar Daily o limpiar contenedor de video si salimos de la sección
     if (seccionId !== 'video') {
         if (dailyCallFrame) { dailyCallFrame.destroy(); dailyCallFrame = null; }
         const cont = document.getElementById('jitsi-container');
         if (cont) cont.innerHTML = '';
     }
-    // 6. Cerrar menú lateral (desktop) y marcar activo en hamburguesa (móvil)
+    // 7. Cerrar menú lateral (desktop) y marcar activo en hamburguesa (móvil)
     var layout = document.getElementById('perfil-layout');
     if (layout) layout.classList.remove('sidebar-open');
     var toggle = document.getElementById('perfil-nav-toggle');
@@ -800,7 +808,7 @@ function abrirChat(psicologoTablaId, nombre, psicologoUsuarioId) {
         input.disabled = false;
         boton.disabled = false;
         if (btnPdf) btnPdf.disabled = false;
-        input.focus();
+        if (window.innerWidth > 768) input.focus();
     }
 
     // 1. Limpiar intervalo previo
@@ -827,21 +835,26 @@ function cargarMensajes(destinatarioId) {
 
             const contenedor = document.getElementById('chat-messages');
             if (!contenedor) return;
+            const target = contenedor.querySelector('.chat-messages-inner') || contenedor;
 
-            contenedor.innerHTML = mensajes.map(m => {
-                const soyYo = m.remitente_id == miIdDesdeServidor;
-                const clase = soyYo ? 'enviado' : 'recibido';
-                const adjunto = (m.ruta_adjunto && m.nombre_adjunto)
-                    ? `<a href="/api/chat/archivo/${m.id}" target="_blank" rel="noopener" class="msg-adjunto-pdf">📎 ${(m.nombre_adjunto || 'documento.pdf').replace(/</g, '&lt;')}</a>`
-                    : '';
-                const texto = (m.contenido || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                return `
-                    <div class="msg ${clase}">
-                        ${adjunto}
-                        ${texto ? '<span>' + texto + '</span>' : ''}
-                    </div>`;
-            }).join('');
-            
+            if (mensajes.length === 0) {
+                target.innerHTML = '<p class="chat-welcome-msg">Aún no hay mensajes. Escribe algo para comenzar.</p>';
+            } else {
+                target.innerHTML = mensajes.map(m => {
+                    const soyYo = m.remitente_id == miIdDesdeServidor;
+                    const clase = soyYo ? 'enviado' : 'recibido';
+                    const adjunto = (m.ruta_adjunto && m.nombre_adjunto)
+                        ? `<a href="/api/chat/archivo/${m.id}" target="_blank" rel="noopener" class="msg-adjunto-pdf">📎 ${(m.nombre_adjunto || 'documento.pdf').replace(/</g, '&lt;')}</a>`
+                        : '';
+                    const texto = (m.contenido || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    return `
+                        <div class="msg ${clase}">
+                            ${adjunto}
+                            ${texto ? '<span>' + texto + '</span>' : ''}
+                        </div>`;
+                }).join('');
+            }
+
             contenedor.scrollTop = contenedor.scrollHeight;
             if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
         })
