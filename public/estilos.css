@@ -5533,4 +5533,40 @@ select {
         align-items: stretch !important;
         gap: 8px !important;
     }
+
+    /* ========== Sala de video + Notas: móvil ========== */
+    #seccion-video {
+        overflow-x: hidden !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        box-sizing: border-box !important;
+    }
+    #seccion-video .video-header {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    #seccion-video #jitsi-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 40vh !important;
+        height: 50vh !important;
+        box-sizing: border-box !important;
+    }
+    #seccion-video .dash-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        box-sizing: border-box !important;
+    }
+    #seccion-video #notas-textarea {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 120px !important;
+        box-sizing: border-box !important;
+    }
+    #seccion-video #btn-guardar-notas {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
 }
