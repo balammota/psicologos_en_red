@@ -132,22 +132,21 @@
             </div>
 
             <div id="seccion-chat" class="seccion-panel" style="display: none;">
-                <div class="chat-main-container" style="display: flex; background: white; height: 75vh; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); overflow: hidden;">
-                    <aside class="chat-sidebar" style="width: 250px; border-right: 1px solid #eee; padding: 15px; background: #f8fafc;">
+                <div class="chat-main-container">
+                    <aside class="chat-sidebar">
                         <h3>Mis Pacientes</h3>
                         <div id="lista-contactos-chat"></div>
                     </aside>
-                    <section class="chat-window" style="flex: 1; display: flex; flex-direction: column;">
-                        <div id="chat-header-info" style="padding: 15px; border-bottom: 1px solid #eee; background: white;">
+                    <section class="chat-window">
+                        <div id="chat-header-info">
                             <h4 id="nombre-paciente-chat" style="margin:0">Selecciona un paciente</h4>
                         </div>
-                        <div id="chat-messages" style="height: 400px; overflow-y: auto; background: #f9f9f9; display: flex; flex-direction: column; padding: 10px;">
-                        </div>
-                        <div class="chat-input-area" style="padding: 15px; background: white; display: flex; gap: 10px; align-items: center;">
+                        <div id="chat-messages"></div>
+                        <div class="chat-input-area">
                             <input type="file" id="input-chat-pdf" accept=".pdf" style="display:none;">
-                            <button type="button" id="btn-adjuntar-pdf-chat" title="Adjuntar PDF" style="padding: 10px 14px; border-radius: 8px; border: 1px solid #ddd; background: white; cursor: pointer;" disabled>📎 PDF</button>
-                            <input type="text" id="input-mensaje" placeholder="Escribe un mensaje..." style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid #ddd;" disabled>
-                            <button id="btn-enviar-chat" class="btn-entrar-sesion" style="width: auto; padding: 0 20px;" disabled>Enviar</button>
+                            <button type="button" id="btn-adjuntar-pdf-chat" title="Adjuntar PDF" disabled>📎 PDF</button>
+                            <input type="text" id="input-mensaje" placeholder="Escribe un mensaje..." disabled>
+                            <button id="btn-enviar-chat" class="btn-entrar-sesion" disabled>Enviar</button>
                         </div>
                     </section>
                 </div>
@@ -1569,9 +1568,10 @@ function abrirNotasEnVideo(citaId, pacienteNombre) {
         }
 
         function abrirChat(id, nombre) {
-    pacienteSeleccionadoId = id; 
+    pacienteSeleccionadoId = id;
+    ultimoPayloadChat = null;
     document.getElementById('nombre-paciente-chat').innerText = nombre;
-    
+
     document.getElementById('input-mensaje').disabled = false;
     document.getElementById('btn-enviar-chat').disabled = false;
     const btnPdfChat = document.getElementById('btn-adjuntar-pdf-chat');
@@ -1591,30 +1591,37 @@ function abrirNotasEnVideo(citaId, pacienteNombre) {
     }, 3000); 
 }
 
+var ultimoPayloadChat = null;
+
 function cargarMensajes(idSocio) {
     if (!idSocio || idSocio === 'undefined') return;
 
     fetch(`/api/mensajes/${idSocio}`)
         .then(res => res.json())
         .then(data => {
-            // data es el objeto { mensajes: [...], miId: X } que viene del servidor
             const mensajes = data.mensajes || [];
-            const miId = data.miId; 
+            const miId = data.miId;
+
+            var payload = idSocio + '.' + mensajes.length + (mensajes.length ? '.' + (mensajes[mensajes.length - 1].id || '') : '');
+            if (ultimoPayloadChat === payload) {
+                if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
+                if (typeof actualizarBurbujasPorContacto === 'function') actualizarBurbujasPorContacto();
+                return;
+            }
+            ultimoPayloadChat = payload;
 
             const contenedor = document.getElementById('chat-messages');
-            
-            if (!contenedor) {
-                console.warn("ADVERTENCIA: No encontré el elemento 'chat-messages' en el HTML.");
-                return;
-            }
+            if (!contenedor) return;
 
-            // Si no hay mensajes, limpiamos el contenedor o ponemos un aviso
             if (mensajes.length === 0) {
                 contenedor.innerHTML = "<p style='text-align:center; color:gray; padding:20px;'>No hay mensajes en esta conversación.</p>";
+                if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
+                if (typeof actualizarBurbujasPorContacto === 'function') actualizarBurbujasPorContacto();
                 return;
             }
 
-            contenedor.innerHTML = mensajes.map(m => {
+            var estabaAbajo = (contenedor.scrollTop + contenedor.clientHeight) >= (contenedor.scrollHeight - 100);
+            var html = mensajes.map(m => {
                 const soyYo = m.remitente_id == miId;
                 const adjunto = (m.ruta_adjunto && m.nombre_adjunto)
                     ? `<a href="/api/chat/archivo/${m.id}" target="_blank" rel="noopener" style="display:block; margin-bottom:4px; text-decoration:underline;">📎 ${(m.nombre_adjunto || 'documento.pdf').replace(/</g, '&lt;')}</a>`
@@ -1622,22 +1629,22 @@ function cargarMensajes(idSocio) {
                 const texto = (m.contenido || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 return `
                     <div style="
-                        padding: 10px 15px; 
-                        margin: 5px; 
-                        border-radius: 15px; 
+                        padding: 10px 15px;
+                        margin: 5px;
+                        border-radius: 15px;
                         max-width: 75%;
                         word-wrap: break-word;
                         font-family: sans-serif;
-                        ${soyYo 
-                            ? 'background: #007bff; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px;' 
+                        ${soyYo
+                            ? 'background: #007bff; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px;'
                             : 'background: #e9e9eb; color: black; align-self: flex-start; border-bottom-left-radius: 2px;'}">
                         ${adjunto}
                         ${texto ? '<span>' + texto + '</span>' : ''}
                     </div>`;
             }).join('');
-            
-            // Auto-scroll al final
-            contenedor.scrollTop = contenedor.scrollHeight;
+            contenedor.innerHTML = '<div class="chat-messages-inner">' + html + '</div>';
+
+            if (estabaAbajo) contenedor.scrollTop = contenedor.scrollHeight;
             if (typeof actualizarBurbujaMensajes === 'function') actualizarBurbujaMensajes();
             if (typeof actualizarBurbujasPorContacto === 'function') actualizarBurbujasPorContacto();
         })
