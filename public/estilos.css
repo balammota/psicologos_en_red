@@ -5479,3 +5479,52 @@ select {
         padding: 4px 8px !important;
     }
 }
+
+/* ========== Agenda psicólogo: móvil (un solo bloque, máxima prioridad) ========== */
+@media (max-width: 768px) {
+    #seccion-agenda {
+        overflow-x: hidden;
+    }
+    #seccion-agenda .agenda-container,
+    #seccion-agenda .dash-card,
+    #seccion-agenda .agenda-card-responsive {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    #seccion-agenda .form-horario-simple .form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    #seccion-agenda .form-horario-simple .form-group {
+        width: 100%;
+        min-width: 0;
+    }
+    #seccion-agenda .form-horario-simple .btn-agregar-bloque {
+        width: 100%;
+    }
+    #seccion-agenda .horario-dia {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    #seccion-agenda .horario-dia__nombre {
+        width: 100%;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #eee;
+    }
+    #seccion-agenda .horario-dia__bloques {
+        flex-direction: column;
+        width: 100%;
+        gap: 8px;
+    }
+    #seccion-agenda .bloque-horario {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    #seccion-agenda .bloqueo-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+}
