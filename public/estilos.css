@@ -2272,12 +2272,13 @@ summary::after {
     padding: 30px;
     background-color: var(--fondo-hueso);
     overflow-y: auto;
+    box-sizing: border-box;
 }
 
-/* Móvil: espacio arriba para que el header fijo no tape los títulos de sección (safe-area por notch) */
+/* Móvil: espacio arriba (header) y abajo (scroll llega al final + safe-area) */
 @media (max-width: 768px) {
     .perfil-main {
-        padding: calc(100px + env(safe-area-inset-top, 0px)) 30px 30px 30px;
+        padding: calc(100px + env(safe-area-inset-top, 0px)) 30px calc(50px + env(safe-area-inset-bottom, 0px)) 30px;
     }
 }
 
@@ -2789,15 +2790,16 @@ summary::after {
     font-style: italic;
 }
 
-/* Sección de video: permite scroll para que el usuario pueda mover la vista a su gusto */
+/* Sección de video: permite scroll; padding-bottom para que el scroll llegue al final */
 #seccion-video {
     padding: 20px;
-    padding-bottom: 120px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
     max-height: calc(100vh - 80px);
     overflow-y: auto;
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
 }
 
 #info-video-titulo {
@@ -5623,6 +5625,7 @@ select {
         overflow-x: hidden !important;
         padding-left: 12px !important;
         padding-right: 12px !important;
+        padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
         box-sizing: border-box !important;
     }
     #seccion-video .video-header {
