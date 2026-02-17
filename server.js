@@ -2039,8 +2039,8 @@ app.post('/auth/login', async (req, res) => {
         if (result.rows.length > 0) {
             const usuario = result.rows[0];
             
-            // Verificar si el email está verificado (excepto admin)
-            if (usuario.rol !== 'admin' && !usuario.email_verificado) {
+            // Verificar si el email está verificado (excepto admin; rol en BD puede ser "Admin", "admin", etc.)
+            if ((usuario.rol || '').toString().trim().toLowerCase() !== 'admin' && !usuario.email_verificado) {
                 return res.send(`
                     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 50px auto; padding: 30px; text-align: center; background: #fff3cd; border-radius: 10px; border: 1px solid #ffc107;">
                         <h2 style="color: #856404;">⚠️ Correo no verificado</h2>
@@ -2056,25 +2056,27 @@ app.post('/auth/login', async (req, res) => {
             const match = await bcrypt.compare(password, usuario.password);
 
             if (match) {
+                // Normalizar rol (minúsculas, sin espacios) para que "Admin", "ADMIN", " psicologo " etc. funcionen
+                const rolNormalizado = (usuario.rol || '').trim().toLowerCase();
                 req.session.usuario = {
                     id: usuario.id,
                     nombre: usuario.nombre,
                     email: usuario.email,
-                    rol: usuario.rol 
+                    rol: rolNormalizado
                 };
 
                 // Contador de inicios de sesión (solo paciente y psicólogo; para encuesta en 6to login)
-                if (usuario.rol === 'paciente' || usuario.rol === 'psicologo') {
+                if (rolNormalizado === 'paciente' || rolNormalizado === 'psicologo') {
                     await pool.query(
                         'UPDATE usuarios SET veces_inicio_sesion = COALESCE(veces_inicio_sesion, 0) + 1 WHERE id = $1',
                         [usuario.id]
                     );
                 }
 
-                // REDIRECCIÓN INTELIGENTE
-                if (usuario.rol === 'admin') {
+                // REDIRECCIÓN INTELIGENTE (admin -> panel-admin; psicólogo -> panel-doctor; resto -> perfil)
+                if (rolNormalizado === 'admin') {
                     res.redirect('/panel-admin');
-                } else if (usuario.rol === 'psicologo') {
+                } else if (rolNormalizado === 'psicologo') {
                     res.redirect('/panel-doctor');
                 } else {
                     res.redirect('/perfil');
