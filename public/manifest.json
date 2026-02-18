@@ -2,13 +2,25 @@
   "name": "Psicólogos en Red",
   "short_name": "Psicólogos en Red",
   "description": "Tu camino hacia el bienestar emocional. Agenda sesiones, chatea con tu especialista y gestiona tus citas.",
-  "start_url": "/",
+  "start_url": "/login",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#ED87AF",
-  "background_color": "#F9F7F5",
+  "background_color": "#FFFFFF",
   "scope": "/",
   "icons": [
+    {
+      "src": "/images/logo-white-bg.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/logo-white-bg.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/images/logo.png",
       "sizes": "192x192",
