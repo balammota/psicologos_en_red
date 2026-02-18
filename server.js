@@ -717,10 +717,29 @@ async function ejecutarRecordatoriosPostCita() {
 // 2. CONFIGURACIONES
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// PWA: manifest con tipo MIME correcto (debe ir antes de static)
+// PWA: manifest con iconos en URL absoluta para que el icono se vea al instalar (Chrome exige URL completa en algunos casos)
 app.get('/manifest.json', (req, res) => {
+    const base = (req.get('x-forwarded-proto') || req.protocol) + '://' + (req.get('x-forwarded-host') || req.get('host') || 'localhost');
+    const manifestPath = path.join(__dirname, 'public', 'manifest.json');
+    let manifest;
+    try {
+        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch (e) {
+        return res.status(500).type('application/json').json({ error: 'Manifest no disponible' });
+    }
+    if (manifest.icons && Array.isArray(manifest.icons)) {
+        manifest.icons = manifest.icons.map(icon => {
+            if (icon.src && icon.src.startsWith('/') && !icon.src.startsWith('//')) {
+                return { ...icon, src: base + icon.src };
+            }
+            return icon;
+        });
+    }
+    if (manifest.start_url && manifest.start_url.startsWith('/')) {
+        manifest.start_url = base + manifest.start_url;
+    }
     res.type('application/manifest+json');
-    res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+    res.json(manifest);
 });
 
 app.use(express.static('public'));
