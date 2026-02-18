@@ -155,11 +155,14 @@
             </div>
 
             <div id="seccion-video" class="seccion-panel" style="display: none;">
-                <header class="video-header">
-                    <h2 id="info-video-titulo">Sala de Espera</h2>
-                    <p>Inicia la sesión cuando estés listo.</p>
+                <header class="video-header" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                    <div>
+                        <h2 id="info-video-titulo">Sala de Espera</h2>
+                        <p style="margin:0;">Inicia la sesión cuando estés listo.</p>
+                    </div>
+                    <button type="button" id="btn-pantalla-completa-video" class="btn-pantalla-completa-video" title="Pantalla completa" aria-label="Pantalla completa">⛶ Pantalla completa</button>
                 </header>
-                <div id="jitsi-container" style="height: 70vh; background: #000; border-radius: 15px;"></div>
+                <div id="jitsi-container" style="background: #000; border-radius: 12px;"></div>
 
                 <div class="dash-card" style="margin-top: 15px;">
                     <h3 style="margin-top:0;">📝 Notas de la sesión</h3>
@@ -1714,5 +1717,7 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
         }, 3000);
     </script>
     <script src="/pwa-register.js"></script>
+    <script src="/pwa-standalone.js"></script>
+    <script src="/video-fullscreen.js"></script>
 </body>
 </html>
