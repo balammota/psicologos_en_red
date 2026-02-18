@@ -2917,6 +2917,21 @@ summary::after {
     background: #16213e;
 }
 
+/* En móvil: pseudo-fullscreen (la API nativa no funciona en iOS/Android) */
+body.video-pseudo-fullscreen #jitsi-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: none !important;
+    z-index: 99999 !important;
+    border-radius: 0 !important;
+}
+
 /* Botón para salir del video (opcional) */
 .btn-cerrar-video {
     margin-top: 10px;
