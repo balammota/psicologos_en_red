@@ -717,6 +717,12 @@ async function ejecutarRecordatoriosPostCita() {
 // 2. CONFIGURACIONES
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// PWA: manifest con tipo MIME correcto (debe ir antes de static)
+app.get('/manifest.json', (req, res) => {
+    res.type('application/manifest+json');
+    res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+});
+
 app.use(express.static('public'));
 
 // Favicon: el navegador pide /favicon.ico; servimos el logo para evitar 404 en logs
