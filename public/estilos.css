@@ -2833,10 +2833,10 @@ summary::after {
     font-style: italic;
 }
 
-/* Sección de video: permite scroll; padding-bottom para que el scroll llegue al final */
+/* Sección de video: ocupa todo el espacio disponible; modo pantalla extendida */
 #seccion-video {
-    padding: 20px;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding: 12px;
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     max-height: calc(100vh - 80px);
     overflow-y: auto;
     overflow-x: hidden;
@@ -2845,21 +2845,76 @@ summary::after {
     box-sizing: border-box;
 }
 
+#seccion-video .video-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
 #info-video-titulo {
-    margin-bottom: 15px;
+    margin: 0;
     color: #2c3e50;
     font-weight: bold;
     font-size: 1.5rem;
 }
 
-/* Contenedor del Iframe de Jitsi: altura para que haya más margen y scroll al gusto */
+/* Contenedor del video: mismas medidas que antes; pantalla completa con el botón */
 #seccion-video #jitsi-container {
-    flex-grow: 1;
-    min-height: 90vh;
+    flex: 1;
+    min-height: 70vh;
+    height: 70vh;
     background: #000;
-    border-radius: 15px;
+    border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+#seccion-video #jitsi-container:fullscreen {
+    border-radius: 0;
+    height: 100vh;
+    min-height: 100vh;
+    max-height: none;
+}
+
+/* Botón X para salir de pantalla completa (se muestra por JS cuando está en fullscreen) */
+.jitsi-fs-cerrar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 9999;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.jitsi-fs-cerrar:hover {
+    background: rgba(200,0,0,0.8);
+}
+
+.btn-pantalla-completa-video {
+    padding: 8px 14px;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-pantalla-completa-video:hover {
+    background: #16213e;
 }
 
 /* Botón para salir del video (opcional) */
