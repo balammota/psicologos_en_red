@@ -33,6 +33,7 @@
             display: grid;
             grid-template-columns: 1fr 1.2fr;
             gap: 30px;
+            box-sizing: border-box;
         }
 
         .contacto-info {
@@ -236,10 +237,24 @@
             .contacto-container {
                 grid-template-columns: 1fr;
                 margin-top: -40px;
+                padding: 0 16px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .contacto-hero {
+                padding: 50px 16px;
+                box-sizing: border-box;
             }
 
             .contacto-hero h1 {
                 font-size: 2rem;
+            }
+
+            .contacto-hero p {
+                padding: 0 8px;
+                box-sizing: border-box;
             }
 
             .form-row {
@@ -249,6 +264,19 @@
             .contacto-info,
             .contacto-form-card {
                 padding: 25px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .info-item {
+                box-sizing: border-box;
+            }
+
+            .contacto-form-card .form-group input,
+            .contacto-form-card .form-group textarea,
+            .contacto-form-card .form-group select {
+                box-sizing: border-box;
             }
         }
     </style>
