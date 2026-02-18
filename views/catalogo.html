@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 </head>
 <body>
-
+    <script>if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) document.body.classList.add('pwa-standalone');</script>
     <header class="main-header">
         <a href="/" class="logo" style="color: var(--primario-rosa); text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <img src="/images/logo.png" alt="Logo" style="height: 40px; width: auto;">
@@ -24,9 +24,9 @@
         <label for="nav-toggle" class="nav-toggle-label" aria-label="Abrir menú"><span></span><span></span><span></span></label>
         <nav class="main-nav">
             <ul style="display: flex; list-style: none; gap: 25px; align-items: center;">
-                <li><a href="/" data-i18n="nav_inicio" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Inicio</a></li>
+                <li class="nav-hide-in-pwa"><a href="/" data-i18n="nav_inicio" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Inicio</a></li>
                 <li><a href="/catalogo" data-i18n="nav_psicologos" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Psicólogos</a></li>
-                <li><a href="/academia" data-i18n="nav_academia" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Academia</a></li>
+                <li class="nav-hide-in-pwa"><a href="/academia" data-i18n="nav_academia" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Academia</a></li>
                 <li><a href="/perfil" class="btn-perfil" data-i18n="nav_mi_perfil" style="background: var(--primario-rosa); color: white; padding: 8px 18px; border-radius: 20px; text-decoration: none;">Mi Perfil</a></li>
             </ul>
         </nav>
