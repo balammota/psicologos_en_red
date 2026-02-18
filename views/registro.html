@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ED87AF">
     <title>Crear Cuenta - Psicólogos en Red</title>
+    <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="/estilos.css">
 </head>
 <body class="auth-body" style="background: linear-gradient(135deg, var(--primario-rosa) 0%, var(--suave-arena) 100%);">
@@ -71,7 +73,7 @@
                 <div class="form-group" style="margin-top: 15px;">
                     <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.85rem; color: var(--texto-oscuro); font-weight: 300;">
                         <input type="checkbox" name="acepto_terminos" required style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primario-rosa); cursor: pointer;">
-                        <span>He leído y acepto los <a href="/terminos-condiciones" target="_blank" style="color: var(--primario-rosa); text-decoration: underline;">Términos y Condiciones</a> y el <a href="/aviso-privacidad" target="_blank" style="color: var(--primario-rosa); text-decoration: underline;">Aviso de Privacidad</a>, y confirmo que soy mayor de 18 años.</span>
+                        <span>He leído y acepto los <a href="/terminos-condiciones" target="_blank" style="color: var(--primario-rosa); text-decoration: underline;">Términos y Condiciones</a> y el <a href="/aviso-privacidad" target="_blank" style="color: var(--primario-rosa); text-decoration: underline;">Aviso de Privacidad</a></span>
                     </label>
                 </div>
 
@@ -113,5 +115,6 @@
             document.getElementById('telefono').value = '+' + codigo + numero;
         });
     </script>
+    <script src="/pwa-register.js"></script>
 </body>
 </html>
