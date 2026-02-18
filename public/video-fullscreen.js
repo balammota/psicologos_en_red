@@ -5,9 +5,15 @@
         if (!btn || !cont) return;
 
         var xBtn = null;
+        var pseudoFs = false;
+        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+        function isNativeFullscreen() {
+            return !!(document.fullscreenElement || document.webkitFullscreenElement);
+        }
 
         function isFullscreen() {
-            return !!(document.fullscreenElement || document.webkitFullscreenElement);
+            return isNativeFullscreen() || pseudoFs;
         }
 
         function updateLabel() {
@@ -34,17 +40,31 @@
         }
 
         function exitFullscreen() {
-            if (!isFullscreen()) return;
-            (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+            if (isNativeFullscreen()) {
+                (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+            }
+            if (pseudoFs) {
+                document.body.classList.remove('video-pseudo-fullscreen');
+                pseudoFs = false;
+                removeXButton();
+                updateLabel();
+            }
         }
 
         function onFullscreenChange() {
             updateLabel();
-            if (isFullscreen()) {
+            if (isNativeFullscreen()) {
                 addXButton();
             } else {
                 removeXButton();
             }
+        }
+
+        function enterPseudoFullscreen() {
+            document.body.classList.add('video-pseudo-fullscreen');
+            pseudoFs = true;
+            addXButton();
+            updateLabel();
         }
 
         document.addEventListener('fullscreenchange', onFullscreenChange);
@@ -61,9 +81,13 @@
         btn.addEventListener('click', function () {
             if (isFullscreen()) {
                 exitFullscreen();
-            } else {
-                (cont.requestFullscreen || cont.webkitRequestFullscreen).call(cont);
+                return;
             }
+            if (isMobile) {
+                enterPseudoFullscreen();
+                return;
+            }
+            (cont.requestFullscreen || cont.webkitRequestFullscreen).call(cont);
         });
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
