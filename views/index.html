@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ED87AF">
     <title>Psicólogos en Red - Tu Bienestar</title>
+    <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="/estilos.css">
     <link rel="stylesheet" href="/chat-widget.css">
 </head>
@@ -665,10 +667,47 @@
         </div>
         <div class="footer-bottom">
             <p style="color: var(--suave-arena); opacity: 0.7;">&copy; 2026 Psicólogos en Red. <span data-i18n="footer_derechos">Todos los derechos reservados.</span></p>
+            <p style="margin-top: 8px;"><button type="button" id="btn-instalar-app" style="background: transparent; border: 1px solid var(--suave-arena); color: var(--suave-arena); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;">📲 Instalar aplicación</button></p>
         </div>
     </footer>
 
+    <div id="modal-instalar-app" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); border-top: 6px solid var(--primario-rosa);">
+            <h3 style="margin: 0 0 12px 0; color: var(--primario-rosa);">Instalar en tu dispositivo</h3>
+            <p id="texto-instalar-app" style="color: #555; margin: 0 0 16px 0; font-size: 0.95rem; line-height: 1.5;">En <strong>Chrome</strong> o <strong>Edge</strong>: abre el menú (⋮) y elige <strong>«Instalar Psicólogos en Red»</strong> o busca el icono ⊕ en la barra de direcciones.<br><br>En <strong>iPhone/iPad</strong>: Safari → botón Compartir (□↑) → <strong>«Añadir a la pantalla de inicio»</strong>.</p>
+            <p style="color: #888; font-size: 0.85rem; margin: 0 0 12px 0;">La opción de instalar solo aparece si estás en <strong>https://</strong> o en <strong>localhost</strong>, y si el sitio tiene iconos configurados.</p>
+            <button type="button" id="cerrar-modal-instalar" style="width: 100%; padding: 12px; background: var(--primario-rosa); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">Entendido</button>
+        </div>
+    </div>
+
     <script src="/i18n.js"></script>
     <script src="/chat-widget.js"></script>
+    <script src="/pwa-register.js"></script>
+    <script>
+    (function() {
+        var installPrompt = null;
+        var btn = document.getElementById('btn-instalar-app');
+        var modal = document.getElementById('modal-instalar-app');
+        var texto = document.getElementById('texto-instalar-app');
+        if (!btn || !modal) return;
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            installPrompt = e;
+            btn.textContent = '📲 Instalar aplicación';
+        });
+        btn.addEventListener('click', function() {
+            if (installPrompt) {
+                installPrompt.prompt();
+                installPrompt.userChoice.then(function() { installPrompt = null; });
+            } else {
+                modal.style.display = 'flex';
+            }
+        });
+        document.getElementById('cerrar-modal-instalar').addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+        modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
+    })();
+    </script>
 </body>
 </html>
