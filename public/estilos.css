@@ -52,6 +52,10 @@ body {
     color: var(--secundario-azul);
 }
 
+/* En modo app (PWA): ocultar Inicio, Academia y enlaces institucionales del menú hamburguesa */
+html.pwa-standalone .nav-hide-in-pwa,
+body.pwa-standalone .nav-hide-in-pwa { display: none !important; }
+
 /* Hamburger: ocultar en desktop */
 .nav-toggle { position: absolute; opacity: 0; pointer-events: none; }
 .nav-toggle-label { display: none; }
@@ -2927,9 +2931,21 @@ body.video-pseudo-fullscreen #jitsi-container {
     width: 100vw !important;
     height: 100vh !important;
     height: 100dvh !important;
+    min-height: 100dvh !important;
     max-height: none !important;
     z-index: 99999 !important;
     border-radius: 0 !important;
+    /* Que el iframe de Daily llene todo el alto */
+    display: flex !important;
+    flex-direction: column !important;
+}
+body.video-pseudo-fullscreen #jitsi-container iframe,
+body.video-pseudo-fullscreen #jitsi-container > div {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    flex: 1 !important;
+    min-height: 0 !important;
 }
 
 /* Botón para salir del video (opcional) */
@@ -5393,6 +5409,11 @@ select {
     #jitsi-container {
         height: 50vh !important;
     }
+    body.video-pseudo-fullscreen #jitsi-container {
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        max-height: none !important;
+    }
 
     #seccion-video .dash-card {
         padding: 12px !important;
@@ -5763,6 +5784,13 @@ select {
         min-height: 40vh !important;
         height: 50vh !important;
         box-sizing: border-box !important;
+    }
+    /* Pseudo-fullscreen en móvil: que ocupe todo el alto (anula el 50vh de arriba) */
+    body.video-pseudo-fullscreen #jitsi-container,
+    body.video-pseudo-fullscreen #seccion-video #jitsi-container {
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        max-height: none !important;
     }
     #seccion-video .dash-card {
         width: 100% !important;
