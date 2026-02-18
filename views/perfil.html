@@ -202,8 +202,9 @@
                         <h2>Sesión en Vivo</h2>
                         <p id="info-sesion">Conéctate a tu sesión programada.</p>
                     </div>
+                    <button type="button" id="btn-pantalla-completa-video" class="btn-pantalla-completa-video" title="Pantalla completa" aria-label="Pantalla completa">⛶ Pantalla completa</button>
                 </header>
-                <div id="jitsi-container" style="height: 80vh;"></div>
+                <div id="jitsi-container"></div>
             </div>
 
             <div id="seccion-chat" class="seccion-panel" style="display: none;">
@@ -1250,3 +1251,5 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
     </script>
     <script src="/chat-widget.js"></script>
     <script src="/pwa-register.js"></script>
+    <script src="/pwa-standalone.js"></script>
+    <script src="/video-fullscreen.js"></script>
