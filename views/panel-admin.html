@@ -274,34 +274,23 @@
         .badge-realizada { background: #d4edda; color: #155724; }
         .badge-no-realizada { background: #e3f2fd; color: #0d47a1; }
 
-        /* Responsive */
+        /* Responsive: mismo diseño que panel-doctor (hamburguesa, sidebar oculto, main a ancho completo) */
         @media (max-width: 768px) {
             .admin-sidebar {
-                width: 70px;
-                padding: 15px 0;
-            }
-
-            .admin-sidebar .admin-logo h2 span,
-            .admin-nav li a span:not(.icon) {
-                display: none;
-            }
-
-            .admin-logo {
-                padding: 0 10px 20px;
-                text-align: center;
-            }
-
-            .admin-nav li a {
-                justify-content: center;
-                padding: 14px;
+                display: none !important;
             }
 
             .admin-main {
-                margin-left: 70px;
+                margin-left: 0 !important;
+                width: 100%;
             }
 
             .admin-header h1 {
                 font-size: 1.1rem;
+            }
+
+            .admin-content {
+                padding: 16px;
             }
 
             .stats-grid {
@@ -313,6 +302,12 @@
                 text-align: center;
                 padding: 20px 15px;
             }
+
+            .admin-table-container {
+                padding: 16px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
         }
 
         @media (max-width: 480px) {
@@ -322,9 +317,27 @@
         }
     </style>
 </head>
-<body>
-    <div class="admin-container">
-        <!-- Sidebar -->
+<body class="perfil-body">
+    <div class="perfil-layout admin-container" id="admin-layout">
+        <!-- Solo móvil: menú hamburguesa (mismo diseño que panel-doctor) -->
+        <header class="perfil-mobile-header">
+            <span class="perfil-mobile-title">Panel Admin</span>
+            <input type="checkbox" id="perfil-nav-toggle" class="perfil-nav-toggle" aria-hidden="true" tabindex="-1">
+            <label for="perfil-nav-toggle" class="perfil-nav-toggle-label" aria-label="Abrir menú"><span></span><span></span><span></span></label>
+            <nav class="perfil-mobile-nav">
+                <ul class="perfil-mobile-nav-list">
+                    <li><button type="button" class="perfil-mobile-nav-btn active" data-section="dashboard">📊 Dashboard</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-section="citas">📅 Citas</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-section="psicologos">👨‍⚕️ Psicólogos</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-section="pacientes">👥 Pacientes</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-section="configuracion">⚙️ Configuración</button></li>
+                    <li><a href="/" class="perfil-mobile-nav-link">🌐 Volver al Sitio</a></li>
+                    <li><a href="/logout" class="perfil-mobile-nav-link perfil-mobile-logout">🚪 Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- Sidebar (desktop) -->
         <aside class="admin-sidebar">
             <div class="admin-logo">
                 <h2>
@@ -343,7 +356,7 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="admin-main">
+        <main class="admin-main perfil-main">
             <header class="admin-header">
                 <h1 id="header-title">Dashboard</h1>
                 <div class="admin-user">
@@ -656,30 +669,47 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Navegación entre secciones
+            const titles = {
+                dashboard: 'Dashboard',
+                citas: 'Gestión de Citas',
+                psicologos: 'Psicólogos',
+                pacientes: 'Pacientes',
+                configuracion: 'Configuración'
+            };
+
+            function mostrarSeccionAdmin(section) {
+                document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+                const el = document.getElementById(section);
+                if (el) el.classList.add('active');
+                const titleEl = document.getElementById('header-title');
+                if (titleEl && titles[section]) titleEl.textContent = titles[section];
+                document.querySelectorAll('.admin-nav a[data-section]').forEach(l => {
+                    l.classList.toggle('active', l.dataset.section === section);
+                });
+                document.querySelectorAll('.perfil-mobile-nav-btn[data-section]').forEach(b => {
+                    b.classList.toggle('active', b.dataset.section === section);
+                });
+            }
+
+            // Navegación desktop (sidebar)
             document.querySelectorAll('.admin-nav a[data-section]').forEach(link => {
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
-                    const section = this.dataset.section;
-                    
-                    // Actualizar navegación activa
-                    document.querySelectorAll('.admin-nav a').forEach(l => l.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Mostrar sección
-                    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-                    document.getElementById(section).classList.add('active');
-                    
-                    // Actualizar título
-                    const titles = {
-                        dashboard: 'Dashboard',
-                        citas: 'Gestión de Citas',
-                        psicologos: 'Psicólogos',
-                        pacientes: 'Pacientes',
-                        configuracion: 'Configuración'
-                    };
-                    document.getElementById('header-title').textContent = titles[section];
+                    mostrarSeccionAdmin(this.dataset.section);
                 });
+            });
+
+            // Navegación móvil (hamburguesa): cerrar menú al elegir opción
+            var toggle = document.getElementById('perfil-nav-toggle');
+            document.querySelectorAll('.perfil-mobile-nav-btn[data-section]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var sec = this.getAttribute('data-section');
+                    if (sec) mostrarSeccionAdmin(sec);
+                    if (toggle) toggle.checked = false;
+                });
+            });
+            document.querySelectorAll('.perfil-mobile-nav-link').forEach(function(a) {
+                a.addEventListener('click', function() { if (toggle) toggle.checked = false; });
             });
 
             // Cargar datos
