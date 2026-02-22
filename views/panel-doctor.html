@@ -1276,9 +1276,11 @@ function getCitaDateTimeDoctor(c) {
         const d = new Date(c.fecha_hora_utc);
         if (!isNaN(d.getTime())) return d;
     }
-    const fechaCita = new Date(c.fecha + 'T12:00:00');
-    const [horas, minutos] = (c.hora || "00:00:00").split(':');
-    fechaCita.setHours(parseInt(horas, 10), parseInt(minutos, 10), 0, 0);
+    const fechaStr = (typeof c.fecha === 'string' && c.fecha) ? c.fecha.slice(0, 10) : (c.fecha ? String(c.fecha).slice(0, 10) : '');
+    const fechaCita = new Date(fechaStr + 'T12:00:00');
+    if (isNaN(fechaCita.getTime())) return new Date(0);
+    const [horas, minutos] = (c.hora || '00:00').split(':');
+    fechaCita.setHours(parseInt(horas, 10) || 0, parseInt(minutos, 10) || 0, 0, 0);
     return fechaCita;
 }
 
@@ -1369,10 +1371,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // Función auxiliar para no repetir código de diseño
 function generarTarjetaCita(cita, esFutura) {
     const dCita = getCitaDateTimeDoctor(cita);
-    const fechaFormateada = dCita.toLocaleDateString('es-MX', { 
+    const esValida = !isNaN(dCita.getTime());
+    const fechaFormateada = esValida ? dCita.toLocaleDateString('es-MX', { 
         weekday: 'long', day: 'numeric', month: 'long' 
-    });
-    const horaMostrar = dCita.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    }) : (cita.fecha ? String(cita.fecha).slice(0, 10) : '—');
+    const horaMostrar = esValida ? dCita.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : (cita.hora ? String(cita.hora).slice(0, 5) : '—');
 
     return `
         <div class="cita-card ${esFutura ? 'border-dorado' : 'grisaceo'}">
