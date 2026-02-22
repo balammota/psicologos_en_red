@@ -1051,15 +1051,27 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
             return;
         }
         
-        // Formatear horarios
+        // Mostrar horarios en la zona del usuario (horarios_iso) si viene; si no, en hora del psicólogo
+        const horariosIso = (data.horarios_iso && Array.isArray(data.horarios_iso) && data.horarios_iso.length === data.horarios.length) ? data.horarios_iso : null;
         selectHora.innerHTML = '<option value="" disabled selected>Elige una hora...</option>';
-        data.horarios.forEach(hora => {
-            const h = parseInt(hora.split(':')[0], 10);
-            const periodo = h < 12 ? 'AM' : 'PM';
-            const hora12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-            selectHora.innerHTML += `<option value="${hora}">${String(hora12).padStart(2, '0')}:00 ${periodo}</option>`;
+        data.horarios.forEach((hora, i) => {
+            let texto = hora;
+            if (horariosIso && horariosIso[i]) {
+                try {
+                    const d = new Date(horariosIso[i]);
+                    if (!isNaN(d.getTime())) {
+                        texto = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    }
+                } catch (e) {}
+            } else {
+                const h = parseInt(hora.split(':')[0], 10);
+                const periodo = h < 12 ? 'AM' : 'PM';
+                const hora12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+                texto = String(hora12).padStart(2, '0') + ':00 ' + periodo;
+            }
+            selectHora.innerHTML += `<option value="${hora}">${texto}</option>`;
         });
-        mensajeHorarios.innerText = `${data.horarios.length} horario(s) disponible(s)`;
+        mensajeHorarios.innerText = `${data.horarios.length} horario(s) disponible(s) (en tu hora local)`;
         mensajeHorarios.style.color = '#27ae60';
         
     } catch (error) {
