@@ -261,6 +261,35 @@
                         <p>Define tu horario laboral semanal y registra vacaciones/bloqueos de fechas.</p>
                     </div>
 
+                    <!-- Zona horaria (para recordatorios y hora correcta de las citas) -->
+                    <div class="dash-card agenda-card-responsive" style="margin-bottom: 24px;">
+                        <h3 style="margin-top:0;">🌍 Zona horaria</h3>
+                        <p style="margin:0 0 8px 0; color:#666; font-size:0.95rem;">Se actualiza automáticamente si no has entrado en las últimas 24 h. Si no es la correcta, elige una abajo o pulsa «Detectar automáticamente».</p>
+                        <p style="margin:0 0 12px 0; font-size:0.95rem;"><strong>Tu zona horaria actual:</strong> <span id="zona-actual-texto" style="color:var(--primario-rosa, #c9a0dc);">—</span></p>
+                        <div class="form-row" style="align-items: center;">
+                            <div class="form-group" style="max-width: 320px;">
+                                <label for="zona-horaria-doc">Cambiar zona horaria</label>
+                                <select id="zona-horaria-doc" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                                    <option value="America/Mexico_City">Ciudad de México (GMT-6)</option>
+                                    <option value="America/Tijuana">Tijuana (GMT-8)</option>
+                                    <option value="America/Hermosillo">Hermosillo (GMT-7)</option>
+                                    <option value="America/Monterrey">Monterrey (GMT-6)</option>
+                                    <option value="America/New_York">Nueva York / Este (GMT-5)</option>
+                                    <option value="America/Chicago">Chicago / Centro (GMT-6)</option>
+                                    <option value="America/Denver">Denver / Montaña (GMT-7)</option>
+                                    <option value="America/Los_Angeles">Los Ángeles / Pacífico (GMT-8)</option>
+                                    <option value="America/Bogota">Bogotá (GMT-5)</option>
+                                    <option value="America/Lima">Lima (GMT-5)</option>
+                                    <option value="America/Argentina/Buenos_Aires">Buenos Aires (GMT-3)</option>
+                                    <option value="Europe/Madrid">Madrid / España (GMT+1)</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btn-guardar-zona" class="btn-cita-secundario" style="margin-top: 24px;">Guardar zona</button>
+                            <button type="button" id="btn-detectar-zona" class="btn-cita-secundario" style="margin-top: 24px; margin-left: 8px;">Detectar automáticamente</button>
+                        </div>
+                        <p id="zona-guardada-msg" style="margin:8px 0 0 0; font-size:0.9rem; color:green; display:none;">Zona horaria guardada.</p>
+                    </div>
+
                     <!-- Horario laboral -->
                     <div class="dash-card agenda-card-responsive">
                         <h3 style="margin-top:0;">🕒 Horario de trabajo</h3>
@@ -554,11 +583,12 @@ fetch('/api/quien-soy')
         cargarCitasDoctor();
     }
 
-    // Si abre la agenda, cargamos horarios y vacaciones
+    // Si abre la agenda, cargamos horarios, vacaciones, perfil y zona horaria
     if (seccionId === 'agenda') {
         cargarHorarioLaboral();
         cargarVacaciones();
         cargarPerfilDoctor();
+        cargarZonaHoraria();
     }
 
     // 4. Al salir de video, cerrar Daily o limpiar contenedor
@@ -731,6 +761,11 @@ async function eliminarHorario(id) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const btnZona = document.getElementById('btn-guardar-zona');
+    if (btnZona) btnZona.addEventListener('click', guardarZonaHoraria);
+    const btnDetectarZona = document.getElementById('btn-detectar-zona');
+    if (btnDetectarZona) btnDetectarZona.addEventListener('click', detectarZonaHoraria);
+
     const form = document.getElementById('form-horario');
     if (form) {
         form.addEventListener('submit', async (e) => {
@@ -1099,6 +1134,55 @@ async function cargarPerfilDoctor() {
     }
 }
 
+function cargarZonaHoraria() {
+    fetch('/api/mi-zona-horaria').then(r => r.json()).then(data => {
+        const sel = document.getElementById('zona-horaria-doc');
+        const spanActual = document.getElementById('zona-actual-texto');
+        if (!sel) return;
+        const val = (data.zona_horaria || 'America/Mexico_City').trim() || 'America/Mexico_City';
+        if (sel.querySelector('option[value="' + val.replace(/"/g, '&quot;') + '"]')) {
+            sel.value = val;
+        } else {
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = val + ' (actual)';
+            sel.insertBefore(opt, sel.firstChild);
+            sel.value = val;
+        }
+        if (spanActual) spanActual.textContent = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : val;
+    }).catch(() => {});
+}
+
+function guardarZonaHoraria() {
+    const sel = document.getElementById('zona-horaria-doc');
+    const msg = document.getElementById('zona-guardada-msg');
+    if (!sel) return;
+    fetch('/api/mi-zona-horaria', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zona_horaria: sel.value })
+    }).then(r => r.json()).then(data => {
+        if (msg) { msg.style.display = 'block'; msg.style.color = 'green'; msg.textContent = 'Zona horaria guardada.'; setTimeout(() => { msg.style.display = 'none'; }, 3000); }
+        cargarZonaHoraria();
+    }).catch(() => { if (msg) { msg.style.display = 'block'; msg.style.color = 'red'; msg.textContent = 'Error al guardar.'; } });
+}
+
+function detectarZonaHoraria() {
+    const msg = document.getElementById('zona-guardada-msg');
+    const btn = document.getElementById('btn-detectar-zona');
+    if (btn) btn.disabled = true;
+    fetch('/api/mi-zona-horaria/detectar', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.zona_horaria) {
+                cargarZonaHoraria();
+                if (msg) { msg.style.display = 'block'; msg.style.color = 'green'; msg.textContent = 'Zona detectada: ' + data.zona_horaria; setTimeout(() => { msg.style.display = 'none'; }, 4000); }
+            }
+        })
+        .catch(() => { if (msg) { msg.style.display = 'block'; msg.style.color = 'red'; msg.textContent = 'No se pudo detectar.'; } })
+        .finally(() => { if (btn) btn.disabled = false; });
+}
+
 function activarEdicionDoc() {
     // Habilitar campos editables
     document.getElementById('doc-telefono').removeAttribute('readonly');
@@ -1188,7 +1272,11 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 function getCitaDateTimeDoctor(c) {
-    const fechaCita = new Date(c.fecha);
+    if (c.fecha_hora_utc) {
+        const d = new Date(c.fecha_hora_utc);
+        if (!isNaN(d.getTime())) return d;
+    }
+    const fechaCita = new Date(c.fecha + 'T12:00:00');
     const [horas, minutos] = (c.hora || "00:00:00").split(':');
     fechaCita.setHours(parseInt(horas, 10), parseInt(minutos, 10), 0, 0);
     return fechaCita;
@@ -1280,15 +1368,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Función auxiliar para no repetir código de diseño
 function generarTarjetaCita(cita, esFutura) {
-    const fechaFormateada = new Date(cita.fecha).toLocaleDateString('es-MX', { 
+    const dCita = getCitaDateTimeDoctor(cita);
+    const fechaFormateada = dCita.toLocaleDateString('es-MX', { 
         weekday: 'long', day: 'numeric', month: 'long' 
     });
+    const horaMostrar = dCita.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
     return `
         <div class="cita-card ${esFutura ? 'border-dorado' : 'grisaceo'}">
             <div class="cita-info">
                 <h4>${cita.paciente_nombre}</h4>
-                <span>${fechaFormateada} | ${cita.hora.slice(0,5)}</span>
+                <span>${fechaFormateada} | ${horaMostrar}</span>
                 <p><strong>Motivo:</strong> ${cita.motivo || 'No especificado'}</p>
             </div>
             <div class="cita-acciones">
