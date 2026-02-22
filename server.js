@@ -2864,14 +2864,16 @@ app.put('/api/mi-zona-horaria', authRequired, async (req, res) => {
     }
 });
 
-// Detectar zona horaria por IP y guardarla (para el psicólogo)
+// Detectar zona horaria: si el front envía zona del navegador se usa (más fiable); si no, por IP
 app.post('/api/mi-zona-horaria/detectar', authRequired, async (req, res) => {
     if (req.session.usuario.rol !== 'psicologo') return res.status(403).json({ error: 'Acceso denegado' });
     try {
         const psicologoId = await getPsicologoIdFromSession(req);
         if (!psicologoId) return res.status(404).json({ error: 'Perfil de psicólogo no encontrado' });
-        const tzIp = await getTimezoneFromIpAsync(req);
-        const zona = (tzIp && tzIp.length <= 64) ? tzIp : 'America/Mexico_City';
+        const desdeNavegador = req.body && typeof req.body.zona_horaria === 'string' && req.body.zona_horaria.trim().length > 0 && req.body.zona_horaria.includes('/');
+        const zona = desdeNavegador
+            ? req.body.zona_horaria.trim().slice(0, 64)
+            : ((await getTimezoneFromIpAsync(req)) || 'America/Mexico_City').slice(0, 64);
         try {
             await pool.query(
                 `UPDATE psicologos SET zona_horaria = $1, zona_horaria_actualizada_at = NOW() WHERE id = $2`,
