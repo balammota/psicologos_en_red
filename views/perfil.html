@@ -95,6 +95,7 @@
                 <header class="video-header">
                     <h2>📅 Mis Citas</h2>
                     <p>Aquí puedes ver todas tus sesiones programadas y tu historial.</p>
+                    <p class="perfil-citas-leyenda" style="font-size: 0.9rem; color: #666; margin: 0.5rem 0 0 0;">Horarios mostrados en tu hora local (según tu dispositivo).</p>
                 </header>
 
                 <div class="citas-secciones-container">
@@ -538,8 +539,12 @@ fetch('/api/quien-soy')
                     const ahora = new Date();
 
                     function getCitaDateTime(cita) {
+                        if (cita.fecha_hora_utc) {
+                            const d = new Date(cita.fecha_hora_utc);
+                            if (!isNaN(d.getTime())) return d;
+                        }
                         const [horas, minutos] = (cita.hora || "00:00:00").split(':');
-                        const fechaCita = new Date(cita.fecha);
+                        const fechaCita = new Date(cita.fecha + 'T12:00:00');
                         fechaCita.setHours(parseInt(horas, 10), parseInt(minutos, 10), 0, 0);
                         return fechaCita;
                     }
@@ -571,8 +576,9 @@ fetch('/api/quien-soy')
                     if (resumenDiv) {
                         if (citasFuturas.length > 0) {
                             const proxima = citasFuturas[0];
+                            const dProx = getCitaDateTime(proxima);
                             resumenDiv.innerHTML = `<strong>Sesión con ${proxima.psicologo_nombre}</strong><br>
-                                ${new Date(proxima.fecha).toLocaleDateString()} - ${proxima.hora.slice(0,5)}`;
+                                ${dProx.toLocaleDateString('es-MX')} - ${dProx.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
                         } else {
                             resumenDiv.innerHTML = `<p style=\"color: #888;\">No tienes citas pendientes.</p>`;
                         }
@@ -624,9 +630,11 @@ fetch('/api/quien-soy')
 
                     // Asegurarse de que generarTarjetaCita esté definida y funcione correctamente
                     function generarTarjetaCita(cita, esFutura) {
-                        const fechaFormateada = new Date(cita.fecha).toLocaleDateString('es-MX', {
+                        const dCita = getCitaDateTime(cita);
+                        const fechaFormateada = dCita.toLocaleDateString('es-MX', {
                             weekday: 'long', day: 'numeric', month: 'long'
                         });
+                        const horaMostrar = dCita.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
                         const hoursUntil = (getCitaDateTime(cita) - ahora) / 3600000;
 
@@ -665,7 +673,7 @@ fetch('/api/quien-soy')
 
                                 <div class="cita-card-meta">
                                     <span>📅 ${fechaFormateada}</span>
-                                    <span>⏰ ${cita.hora.slice(0,5)}</span>
+                                    <span>⏰ ${horaMostrar}</span>
                                 </div>
 
                                 <div class="cita-card-actions">
@@ -1083,21 +1091,30 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
                     return;
                 }
 
+                const horariosIso = (data.horarios_iso && Array.isArray(data.horarios_iso) && data.horarios_iso.length === data.horarios.length) ? data.horarios_iso : null;
                 selectHora.innerHTML = '<option value="" disabled>Elige una hora...</option>';
-                data.horarios.forEach(hora => {
-                    const h = parseInt(hora.split(':')[0], 10);
-                    const periodo = h < 12 ? 'AM' : 'PM';
-                    const hora12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+                data.horarios.forEach((hora, i) => {
+                    let texto = hora;
+                    if (horariosIso && horariosIso[i]) {
+                        try {
+                            const d = new Date(horariosIso[i]);
+                            if (!isNaN(d.getTime())) texto = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+                        } catch (e) {}
+                    } else {
+                        const h = parseInt(hora.split(':')[0], 10);
+                        const periodo = h < 12 ? 'AM' : 'PM';
+                        const hora12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+                        texto = String(hora12).padStart(2, '0') + ':00 ' + periodo;
+                    }
                     const selected = (horaSeleccionada && hora === horaSeleccionada.slice(0,5)) ? 'selected' : '';
-                    selectHora.innerHTML += `<option value="${hora}" ${selected}>${String(hora12).padStart(2, '0')}:00 ${periodo}</option>`;
+                    selectHora.innerHTML += `<option value="${hora}" ${selected}>${texto}</option>`;
                 });
 
-                // Si ninguna fue seleccionada, seleccionar el placeholder
                 if (!horaSeleccionada || !data.horarios.includes(horaSeleccionada?.slice(0,5))) {
                     selectHora.selectedIndex = 0;
                 }
 
-                mensaje.innerText = `${data.horarios.length} horario(s) disponible(s)`;
+                mensaje.innerText = `${data.horarios.length} horario(s) disponible(s) (en tu hora local)`;
                 mensaje.style.color = '#27ae60';
 
             } catch (error) {
