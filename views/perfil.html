@@ -543,9 +543,12 @@ fetch('/api/quien-soy')
                             const d = new Date(cita.fecha_hora_utc);
                             if (!isNaN(d.getTime())) return d;
                         }
-                        const [horas, minutos] = (cita.hora || "00:00:00").split(':');
-                        const fechaCita = new Date(cita.fecha + 'T12:00:00');
-                        fechaCita.setHours(parseInt(horas, 10), parseInt(minutos, 10), 0, 0);
+                        // Normalizar fecha: puede llegar "YYYY-MM-DD" o ISO completo desde el servidor
+                        const fechaStr = (typeof cita.fecha === 'string' && cita.fecha) ? cita.fecha.slice(0, 10) : (cita.fecha ? String(cita.fecha).slice(0, 10) : '');
+                        const [horas, minutos] = (cita.hora || '00:00').split(':');
+                        const fechaCita = new Date(fechaStr + 'T12:00:00');
+                        if (isNaN(fechaCita.getTime())) return new Date(0);
+                        fechaCita.setHours(parseInt(horas, 10) || 0, parseInt(minutos, 10) || 0, 0, 0);
                         return fechaCita;
                     }
 
@@ -577,8 +580,11 @@ fetch('/api/quien-soy')
                         if (citasFuturas.length > 0) {
                             const proxima = citasFuturas[0];
                             const dProx = getCitaDateTime(proxima);
+                            const proxValida = !isNaN(dProx.getTime());
+                            const proxFecha = proxValida ? dProx.toLocaleDateString('es-MX') : (proxima.fecha ? String(proxima.fecha).slice(0, 10) : '—');
+                            const proxHora = proxValida ? dProx.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : (proxima.hora ? String(proxima.hora).slice(0, 5) : '—');
                             resumenDiv.innerHTML = `<strong>Sesión con ${proxima.psicologo_nombre}</strong><br>
-                                ${dProx.toLocaleDateString('es-MX')} - ${dProx.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
+                                ${proxFecha} - ${proxHora}`;
                         } else {
                             resumenDiv.innerHTML = `<p style=\"color: #888;\">No tienes citas pendientes.</p>`;
                         }
@@ -631,10 +637,11 @@ fetch('/api/quien-soy')
                     // Asegurarse de que generarTarjetaCita esté definida y funcione correctamente
                     function generarTarjetaCita(cita, esFutura) {
                         const dCita = getCitaDateTime(cita);
-                        const fechaFormateada = dCita.toLocaleDateString('es-MX', {
+                        const esValida = !isNaN(dCita.getTime());
+                        const fechaFormateada = esValida ? dCita.toLocaleDateString('es-MX', {
                             weekday: 'long', day: 'numeric', month: 'long'
-                        });
-                        const horaMostrar = dCita.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                        }) : (cita.fecha ? String(cita.fecha).slice(0, 10) : '—');
+                        const horaMostrar = esValida ? dCita.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : (cita.hora ? String(cita.hora).slice(0, 5) : '—');
 
                         const hoursUntil = (getCitaDateTime(cita) - ahora) / 3600000;
 
