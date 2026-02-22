@@ -264,7 +264,7 @@
                     <!-- Zona horaria (para recordatorios y hora correcta de las citas) -->
                     <div class="dash-card agenda-card-responsive" style="margin-bottom: 24px;">
                         <h3 style="margin-top:0;">🌍 Zona horaria</h3>
-                        <p style="margin:0 0 8px 0; color:#666; font-size:0.95rem;">Se actualiza automáticamente si no has entrado en las últimas 24 h. Si no es la correcta, elige una abajo o pulsa «Detectar automáticamente».</p>
+                        <p style="margin:0 0 8px 0; color:#666; font-size:0.95rem;">Se actualiza al entrar (por conexión) o al pulsar «Detectar automáticamente» (usa la hora de tu dispositivo, más precisa). Si sale mal, elige la zona manualmente abajo.</p>
                         <p style="margin:0 0 12px 0; font-size:0.95rem;"><strong>Tu zona horaria actual:</strong> <span id="zona-actual-texto" style="color:var(--primario-rosa, #c9a0dc);">—</span></p>
                         <div class="form-row" style="align-items: center;">
                             <div class="form-group" style="max-width: 320px;">
@@ -1171,7 +1171,13 @@ function detectarZonaHoraria() {
     const msg = document.getElementById('zona-guardada-msg');
     const btn = document.getElementById('btn-detectar-zona');
     if (btn) btn.disabled = true;
-    fetch('/api/mi-zona-horaria/detectar', { method: 'POST' })
+    // Usar la zona del navegador (más fiable que IP: refleja dónde está el dispositivo)
+    const zonaNavegador = typeof Intl !== 'undefined' && Intl.DateTimeFormat && Intl.DateTimeFormat().resolvedOptions().timeZone ? Intl.DateTimeFormat().resolvedOptions().timeZone : '';
+    fetch('/api/mi-zona-horaria/detectar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(zonaNavegador ? { zona_horaria: zonaNavegador } : {})
+    })
         .then(r => r.json())
         .then(data => {
             if (data.zona_horaria) {
