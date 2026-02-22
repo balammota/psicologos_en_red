@@ -81,7 +81,10 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
         const { paciente_id, psicologo_id, fecha, hora } = session.metadata || {};
         if (paciente_id && psicologo_id && fecha && hora) {
             pool.query(
-                'INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria)
+                 SELECT $1, $2, $3, $4, $5, COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City')
+                 FROM psicologos p WHERE p.id = $2
+                 RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
             ).then(async (result) => {
                 const cita_id = result.rows[0]?.id || null;
@@ -577,18 +580,35 @@ async function enviarCorreoNotificacionChatSiAplica(destinatarioId, remitenteId)
     }
 }
 
-/** Job: enviar recordatorios 30 min antes. Ejecuta cada 5 min y envía a citas en ventana 25–35 min. */
+/** Job: enviar recordatorios 30 min antes. La hora de la cita se interpreta en c.zona_horaria (ej. America/Mexico_City). */
+const ZONA_HORARIA_DEFECTO = 'America/Mexico_City';
+
 async function ejecutarRecordatoriosCitas() {
     try {
-        const res = await pool.query(`
-            SELECT c.id, c.paciente_id, c.psicologo_id, c.fecha, c.hora
-            FROM citas c
-            WHERE c.estado IN ('pendiente', 'confirmada')
-              AND c.recordatorio_enviado_at IS NULL
-              AND (c.fecha + c.hora) > NOW()
-              AND (c.fecha + c.hora) - NOW() <= INTERVAL '35 minutes'
-              AND (c.fecha + c.hora) - NOW() >= INTERVAL '25 minutes'
-        `);
+        let res;
+        try {
+            res = await pool.query(`
+                SELECT c.id, c.paciente_id, c.psicologo_id, c.fecha, c.hora
+                FROM citas c
+                WHERE c.estado IN ('pendiente', 'confirmada')
+                  AND c.recordatorio_enviado_at IS NULL
+                  AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) > NOW()
+                  AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW() <= INTERVAL '35 minutes'
+                  AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW() >= INTERVAL '25 minutes'
+            `, [ZONA_HORARIA_DEFECTO]);
+        } catch (qErr) {
+            if (qErr.message && (qErr.message.includes('zona_horaria') || qErr.message.includes('does not exist'))) {
+                res = await pool.query(`
+                    SELECT c.id, c.paciente_id, c.psicologo_id, c.fecha, c.hora
+                    FROM citas c
+                    WHERE c.estado IN ('pendiente', 'confirmada')
+                      AND c.recordatorio_enviado_at IS NULL
+                      AND (c.fecha + c.hora) > NOW()
+                      AND (c.fecha + c.hora) - NOW() <= INTERVAL '35 minutes'
+                      AND (c.fecha + c.hora) - NOW() >= INTERVAL '25 minutes'
+                `);
+            } else throw qErr;
+        }
         for (const row of res.rows) {
             try {
                 await enviarCorreosRecordatorioCita(row.paciente_id, row.psicologo_id, row.fecha, row.hora, row.id);
@@ -1383,6 +1403,41 @@ function parseCountryFromGeoJson(json) {
     return cc || null;
 }
 
+// Mapa país → zona horaria por defecto (por si la API no devuelve timezone)
+const COUNTRY_DEFAULT_TZ = {
+    MX: 'America/Mexico_City', US: 'America/New_York', CA: 'America/Toronto',
+    ES: 'Europe/Madrid', AR: 'America/Argentina/Buenos_Aires', CO: 'America/Bogota',
+    PE: 'America/Lima', CL: 'America/Santiago', EC: 'America/Guayaquil'
+};
+
+/** Obtener zona horaria IANA por IP (misma lógica que precio: IP real, no localhost).
+ *  Resuelve con ip-api.com (timezone) o fallback countryCode → COUNTRY_DEFAULT_TZ. */
+function getTimezoneFromIpAsync(req) {
+    return new Promise((resolve) => {
+        const clientIp = getClientIp(req);
+        if (/^127\.|^::1$|^::ffff:127\./i.test(clientIp) || isIpNoConfiable(clientIp)) {
+            return resolve(null);
+        }
+        const encodedIp = encodeURIComponent(clientIp);
+        const url = `http://ip-api.com/json/${encodedIp}?fields=timezone,countryCode`;
+        http.get(url, (apiRes) => {
+            let data = '';
+            apiRes.on('data', chunk => { data += chunk; });
+            apiRes.on('end', () => {
+                try {
+                    const j = JSON.parse(data || '{}');
+                    const tz = (j.timezone && typeof j.timezone === 'string' && j.timezone.includes('/')) ? j.timezone.trim() : null;
+                    if (tz) return resolve(tz);
+                    const cc = (j.countryCode || '').toUpperCase();
+                    return resolve(COUNTRY_DEFAULT_TZ[cc] || null);
+                } catch (e) {
+                    resolve(null);
+                }
+            });
+        }).on('error', () => resolve(null));
+    });
+}
+
 // Helper: obtener precio según IP (Promise). Solo devuelve MXN/USD cuando la geolocalización es segura; si no, regionUnknown (nunca asumir MXN).
 // Usamos APIs con HTTPS primero; ip-api.com gratis solo permite HTTP por eso es fallback.
 function getPrecioRegionAsync(req) {
@@ -1854,15 +1909,31 @@ app.get('/api/psicologos', async (req, res) => {
 app.get('/api/mis-citas-paciente', authRequired, async (req, res) => {
     try {
         await marcarCitasNoRealizadas();
-        const result = await pool.query(
-            `SELECT c.id, c.fecha, c.hora, c.estado, c.link_sesion, c.psicologo_id, p.nombre as psicologo_nombre
-             FROM citas c 
-             JOIN psicologos p ON c.psicologo_id = p.id 
-             WHERE c.paciente_id = $1 
-             ORDER BY c.fecha ASC, c.hora ASC`,
-            [req.session.usuario.id]
-        );
-        res.json(result.rows);
+        let result;
+        try {
+            result = await pool.query(
+                `SELECT c.id, c.fecha, c.hora, c.estado, c.link_sesion, c.psicologo_id, p.nombre as psicologo_nombre,
+                 ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), 'America/Mexico_City')) AS fecha_hora_utc
+                 FROM citas c 
+                 JOIN psicologos p ON c.psicologo_id = p.id 
+                 WHERE c.paciente_id = $1 
+                 ORDER BY c.fecha ASC, c.hora ASC`,
+                [req.session.usuario.id]
+            );
+        } catch (e) {
+            if (e.message && e.message.includes('zona_horaria')) {
+                result = await pool.query(
+                    `SELECT c.id, c.fecha, c.hora, c.estado, c.link_sesion, c.psicologo_id, p.nombre as psicologo_nombre
+                     FROM citas c JOIN psicologos p ON c.psicologo_id = p.id WHERE c.paciente_id = $1 ORDER BY c.fecha ASC, c.hora ASC`,
+                    [req.session.usuario.id]
+                );
+            } else throw e;
+        }
+        const rows = result.rows.map(r => ({
+            ...r,
+            fecha_hora_utc: r.fecha_hora_utc ? (r.fecha_hora_utc instanceof Date ? r.fecha_hora_utc.toISOString() : r.fecha_hora_utc) : null
+        }));
+        res.json(rows);
     } catch (error) {
         console.error("Error al obtener citas del paciente:", error);
         res.status(500).json({ error: 'Error al obtener citas' });
@@ -2098,6 +2169,11 @@ app.post('/auth/login', async (req, res) => {
                     );
                 }
 
+                // Psicólogo: si no ha hecho login en las últimas 24h, detectar zona horaria por IP y actualizar
+                if (rolNormalizado === 'psicologo') {
+                    await actualizarZonaHorariaSiPasaron24h(req);
+                }
+
                 // REDIRECCIÓN INTELIGENTE (admin -> panel-admin; psicólogo -> panel-doctor; resto -> perfil)
                 if (rolNormalizado === 'admin') {
                     res.redirect('/panel-admin');
@@ -2234,13 +2310,24 @@ app.get('/api/disponibilidad-calendario/:psicologoId', async (req, res) => {
     }
 });
 
-// Obtener horarios disponibles para un psicólogo en una fecha
+// Obtener horarios disponibles para un psicólogo en una fecha. Devuelve horarios (hora en zona del psicólogo) y horarios_iso (ISO UTC) para mostrar en la zona del usuario.
 app.get('/api/horarios-disponibles/:psicologoId', async (req, res) => {
     const psicologoId = parseInt(req.params.psicologoId, 10);
     const { fecha } = req.query; // formato: YYYY-MM-DD
 
     if (!fecha || Number.isNaN(psicologoId)) {
         return res.status(400).json({ error: 'Fecha y psicólogo son requeridos' });
+    }
+
+    const ZONA_DEFECTO = 'America/Mexico_City';
+    let zonaHoraria = ZONA_DEFECTO;
+    try {
+        const tzRow = await pool.query('SELECT zona_horaria FROM psicologos WHERE id = $1', [psicologoId]);
+        if (tzRow.rows[0] && tzRow.rows[0].zona_horaria && String(tzRow.rows[0].zona_horaria).trim()) {
+            zonaHoraria = String(tzRow.rows[0].zona_horaria).trim();
+        }
+    } catch (e) {
+        if (!e.message || !e.message.includes('zona_horaria')) console.error('Error zona horario:', e.message);
     }
 
     try {
@@ -2255,7 +2342,7 @@ app.get('/api/horarios-disponibles/:psicologoId', async (req, res) => {
             [psicologoId, fecha]
         );
         if (vacacionesResult.rows.length > 0) {
-            return res.json({ disponible: false, horarios: [], mensaje: 'El psicólogo no está disponible en esta fecha' });
+            return res.json({ disponible: false, horarios: [], horarios_iso: [], mensaje: 'El psicólogo no está disponible en esta fecha' });
         }
 
         // 2. Obtener horario laboral para ese día de la semana
@@ -2267,7 +2354,7 @@ app.get('/api/horarios-disponibles/:psicologoId', async (req, res) => {
         );
 
         if (horarioResult.rows.length === 0) {
-            return res.json({ disponible: false, horarios: [], mensaje: 'El psicólogo no trabaja este día' });
+            return res.json({ disponible: false, horarios: [], horarios_iso: [], mensaje: 'El psicólogo no trabaja este día' });
         }
 
         // 3. Generar todos los horarios posibles (bloques de 1 hora)
@@ -2290,14 +2377,40 @@ app.get('/api/horarios-disponibles/:psicologoId', async (req, res) => {
         const horasOcupadas = citasResult.rows.map(c => c.hora_ocupada);
         horariosDisponibles = horariosDisponibles.filter(h => !horasOcupadas.includes(h));
 
-        // 5. Si es hoy, quitar horarios pasados
+        // 5. Si es hoy, quitar horarios pasados según la zona del psicólogo
         const hoy = new Date().toISOString().split('T')[0];
-        if (fecha === hoy) {
-            const horaActual = new Date().getHours();
-            horariosDisponibles = horariosDisponibles.filter(h => parseInt(h.split(':')[0], 10) > horaActual);
+        if (fecha === hoy && horariosDisponibles.length > 0) {
+            try {
+                const ahoraPsi = await pool.query(
+                    `SELECT TO_CHAR(NOW() AT TIME ZONE $1, 'HH24:MI') AS ahora`,
+                    [zonaHoraria]
+                );
+                const ahora = (ahoraPsi.rows[0] && ahoraPsi.rows[0].ahora) ? ahoraPsi.rows[0].ahora : null;
+                if (ahora) {
+                    horariosDisponibles = horariosDisponibles.filter(h => h > ahora);
+                }
+            } catch (e) {
+                const horaActual = new Date().getHours();
+                horariosDisponibles = horariosDisponibles.filter(h => parseInt(h.split(':')[0], 10) > horaActual);
+            }
         }
 
-        res.json({ disponible: true, horarios: horariosDisponibles });
+        // 6. Horarios en ISO UTC para que el front muestre la hora en la zona del usuario
+        let horariosIso = [];
+        if (horariosDisponibles.length > 0) {
+            try {
+                const isoResult = await pool.query(
+                    `SELECT (($1::date + u.hora::time) AT TIME ZONE $2)::timestamptz AS t
+                     FROM unnest($3::text[]) AS u(hora)`,
+                    [fecha, zonaHoraria, horariosDisponibles]
+                );
+                horariosIso = isoResult.rows.map(r => r.t instanceof Date ? r.t.toISOString() : (r.t ? new Date(r.t).toISOString() : ''));
+            } catch (e) {
+                // si falla (ej. columna o timezone) dejamos horarios_iso vacío; el front puede mostrar la hora del psicólogo
+            }
+        }
+
+        res.json({ disponible: true, horarios: horariosDisponibles, horarios_iso: horariosIso, zona_horaria: zonaHoraria });
     } catch (error) {
         console.error('Error al obtener horarios disponibles:', error);
         res.status(500).json({ error: 'Error al obtener horarios' });
@@ -2480,14 +2593,20 @@ app.post('/api/agendar-cita', authRequired, async (req, res) => {
 
         if (motivo) {
             const insertResult = await pool.query(
-                'INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, motivo_de_consulta) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, motivo_de_consulta, zona_horaria)
+                 SELECT $1, $2, $3, $4, $5, $6, COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City')
+                 FROM psicologos p WHERE p.id = $2
+                 RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, motivo]
             );
             const cita_id = insertResult.rows[0]?.id || null;
             try { await enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora, cita_id); } catch (e) { console.error('Error enviando correos cita:', e); }
         } else {
             const insertResult = await pool.query(
-                'INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria)
+                 SELECT $1, $2, $3, $4, $5, COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City')
+                 FROM psicologos p WHERE p.id = $2
+                 RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
             );
             const cita_id = insertResult.rows[0]?.id || null;
@@ -2578,12 +2697,13 @@ app.post('/api/reagendar-cita', authRequired, async (req, res) => {
         }
 
         const result = await pool.query(
-            `UPDATE citas
-             SET fecha = $1, hora = $2, estado = 'pendiente'
-             WHERE id = $3 AND paciente_id = $4
-               AND estado IN ('pendiente', 'confirmada')
+            `UPDATE citas c
+             SET fecha = $1, hora = $2, estado = 'pendiente',
+                 zona_horaria = COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City')
+             FROM psicologos p WHERE p.id = c.psicologo_id AND c.id = $3 AND c.paciente_id = $4
+               AND c.estado IN ('pendiente', 'confirmada')
                AND ($1::date + $2::time) > NOW()
-             RETURNING id`,
+             RETURNING c.id`,
             [fecha, hora, cita_id, paciente_id]
         );
 
@@ -2669,6 +2789,106 @@ async function getPsicologoIdFromSession(req) {
     const r = await pool.query('SELECT id FROM psicologos WHERE usuario_id = $1 LIMIT 1', [userId]);
     return r.rows.length ? r.rows[0].id : null;
 }
+
+/** Si el psicólogo no ha hecho login en las últimas 24h, detecta zona por IP y actualiza psicologos. */
+async function actualizarZonaHorariaSiPasaron24h(req) {
+    const psicologoId = await getPsicologoIdFromSession(req);
+    if (!psicologoId) return;
+    try {
+        const r = await pool.query(
+            `SELECT id, zona_horaria_actualizada_at FROM psicologos WHERE id = $1`,
+            [psicologoId]
+        );
+        if (r.rows.length === 0) return;
+        const updatedAt = r.rows[0].zona_horaria_actualizada_at;
+        if (updatedAt) {
+            const hace = await pool.query(
+                `SELECT (NOW() - $1::timestamptz) > INTERVAL '24 hours' AS pasaron24`,
+                [updatedAt]
+            );
+            if (hace.rows[0] && !hace.rows[0].pasaron24) return; // ya se actualizó en las últimas 24h
+        }
+        const tzIp = await getTimezoneFromIpAsync(req);
+        const zona = (tzIp && tzIp.length <= 64) ? tzIp : 'America/Mexico_City';
+        await pool.query(
+            `UPDATE psicologos SET zona_horaria = $1, zona_horaria_actualizada_at = NOW() WHERE id = $2`,
+            [zona, psicologoId]
+        );
+    } catch (e) {
+        if (e.message && !e.message.includes('zona_horaria_actualizada_at')) console.error('actualizarZonaHorariaSiPasaron24h:', e.message);
+    }
+}
+
+app.get('/api/mi-zona-horaria', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'psicologo') return res.status(403).json({ error: 'Acceso denegado' });
+    try {
+        const psicologoId = await getPsicologoIdFromSession(req);
+        if (!psicologoId) return res.status(404).json({ error: 'Perfil de psicólogo no encontrado' });
+        let r = await pool.query('SELECT zona_horaria FROM psicologos WHERE id = $1', [psicologoId]);
+        let zona = (r.rows[0] && r.rows[0].zona_horaria) ? String(r.rows[0].zona_horaria).trim() : '';
+        if (!zona) {
+            const tzIp = await getTimezoneFromIpAsync(req);
+            zona = (tzIp && tzIp.length <= 64) ? tzIp : 'America/Mexico_City';
+            await pool.query('UPDATE psicologos SET zona_horaria = $1 WHERE id = $2', [zona, psicologoId]);
+        }
+        res.json({ zona_horaria: zona || 'America/Mexico_City' });
+    } catch (e) {
+        if (e.message && e.message.includes('zona_horaria')) return res.json({ zona_horaria: 'America/Mexico_City' });
+        console.error('Error mi-zona-horaria:', e.message);
+        res.status(500).json({ error: 'Error al obtener zona horaria' });
+    }
+});
+
+app.put('/api/mi-zona-horaria', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'psicologo') return res.status(403).json({ error: 'Acceso denegado' });
+    const zona = req.body && req.body.zona_horaria != null ? String(req.body.zona_horaria).trim().slice(0, 64) : '';
+    const valor = zona || 'America/Mexico_City';
+    try {
+        const psicologoId = await getPsicologoIdFromSession(req);
+        if (!psicologoId) return res.status(404).json({ error: 'Perfil de psicólogo no encontrado' });
+        try {
+            await pool.query(
+                `UPDATE psicologos SET zona_horaria = $1, zona_horaria_actualizada_at = NOW() WHERE id = $2`,
+                [valor, psicologoId]
+            );
+        } catch (e2) {
+            if (e2.message && e2.message.includes('zona_horaria_actualizada_at')) {
+                await pool.query('UPDATE psicologos SET zona_horaria = $1 WHERE id = $2', [valor, psicologoId]);
+            } else throw e2;
+        }
+        res.json({ success: true, zona_horaria: valor });
+    } catch (e) {
+        if (e.message && e.message.includes('zona_horaria')) return res.status(500).json({ error: 'Ejecuta la migración add_zona_horaria_citas_psicologos.sql en la base de datos' });
+        console.error('Error actualizar zona horaria:', e.message);
+        res.status(500).json({ error: 'Error al actualizar zona horaria' });
+    }
+});
+
+// Detectar zona horaria por IP y guardarla (para el psicólogo)
+app.post('/api/mi-zona-horaria/detectar', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'psicologo') return res.status(403).json({ error: 'Acceso denegado' });
+    try {
+        const psicologoId = await getPsicologoIdFromSession(req);
+        if (!psicologoId) return res.status(404).json({ error: 'Perfil de psicólogo no encontrado' });
+        const tzIp = await getTimezoneFromIpAsync(req);
+        const zona = (tzIp && tzIp.length <= 64) ? tzIp : 'America/Mexico_City';
+        try {
+            await pool.query(
+                `UPDATE psicologos SET zona_horaria = $1, zona_horaria_actualizada_at = NOW() WHERE id = $2`,
+                [zona, psicologoId]
+            );
+        } catch (e2) {
+            if (e2.message && e2.message.includes('zona_horaria_actualizada_at')) {
+                await pool.query('UPDATE psicologos SET zona_horaria = $1 WHERE id = $2', [zona, psicologoId]);
+            } else throw e2;
+        }
+        res.json({ success: true, zona_horaria: zona });
+    } catch (e) {
+        if (e.message && e.message.includes('zona_horaria')) return res.status(500).json({ error: 'Ejecuta la migración add_zona_horaria_citas_psicologos.sql' });
+        console.error('Error detectar zona:', e.message);
+        res.status(500).json({ error: 'No se pudo detectar la zona horaria' });
+    }
+});
 
 app.get('/api/horario-laboral', authRequired, async (req, res) => {
     if (req.session.usuario.rol !== 'psicologo') return res.status(403).json({ error: 'Acceso denegado' });
@@ -3428,7 +3648,7 @@ app.post('/api/citas/:citaId/registrar-entrada', authRequired, async (req, res) 
 app.get('/api/mis-citas-doctor', authRequired, async (req, res) => {
     try {
         await marcarCitasNoRealizadas();
-        const query = `
+        let query = `
             SELECT 
                 c.id AS cita_id,
                 c.fecha,
@@ -3438,15 +3658,33 @@ app.get('/api/mis-citas-doctor', authRequired, async (req, res) => {
                 c.notas,
                 u.nombre AS paciente_nombre,
                 u.id AS paciente_usuario_id,
-                u.id AS id_para_chat
+                u.id AS id_para_chat,
+                ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), 'America/Mexico_City')) AS fecha_hora_utc
             FROM citas c
             JOIN vista_psicologos v ON c.psicologo_id = v.psicologo_id_tabla
             JOIN usuarios u ON c.paciente_id = u.id 
             WHERE v.usuario_id = $1
             ORDER BY c.fecha ASC, c.hora ASC`;
 
-        const result = await pool.query(query, [req.session.usuario.id]);
-        res.json(result.rows);
+        let result;
+        try {
+            result = await pool.query(query, [req.session.usuario.id]);
+        } catch (e) {
+            if (e.message && e.message.includes('zona_horaria')) {
+                result = await pool.query(`
+                    SELECT c.id AS cita_id, c.fecha, c.hora, c.estado, c.link_sesion, c.notas,
+                           u.nombre AS paciente_nombre, u.id AS paciente_usuario_id, u.id AS id_para_chat
+                    FROM citas c JOIN vista_psicologos v ON c.psicologo_id = v.psicologo_id_tabla JOIN usuarios u ON c.paciente_id = u.id
+                    WHERE v.usuario_id = $1 ORDER BY c.fecha ASC, c.hora ASC`,
+                    [req.session.usuario.id]
+                );
+            } else throw e;
+        }
+        const rows = result.rows.map(r => ({
+            ...r,
+            fecha_hora_utc: r.fecha_hora_utc ? (r.fecha_hora_utc instanceof Date ? r.fecha_hora_utc.toISOString() : r.fecha_hora_utc) : null
+        }));
+        res.json(rows);
     } catch (error) {
         res.status(500).send("Error");
     }
