@@ -294,7 +294,7 @@
                     <div class="dash-card agenda-card-responsive">
                         <h3 style="margin-top:0;">🕒 Horario de trabajo</h3>
                         <p style="margin:0 0 16px 0; color:#666; font-size:0.95rem;">
-                            Agrega los bloques de tiempo en los que atiendes pacientes cada semana.
+                            Agrega los bloques de tiempo en los que atiendes (solo horas en punto: 09:00, 10:00, etc.).
                         </p>
 
                         <form id="form-horario" class="form-horario-simple">
@@ -313,11 +313,11 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="hl-inicio">Desde</label>
-                                    <input type="time" id="hl-inicio" value="09:00" required>
+                                    <input type="time" id="hl-inicio" value="09:00" step="3600" required title="Solo horas en punto (ej. 09:00)">
                                 </div>
                                 <div class="form-group">
                                     <label for="hl-fin">Hasta</label>
-                                    <input type="time" id="hl-fin" value="13:00" required>
+                                    <input type="time" id="hl-fin" value="13:00" step="3600" required title="Solo horas en punto (ej. 13:00)">
                                 </div>
                                 <button type="submit" class="btn-agregar-bloque">+ Agregar</button>
                             </div>
@@ -729,8 +729,13 @@ async function cargarHorarioLaboral() {
                 <div class="horario-dia__bloques">`;
 
             for (const b of bloques) {
-                const ini = String(b.hora_inicio).slice(0, 5);
-                const fin = String(b.hora_fin).slice(0, 5);
+                const partsIni = String(b.hora_inicio).split(':');
+                const partsFin = String(b.hora_fin).split(':');
+                const hIni = parseInt(partsIni[0], 10) || 0;
+                const hFin = parseInt(partsFin[0], 10) || 0;
+                const mFin = parseInt(partsFin[1], 10) || 0;
+                const ini = `${String(hIni).padStart(2, '0')}:00`;
+                const fin = `${String(mFin > 0 ? hFin + 1 : hFin).padStart(2, '0')}:00`;
                 html += `
                     <div class="bloque-horario">
                         <span>${ini} – ${fin}</span>
@@ -771,8 +776,11 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const dia_semana = Number(document.getElementById('hl-dia').value);
-            const hora_inicio = document.getElementById('hl-inicio').value;
-            const hora_fin = document.getElementById('hl-fin').value;
+            let hora_inicio = document.getElementById('hl-inicio').value;
+            let hora_fin = document.getElementById('hl-fin').value;
+            // Forzar horas en punto (HH:00) por si el navegador no respeta step="3600"
+            if (hora_inicio && hora_inicio.length >= 5) hora_inicio = hora_inicio.slice(0, 5).replace(/:(\d{2})$/, ':00');
+            if (hora_fin && hora_fin.length >= 5) hora_fin = hora_fin.slice(0, 5).replace(/:(\d{2})$/, ':00');
 
             if (!hora_inicio || !hora_fin) {
                 return mostrarPopup('Completa ambas horas.', 'Horario');
