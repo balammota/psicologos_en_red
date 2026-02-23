@@ -1348,6 +1348,40 @@ GUÍA DE NAVEGACIÓN:
 
 PRECIOS: Varían por psicólogo y servicio. Se ven en el catálogo en cada tarjeta y al "Agendar cita".`;
 
+// Información fija de la página Academia (historia, pilares, tipo de programas). Redi debe usar solo esto y la lista dinámica de diplomados.
+const ACADEMIA_STATIC_CONTEXT = `
+
+ACADEMIA VIRTUAL (usa solo la información siguiente; no inventes cursos ni diplomados):
+- La Academia Virtual de Psicólogos en Red ofrece formación especializada para psicólogas, psicólogos y estudiantes. Eslogan: "Tu aprendizaje, tu ritmo".
+- Objetivo: brindar herramientas y conocimientos actualizados que fortalezcan el ejercicio clínico y el crecimiento profesional y personal. Cursos y diplomados en línea, experiencia integral y práctica.
+- La directora Lucy Contreras indica que la Academia surge para cerrar la brecha entre el aula y el consultorio, con programas de especialización en línea que profesionalicen el quehacer clínico.
+- La coordinadora académica Alejandra Azuara es capacitadora certificada ante SEP/CONOCER; los programas tienen respaldo curricular y constancias con valor oficial.
+- Pilares: Excelencia académica (contenidos basados en evidencia), Flexibilidad total (acceso 24 h, aprender a tu ritmo), Enfoque humano (crecimiento personal), Respaldo curricular (constancia con valor, SEP/CONOCER).
+- Para ver programas y fechas el usuario debe entrar a ${BASE_URL_CHAT}/academia. Los diplomados y cursos disponibles en este momento son los listados en el bloque "DIPLOMADOS Y CURSOS DISPONIBLES" siguiente; no menciones ni inventes otros.`;
+
+/** Construye el texto de diplomados activos para inyectar en el prompt del chat (desde la base de datos). */
+async function getDiplomadosContextForChat() {
+    try {
+        const r = await pool.query(
+            `SELECT id, area, titulo, fecha_inicio, descripcion_corta, descripcion_larga
+             FROM diplomados WHERE activo = true ORDER BY orden ASC, id ASC`
+        );
+        if (!r.rows.length) return '\nDIPLOMADOS Y CURSOS DISPONIBLES: No hay programas publicados en este momento. Indica que puede revisar la página de Academia más adelante.';
+        const lines = r.rows.map(d => {
+            const descLarga = (d.descripcion_larga || '')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 350);
+            return `- ${d.titulo} (${d.area}). Inicio: ${d.fecha_inicio || 'consultar'}. Resumen: ${d.descripcion_corta || ''}. ${descLarga ? descLarga + '.' : ''} Para más información y registro: ${BASE_URL_CHAT}/academia`;
+        });
+        return '\nDIPLOMADOS Y CURSOS DISPONIBLES (solo estos existen; no inventes otros):\n' + lines.join('\n');
+    } catch (e) {
+        console.error('Error obteniendo diplomados para chat:', e.message);
+        return '\nDIPLOMADOS Y CURSOS DISPONIBLES: No disponible temporalmente. Indica que visite ' + BASE_URL_CHAT + '/academia para ver la oferta actual.';
+    }
+}
+
 /** Construye el texto de psicólogos para inyectar en el prompt (nombre, especialidad, biografía, áreas, servicios). */
 async function getPsicologosContextForChat() {
     try {
@@ -1401,8 +1435,11 @@ app.post('/api/chat', async (req, res) => {
             ...(showCrisisNotice && { crisisNotice: CRISIS_NOTICE })
         });
     }
-    const psicologosContext = await getPsicologosContextForChat();
-    const systemContent = CHAT_SYSTEM_BASE + psicologosContext;
+    const [psicologosContext, diplomadosContext] = await Promise.all([
+        getPsicologosContextForChat(),
+        getDiplomadosContextForChat()
+    ]);
+    const systemContent = CHAT_SYSTEM_BASE + psicologosContext + ACADEMIA_STATIC_CONTEXT + diplomadosContext;
     const messages = [
         { role: 'system', content: systemContent },
         ...(Array.isArray(history) ? history.slice(-10).map(m => ({ role: m.role, content: String(m.content || '').slice(0, 500) })) : []),
