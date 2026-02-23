@@ -668,12 +668,22 @@ fetch('/api/quien-soy')
                         const estadoClass = estadoTexto.toLowerCase().replace(/\s+/g, '-');
 
                         const escJs = (s) => (s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r/g,'').replace(/\n/g,' ');
+                        const inicioCitaMs = dCita.getTime();
+                        const ahoraMs = Date.now();
+                        const MS_15_MIN = 15 * 60 * 1000;
+                        const puedeUnirseAhora = (ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_15_MIN);
                         const botonPrincipal = esFutura
-                            ? `
+                            ? (puedeUnirseAhora
+                                ? `
                                 <button onclick="iniciarVideo('${escJs(cita.link_sesion || '')}', '${escJs(cita.psicologo_nombre || '')}', ${cita.id})" class="btn-entrar-sesion">
                                     🎥 Unirse
                                 </button>
                               `
+                                : `
+                                <button type="button" onclick="mostrarPopup('Se activará 15 minutos antes de la cita.', 'Unirse'); return false;" class="btn-entrar-sesion btn-entrar-sesion-deshabilitado" title="Se activará 15 minutos antes de la cita">
+                                    🎥 Unirse
+                                </button>
+                              `)
                             : `
                                 <button onclick="abrirModalDetalleCita('${encodeURIComponent(cita.psicologo_nombre)}','${new Date(cita.fecha).toISOString()}','${cita.hora}','${encodeURIComponent(estadoTexto)}','${encodeURIComponent(cita.link_sesion || '')}',${cita.id})" class="btn-entrar-sesion">
                                     📄 Ver detalles
