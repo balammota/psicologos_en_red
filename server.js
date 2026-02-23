@@ -93,7 +93,22 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
         const session = event.data.object;
         const { paciente_id, psicologo_id, fecha, hora } = session.metadata || {};
         if (paciente_id && psicologo_id && fecha && hora) {
-            pool.query(
+            const paymentIntentId = typeof session.payment_intent === 'string'
+                ? session.payment_intent
+                : (session.payment_intent && session.payment_intent.id) || null;
+            const insertWithPaymentIntent = () => pool.query(
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc, stripe_payment_intent_id)
+                 SELECT $1, $2, $3, $4, $5,
+                   CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
+                   (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text,
+                   $6
+                 FROM psicologos p WHERE p.id = $2
+                 RETURNING id`,
+                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, paymentIntentId || null]
+            );
+            const insertSinStripe = () => pool.query(
                 `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc)
                  SELECT $1, $2, $3, $4, $5,
                    CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
@@ -103,11 +118,25 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
-            ).then(async (result) => {
+            );
+            insertWithPaymentIntent()
+            .then(async (result) => {
                 const cita_id = result.rows[0]?.id || null;
                 try { await enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora, cita_id); } catch (e) { console.error('Error enviando correos cita (webhook):', e); }
                 res.status(200).send();
-            }).catch(err => {
+            })
+            .catch(async (err) => {
+                if (err.message && (err.message.includes('stripe_payment_intent_id') || err.message.includes('does not exist'))) {
+                    try {
+                        const result = await insertSinStripe();
+                        const cita_id = result.rows[0]?.id || null;
+                        try { await enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora, cita_id); } catch (e) { console.error('Error enviando correos cita (webhook):', e); }
+                        return res.status(200).send();
+                    } catch (e2) {
+                        console.error('Error creando cita desde webhook (fallback):', e2);
+                        return res.status(500).send();
+                    }
+                }
                 console.error('Error creando cita desde webhook:', err);
                 res.status(500).send();
             });
@@ -2916,7 +2945,7 @@ app.post('/api/reagendar-cita', authRequired, async (req, res) => {
     }
 });
 
-// Cancelar una cita existente (solo del paciente dueño)
+// Cancelar una cita existente (solo del paciente dueño). Con ≥36 h: reembolso en Stripe y luego estado cancelada.
 app.post('/api/cancelar-cita', authRequired, async (req, res) => {
     const { cita_id } = req.body;
     const paciente_id = req.session.usuario.id;
@@ -2930,6 +2959,7 @@ app.post('/api/cancelar-cita', authRequired, async (req, res) => {
             `SELECT 
                 id,
                 estado,
+                stripe_payment_intent_id,
                 EXTRACT(EPOCH FROM ((fecha + hora) - NOW())) AS seconds_until
              FROM citas
              WHERE id = $1 AND paciente_id = $2
@@ -2941,7 +2971,7 @@ app.post('/api/cancelar-cita', authRequired, async (req, res) => {
             return res.status(404).json({ error: 'Cita no encontrada' });
         }
 
-        const { estado, seconds_until } = citaInfo.rows[0];
+        const { estado, seconds_until, stripe_payment_intent_id } = citaInfo.rows[0];
 
         if (!['pendiente', 'confirmada'].includes(estado)) {
             return res.status(403).json({ error: 'Solo puedes cancelar citas pendientes o confirmadas.' });
@@ -2950,6 +2980,23 @@ app.post('/api/cancelar-cita', authRequired, async (req, res) => {
         const hoursUntil = Number(seconds_until) / 3600;
         if (!(hoursUntil >= 36)) {
             return res.status(403).json({ error: 'Solo puedes cancelar con 36 horas de anticipación.' });
+        }
+
+        const paymentIntentId = stripe_payment_intent_id && String(stripe_payment_intent_id).trim();
+        if (paymentIntentId && stripe) {
+            try {
+                await stripe.refunds.create({
+                    payment_intent: paymentIntentId,
+                    reason: 'requested_by_customer',
+                });
+            } catch (refundErr) {
+                console.error('Stripe refund error al cancelar cita', cita_id, refundErr.message);
+                const code = refundErr.code || refundErr.type;
+                const msg = code === 'charge_already_refunded'
+                    ? 'Este pago ya fue reembolsado.'
+                    : 'No se pudo procesar el reembolso. Intenta de nuevo o contacta a soporte.';
+                return res.status(502).json({ error: msg });
+            }
         }
 
         const result = await pool.query(
@@ -2966,15 +3013,20 @@ app.post('/api/cancelar-cita', authRequired, async (req, res) => {
 
         const row = result.rows[0];
         const psicologo_id = row.psicologo_id;
-        // Normalizar fecha/hora: RETURNING puede devolver Date u otro formato; pasamos valor seguro
         let fechaCita = row.fecha;
         if (fechaCita instanceof Date) fechaCita = fechaCita.toISOString().slice(0, 10);
         else if (fechaCita != null) fechaCita = String(fechaCita).slice(0, 10);
         const horaCita = row.hora != null ? String(row.hora).substring(0, 5) : '';
         try { await enviarCorreosCitaCancelada(paciente_id, psicologo_id, fechaCita, horaCita, cita_id); } catch (e) { console.error('Error enviando correos cancelación:', e); }
-        res.json({ success: true });
+        res.json({
+            success: true,
+            reembolso_solicitado: !!paymentIntentId,
+        });
     } catch (error) {
         console.error("Error al cancelar cita:", error);
+        if (error.message && (error.message.includes('stripe_payment_intent_id') || error.message.includes('does not exist'))) {
+            return res.status(500).json({ error: 'Ejecuta la migración add_stripe_payment_intent_id_citas.sql para habilitar reembolsos.' });
+        }
         res.status(500).json({ error: 'Error al cancelar cita' });
     }
 });
