@@ -397,9 +397,9 @@ fetch('/api/quien-soy')
                 if(document.getElementById('config-contacto-emergencia')) document.getElementById('config-contacto-emergencia').value = user.contacto_emergencia || '';
                 
                 cargarCitas();
-                // Detectar región para pago (igual que catálogo): así al agendar desde perfil se cobra MXN/USD correcto
-                fetch('/api/precio-region').then(function(r) { return r.json(); }).then(function(data) {
-                    if (data && !data.regionUnknown && (data.currency === 'MXN' || data.currency === 'USD')) precioCurrencyPerfil = data.currency;
+                // Detectar región para pago (misma cadena que catálogo: ipapi.co → ip.sb → /api/precio-region)
+                obtenerPrecioRegionPerfil().then(function(data) {
+                    if (data && (data.currency === 'MXN' || data.currency === 'USD')) precioCurrencyPerfil = data.currency;
                 }).catch(function() {});
                 // Popup "Califica a tu psicólogo" después de la 3ª cita realizada (siguiente vez que inicia sesión)
                 setTimeout(function() {
@@ -1015,6 +1015,21 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
         let gestionPsicologoId = null;
         let precioCurrencyPerfil = ''; // misma lógica que catálogo: detectar región para pago
 
+        // Misma detección de región que catálogo (ipapi.co → ip.sb → /api/precio-region)
+        function parseRegionPerfil(data) {
+            const cc = (data.country_code || data.countryCode || '').toUpperCase();
+            if (!cc) return null;
+            return { currency: cc === 'MX' ? 'MXN' : 'USD', inMexico: cc === 'MX' };
+        }
+        function obtenerPrecioRegionPerfil() {
+            return fetch('https://ipapi.co/json/')
+                .then(r => r.json())
+                .then(data => { const r = parseRegionPerfil(data); return r ? r : Promise.reject(new Error('no country')); })
+                .catch(() => fetch('https://api.ip.sb/geoip').then(r => r.json()).then(data => { const r = parseRegionPerfil(data); return r ? r : Promise.reject(new Error('no country')); }))
+                .catch(() => fetch('/api/precio-region').then(r => r.json()))
+                .then(region => (region && !region.regionUnknown && (region.currency === 'MXN' || region.currency === 'USD')) ? region : null);
+        }
+
         function toLocalDateInputValue(dateLike) {
             const d = new Date(dateLike);
             d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -1173,13 +1188,12 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
                     cargarCitas();
                     mostrarPopup('Listo', 'Cita actualizada');
                 } else {
-                    // Agendar nueva cita: redirigir a Stripe Checkout. Obtener región justo antes (igual que catálogo) para no depender del load.
+                    // Agendar nueva cita: redirigir a Stripe Checkout. Región = misma cadena que catálogo (ipapi.co → ip.sb → /api/precio-region).
                     let currency = (precioCurrencyPerfil === 'MXN' || precioCurrencyPerfil === 'USD') ? precioCurrencyPerfil : '';
                     if (!currency) {
                         try {
-                            const regionRes = await fetch('/api/precio-region');
-                            const regionData = await regionRes.json().catch(() => ({}));
-                            if (regionData && !regionData.regionUnknown && (regionData.currency === 'MXN' || regionData.currency === 'USD')) {
+                            const regionData = await obtenerPrecioRegionPerfil();
+                            if (regionData && (regionData.currency === 'MXN' || regionData.currency === 'USD')) {
                                 currency = regionData.currency;
                                 precioCurrencyPerfil = currency;
                             }
