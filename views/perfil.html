@@ -397,6 +397,10 @@ fetch('/api/quien-soy')
                 if(document.getElementById('config-contacto-emergencia')) document.getElementById('config-contacto-emergencia').value = user.contacto_emergencia || '';
                 
                 cargarCitas();
+                // Detectar región para pago (igual que catálogo): así al agendar desde perfil se cobra MXN/USD correcto
+                fetch('/api/precio-region').then(function(r) { return r.json(); }).then(function(data) {
+                    if (data && !data.regionUnknown && (data.currency === 'MXN' || data.currency === 'USD')) precioCurrencyPerfil = data.currency;
+                }).catch(function() {});
                 // Popup "Califica a tu psicólogo" después de la 3ª cita realizada (siguiente vez que inicia sesión)
                 setTimeout(function() {
                     fetch('/api/debo-opinar-psicologo').then(function(r) { return r.json(); }).then(function(data) {
@@ -1009,6 +1013,7 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
         let gestionModo = null; // 'agendar' | 'reagendar'
         let gestionCitaId = null;
         let gestionPsicologoId = null;
+        let precioCurrencyPerfil = ''; // misma lógica que catálogo: detectar región para pago
 
         function toLocalDateInputValue(dateLike) {
             const d = new Date(dateLike);
@@ -1168,18 +1173,20 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
                     cargarCitas();
                     mostrarPopup('Listo', 'Cita actualizada');
                 } else {
-                    // Agendar nueva cita: redirigir a Stripe Checkout para pagar
+                    // Agendar nueva cita: redirigir a Stripe Checkout para pagar (currency = misma lógica que catálogo)
+                    const body = {
+                        psicologo_id: gestionPsicologoId,
+                        fecha,
+                        hora,
+                        servicio_interes: 'Sesión de psicoterapia',
+                        success_url: window.location.origin + '/perfil?pago=exito',
+                        cancel_url: window.location.origin + '/perfil'
+                    };
+                    if (precioCurrencyPerfil === 'MXN' || precioCurrencyPerfil === 'USD') body.currency = precioCurrencyPerfil;
                     res = await fetch('/api/crear-sesion-pago', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            psicologo_id: gestionPsicologoId,
-                            fecha,
-                            hora,
-                            servicio_interes: 'Sesión de psicoterapia',
-                            success_url: window.location.origin + '/perfil?pago=exito',
-                            cancel_url: window.location.origin + '/perfil'
-                        })
+                        body: JSON.stringify(body)
                     });
                     const data = await res.json().catch(() => ({}));
                     if (res.ok && data.url) {
