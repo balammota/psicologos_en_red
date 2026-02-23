@@ -2812,10 +2812,11 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
             monto = Math.round(monto * 100);
         }
 
-        // Prueba de pago: si STRIPE_TEST_AMOUNT_MXN está definido (ej: 1), forzar ese monto en MXN. Quitar la variable para volver a precios reales.
+        // Prueba de pago: si STRIPE_TEST_AMOUNT_MXN está definido (ej: 1), forzar ese monto en MXN. Stripe exige mínimo 10 MXN en Live.
         const testAmountMxn = process.env.STRIPE_TEST_AMOUNT_MXN ? parseInt(process.env.STRIPE_TEST_AMOUNT_MXN, 10) : 0;
         if (testAmountMxn > 0) {
-            monto = testAmountMxn * 100; // Stripe usa centavos
+            const mxnCentavos = Math.max(testAmountMxn * 100, 1000); // mínimo 10 MXN = 1000 centavos
+            monto = mxnCentavos;
             currency = 'mxn';
         }
 
@@ -2833,8 +2834,8 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
                     currency,
                     unit_amount: monto,
                     product_data: {
-                        name: testAmountMxn > 0 ? `Prueba de pago (${testAmountMxn} MXN)` : (servicio_interes || 'Sesión de psicoterapia'),
-                        description: testAmountMxn > 0 ? 'Pago de prueba - eliminar variable STRIPE_TEST_AMOUNT_MXN después' : `1 sesión - ${fecha} ${hora}`,
+                        name: testAmountMxn > 0 ? `Prueba de pago (${Math.max(testAmountMxn, 10)} MXN)` : (servicio_interes || 'Sesión de psicoterapia'),
+                        description: testAmountMxn > 0 ? 'Pago de prueba (mín. 10 MXN por Stripe) - quitar STRIPE_TEST_AMOUNT_MXN después' : `1 sesión - ${fecha} ${hora}`,
                     },
                 },
                 quantity: 1,
