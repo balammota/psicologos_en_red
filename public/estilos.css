@@ -2801,6 +2801,17 @@ summary::after {
     background: #219150;
 }
 
+.btn-entrar-deshabilitado,
+.btn-entrar.btn-entrar-deshabilitado {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: auto;
+}
+.btn-entrar-deshabilitado:hover,
+.btn-entrar.btn-entrar-deshabilitado:hover {
+    background: #27ae60;
+}
+
 .btn-chat-icon {
     background: #f1f3f5;
     border: 1px solid #dee2e6;
@@ -3762,6 +3773,17 @@ select {
 
 .btn-entrar-sesion:hover {
     background-color: #d17a8a; /* Un rosa un poco más oscuro */
+}
+
+.btn-entrar-sesion-deshabilitado,
+.btn-entrar-sesion.btn-entrar-sesion-deshabilitado {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: auto;
+}
+.btn-entrar-sesion-deshabilitado:hover,
+.btn-entrar-sesion.btn-entrar-sesion-deshabilitado:hover {
+    background-color: var(--primario-rosa);
 }
 
 .btn-volver {
