@@ -616,6 +616,22 @@ async function ejecutarRecordatoriosCitas() {
             console.log('[Recordatorios]', nowIso, 'zona_horaria=', usoZonaHoraria, 'citas a enviar=', res.rows.length, 'ids=', res.rows.map(r => r.id));
         } else {
             console.log('[Recordatorios]', nowIso, 'zona_horaria=', usoZonaHoraria, '→ 0 citas en ventana 25-35 min');
+            // Diagnóstico: listar candidatas (pendiente/confirmada, sin recordatorio, futuras) y minutos hasta cada una
+            try {
+                const diag = await pool.query(`
+                    SELECT c.id,
+                      ROUND(EXTRACT(EPOCH FROM (((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW())) / 60)::int AS min_hasta
+                    FROM citas c
+                    WHERE c.estado IN ('pendiente', 'confirmada')
+                      AND c.recordatorio_enviado_at IS NULL
+                      AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) > NOW()
+                `, [ZONA_HORARIA_DEFECTO]);
+                if (diag.rows.length > 0) {
+                    console.log('[Recordatorios] candidatas (futuras, sin recordatorio):', diag.rows.map(r => 'id ' + r.id + ' en ' + r.min_hasta + ' min').join(', '));
+                }
+            } catch (eDiag) {
+                if (eDiag.message && !eDiag.message.includes('zona_horaria')) console.error('[Recordatorios] diag:', eDiag.message);
+            }
         }
         for (const row of res.rows) {
             try {
