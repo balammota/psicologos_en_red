@@ -1401,6 +1401,17 @@ function generarTarjetaCita(cita, esFutura) {
     }) : (cita.fecha ? String(cita.fecha).slice(0, 10) : '—');
     const horaMostrar = esValida ? dCita.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : (cita.hora ? String(cita.hora).slice(0, 5) : '—');
 
+    const escJs = (s) => (s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r/g,'').replace(/\n/g,' ');
+    const inicioCitaMs = dCita.getTime();
+    const ahoraMs = Date.now();
+    const MS_15_MIN = 15 * 60 * 1000;
+    const puedeUnirseAhora = (ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_15_MIN);
+    const botonVideo = esFutura
+        ? (puedeUnirseAhora
+            ? `<button onclick="iniciarVideo('${escJs(cita.link_sesion || '')}', '${escJs(cita.paciente_nombre || '')}', ${cita.cita_id})" class="btn-entrar">🎥 Iniciar Sesión</button>`
+            : `<button type="button" onclick="mostrarPopup('Se activará 15 minutos antes de la cita.', 'Iniciar sesión'); return false;" class="btn-entrar btn-entrar-deshabilitado" title="Se activará 15 minutos antes de la cita">🎥 Iniciar Sesión</button>`)
+        : (() => { const e = (cita.estado || 'pendiente').toLowerCase(); const esCancelada = e === 'cancelada'; const esRealizada = e === 'realizada'; return `<span class="badge-${esCancelada ? 'cancelada' : esRealizada ? 'finalizada' : 'no-realizada'}">${esCancelada ? 'Cancelada' : esRealizada ? 'Realizada' : 'No realizada'}</span>`; })();
+
     return `
         <div class="cita-card ${esFutura ? 'border-dorado' : 'grisaceo'}">
             <div class="cita-info">
@@ -1409,10 +1420,7 @@ function generarTarjetaCita(cita, esFutura) {
                 <p><strong>Motivo:</strong> ${cita.motivo || 'No especificado'}</p>
             </div>
             <div class="cita-acciones">
-                ${esFutura 
-                    ? (() => { const escJs = (s) => (s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r/g,'').replace(/\n/g,' '); return `<button onclick="iniciarVideo('${escJs(cita.link_sesion || '')}', '${escJs(cita.paciente_nombre || '')}', ${cita.cita_id})" class="btn-entrar">🎥 Iniciar Sesión</button>`; })()
-                    : (() => { const e = (cita.estado || 'pendiente').toLowerCase(); const esCancelada = e === 'cancelada'; const esRealizada = e === 'realizada'; return `<span class="badge-${esCancelada ? 'cancelada' : esRealizada ? 'finalizada' : 'no-realizada'}">${esCancelada ? 'Cancelada' : esRealizada ? 'Realizada' : 'No realizada'}</span>`; })()
-                }
+                ${botonVideo}
                 ${esFutura
                     ? `<button onclick="abrirNotasEnVideo(${cita.cita_id}, '${cita.paciente_nombre}')" class="btn-chat-icon">📝</button>`
                     : `<button onclick="abrirModalNotas(${cita.cita_id}, '${cita.paciente_nombre}', '${new Date(cita.fecha).toISOString()}', '${cita.hora}')" class="btn-chat-icon">📝</button>`
