@@ -584,6 +584,7 @@ async function enviarCorreoNotificacionChatSiAplica(destinatarioId, remitenteId)
 const ZONA_HORARIA_DEFECTO = 'America/Mexico_City';
 
 async function ejecutarRecordatoriosCitas() {
+    const nowIso = new Date().toISOString();
     try {
         let res;
         let usoZonaHoraria = true;
@@ -611,9 +612,10 @@ async function ejecutarRecordatoriosCitas() {
                 `);
             } else throw qErr;
         }
-        const nowIso = new Date().toISOString();
         if (res.rows.length > 0) {
             console.log('[Recordatorios]', nowIso, 'zona_horaria=', usoZonaHoraria, 'citas a enviar=', res.rows.length, 'ids=', res.rows.map(r => r.id));
+        } else {
+            console.log('[Recordatorios]', nowIso, 'zona_horaria=', usoZonaHoraria, '→ 0 citas en ventana 25-35 min');
         }
         for (const row of res.rows) {
             try {
