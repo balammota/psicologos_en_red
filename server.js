@@ -2447,21 +2447,38 @@ app.get('/api/horarios-disponibles/:psicologoId', async (req, res) => {
         const horasOcupadas = citasResult.rows.map(c => c.hora_ocupada);
         horariosDisponibles = horariosDisponibles.filter(h => !horasOcupadas.includes(h));
 
-        // 5. Si es hoy, quitar horarios pasados según la zona del psicólogo
-        const hoy = new Date().toISOString().split('T')[0];
-        if (fecha === hoy && horariosDisponibles.length > 0) {
+        // 5. Si la fecha es "hoy" en la zona del psicólogo, quitar horarios ya pasados (slot debe ser estrictamente después de ahora)
+        let hoyPsi = null;
+        try {
+            const hoyRow = await pool.query(
+                `SELECT (NOW() AT TIME ZONE $1)::date AS hoy`,
+                [zonaHoraria]
+            );
+            if (hoyRow.rows[0] && hoyRow.rows[0].hoy) {
+                const d = hoyRow.rows[0].hoy;
+                hoyPsi = d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
+            }
+        } catch (e) {
+            hoyPsi = new Date().toISOString().split('T')[0];
+        }
+        if (hoyPsi && fecha === hoyPsi && horariosDisponibles.length > 0) {
             try {
                 const ahoraPsi = await pool.query(
                     `SELECT TO_CHAR(NOW() AT TIME ZONE $1, 'HH24:MI') AS ahora`,
                     [zonaHoraria]
                 );
-                const ahora = (ahoraPsi.rows[0] && ahoraPsi.rows[0].ahora) ? ahoraPsi.rows[0].ahora : null;
+                const ahora = (ahoraPsi.rows[0] && ahoraPsi.rows[0].ahora) ? String(ahoraPsi.rows[0].ahora).trim() : null;
                 if (ahora) {
-                    horariosDisponibles = horariosDisponibles.filter(h => h > ahora);
+                    // Solo mostrar slots estrictamente después de la hora actual (ej. a las 20:18 ya no mostrar 20:00)
+                    horariosDisponibles = horariosDisponibles.filter(h => String(h).trim() > ahora);
                 }
             } catch (e) {
                 const horaActual = new Date().getHours();
-                horariosDisponibles = horariosDisponibles.filter(h => parseInt(h.split(':')[0], 10) > horaActual);
+                const minActual = new Date().getMinutes();
+                horariosDisponibles = horariosDisponibles.filter(h => {
+                    const [hh, mm] = h.split(':').map(Number);
+                    return hh > horaActual || (hh === horaActual && (mm || 0) > minActual);
+                });
             }
         }
 
