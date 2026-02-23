@@ -1692,6 +1692,10 @@ function getPrecioRegionAsync(req) {
 
 // API: precio según región (IP). México → MXN; fuera → USD. ?pais=MX fuerza MXN (para pruebas).
 app.get('/api/precio-region', (req, res) => {
+    const testMxn = process.env.STRIPE_TEST_AMOUNT_MXN ? parseInt(process.env.STRIPE_TEST_AMOUNT_MXN, 10) : 0;
+    if (testMxn > 0) {
+        return res.json({ amount: testMxn, currency: 'MXN', inMexico: true });
+    }
     const force = (req.query.pais || req.query.moneda || '').toUpperCase();
     if (force === 'MX' || force === 'MXN') {
         return res.json({ amount: PRECIOS_DEFAULT_MXN.individual, currency: 'MXN', inMexico: true });
@@ -2808,6 +2812,13 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
             monto = Math.round(monto * 100);
         }
 
+        // Prueba de pago: si STRIPE_TEST_AMOUNT_MXN está definido (ej: 1), forzar ese monto en MXN. Quitar la variable para volver a precios reales.
+        const testAmountMxn = process.env.STRIPE_TEST_AMOUNT_MXN ? parseInt(process.env.STRIPE_TEST_AMOUNT_MXN, 10) : 0;
+        if (testAmountMxn > 0) {
+            monto = testAmountMxn * 100; // Stripe usa centavos
+            currency = 'mxn';
+        }
+
         const successUrl = (req.body.success_url && typeof req.body.success_url === 'string' && req.body.success_url.startsWith(BASE_URL))
             ? req.body.success_url
             : `${BASE_URL}/catalogo?pago=exito`;
@@ -2822,8 +2833,8 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
                     currency,
                     unit_amount: monto,
                     product_data: {
-                        name: servicio_interes || 'Sesión de psicoterapia',
-                        description: `1 sesión - ${fecha} ${hora}`,
+                        name: testAmountMxn > 0 ? `Prueba de pago (${testAmountMxn} MXN)` : (servicio_interes || 'Sesión de psicoterapia'),
+                        description: testAmountMxn > 0 ? 'Pago de prueba - eliminar variable STRIPE_TEST_AMOUNT_MXN después' : `1 sesión - ${fecha} ${hora}`,
                     },
                 },
                 quantity: 1,
