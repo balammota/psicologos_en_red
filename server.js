@@ -14,14 +14,27 @@ const mammoth = require('mammoth');
 const pool = require('./db'); 
 const { hasHadAppointment } = require('./utils/dbHelpers'); 
 
-/** Marca como 'no realizada' las citas pasadas que siguen pendientes/confirmadas (nadie se unió) */
+/** Marca como 'no realizada' las citas que pasaron hace más de 15 min y siguen pendientes/confirmadas (nadie se unió). */
+const MINUTOS_GRACIA_PARA_UNIRSE = 15;
+
 async function marcarCitasNoRealizadas() {
-    await pool.query(`
-        UPDATE citas
-        SET estado = 'no realizada'
-        WHERE estado IN ('pendiente', 'confirmada')
-          AND (fecha + hora) < NOW()
-    `);
+    try {
+        await pool.query(`
+            UPDATE citas c
+            SET estado = 'no realizada'
+            WHERE c.estado IN ('pendiente', 'confirmada')
+              AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) + INTERVAL '1 minute' * $2 < NOW()
+        `, ['America/Mexico_City', MINUTOS_GRACIA_PARA_UNIRSE]);
+    } catch (e) {
+        if (e.message && (e.message.includes('zona_horaria') || e.message.includes('does not exist'))) {
+            await pool.query(`
+                UPDATE citas
+                SET estado = 'no realizada'
+                WHERE estado IN ('pendiente', 'confirmada')
+                  AND (fecha + hora) + INTERVAL '1 minute' * $1 < NOW()
+            `, [MINUTOS_GRACIA_PARA_UNIRSE]);
+        } else throw e;
+    }
 }
 const app = express();
 const nodemailer = require('nodemailer');
@@ -81,10 +94,12 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
         const { paciente_id, psicologo_id, fecha, hora } = session.metadata || {};
         if (paciente_id && psicologo_id && fecha && hora) {
             pool.query(
-                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria)
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc)
                  SELECT $1, $2, $3, $4, $5,
                    CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
-                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
+                   (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
@@ -582,57 +597,86 @@ async function enviarCorreoNotificacionChatSiAplica(destinatarioId, remitenteId)
     }
 }
 
-/** Job: enviar recordatorios 30 min antes. La hora de la cita se interpreta en c.zona_horaria (ej. America/Mexico_City). */
+/** Job: enviar recordatorios 30 min antes. Usa solo c.fecha_hora_utc (rellenada al agendar). */
 const ZONA_HORARIA_DEFECTO = 'America/Mexico_City';
 
 async function ejecutarRecordatoriosCitas() {
     const nowIso = new Date().toISOString();
     try {
         let res;
-        let usoZonaHoraria = true;
+        let usoFechaHoraUtc = true;
         try {
             res = await pool.query(`
                 SELECT c.id, c.paciente_id, c.psicologo_id, c.fecha, c.hora
                 FROM citas c
                 WHERE c.estado IN ('pendiente', 'confirmada')
                   AND c.recordatorio_enviado_at IS NULL
-                  AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) > NOW()
-                  AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW() <= INTERVAL '35 minutes'
-                  AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW() >= INTERVAL '25 minutes'
-            `, [ZONA_HORARIA_DEFECTO]);
+                  AND c.fecha_hora_utc IS NOT NULL AND c.fecha_hora_utc != ''
+                  AND (c.fecha_hora_utc::timestamptz) > NOW()
+                  AND (c.fecha_hora_utc::timestamptz) - NOW() <= INTERVAL '35 minutes'
+                  AND (c.fecha_hora_utc::timestamptz) - NOW() >= INTERVAL '25 minutes'
+            `);
         } catch (qErr) {
-            if (qErr.message && (qErr.message.includes('zona_horaria') || qErr.message.includes('does not exist'))) {
-                usoZonaHoraria = false;
+            if (qErr.message && (qErr.message.includes('fecha_hora_utc') || qErr.message.includes('does not exist'))) {
+                usoFechaHoraUtc = false;
                 res = await pool.query(`
                     SELECT c.id, c.paciente_id, c.psicologo_id, c.fecha, c.hora
                     FROM citas c
                     WHERE c.estado IN ('pendiente', 'confirmada')
                       AND c.recordatorio_enviado_at IS NULL
-                      AND (c.fecha + c.hora) > NOW()
-                      AND (c.fecha + c.hora) - NOW() <= INTERVAL '35 minutes'
-                      AND (c.fecha + c.hora) - NOW() >= INTERVAL '25 minutes'
-                `);
+                      AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) > NOW()
+                      AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW() <= INTERVAL '35 minutes'
+                      AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW() >= INTERVAL '25 minutes'
+                `, [ZONA_HORARIA_DEFECTO]);
             } else throw qErr;
         }
         if (res.rows.length > 0) {
-            console.log('[Recordatorios]', nowIso, 'zona_horaria=', usoZonaHoraria, 'citas a enviar=', res.rows.length, 'ids=', res.rows.map(r => r.id));
+            console.log('[Recordatorios]', nowIso, 'fecha_hora_utc=', usoFechaHoraUtc, '→ citas a enviar=', res.rows.length, 'ids=', res.rows.map(r => r.id));
         } else {
-            console.log('[Recordatorios]', nowIso, 'zona_horaria=', usoZonaHoraria, '→ 0 citas en ventana 25-35 min');
-            // Diagnóstico: listar candidatas (pendiente/confirmada, sin recordatorio, futuras) y minutos hasta cada una
-            try {
-                const diag = await pool.query(`
-                    SELECT c.id,
-                      ROUND(EXTRACT(EPOCH FROM (((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW())) / 60)::int AS min_hasta
-                    FROM citas c
-                    WHERE c.estado IN ('pendiente', 'confirmada')
-                      AND c.recordatorio_enviado_at IS NULL
-                      AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) > NOW()
-                `, [ZONA_HORARIA_DEFECTO]);
-                if (diag.rows.length > 0) {
-                    console.log('[Recordatorios] candidatas (futuras, sin recordatorio):', diag.rows.map(r => 'id ' + r.id + ' en ' + r.min_hasta + ' min').join(', '));
+            console.log('[Recordatorios]', nowIso, 'fecha_hora_utc=', usoFechaHoraUtc, '→ 0 citas en ventana 25-35 min');
+            if (usoFechaHoraUtc) {
+                try {
+                    const diag = await pool.query(`
+                        SELECT c.id,
+                          ROUND(EXTRACT(EPOCH FROM (c.fecha_hora_utc::timestamptz - NOW())) / 60)::int AS min_hasta
+                        FROM citas c
+                        WHERE c.estado IN ('pendiente', 'confirmada')
+                          AND c.recordatorio_enviado_at IS NULL
+                          AND c.fecha_hora_utc IS NOT NULL AND c.fecha_hora_utc != ''
+                          AND (c.fecha_hora_utc::timestamptz) > NOW()
+                    `);
+                    if (diag.rows.length > 0) {
+                        console.log('[Recordatorios] candidatas (fecha_hora_utc):', diag.rows.map(r => 'id ' + r.id + ' en ' + r.min_hasta + ' min').join(', '));
+                    } else {
+                        const sinUtc = await pool.query(`
+                            SELECT COUNT(*) AS n FROM citas c
+                            WHERE c.estado IN ('pendiente', 'confirmada')
+                              AND c.recordatorio_enviado_at IS NULL
+                              AND (c.fecha_hora_utc IS NULL OR c.fecha_hora_utc = '')
+                        `);
+                        if (parseInt(sinUtc.rows[0]?.n || 0, 10) > 0) {
+                            console.log('[Recordatorios] hay', sinUtc.rows[0].n, 'citas sin fecha_hora_utc (no entran en candidatas)');
+                        }
+                    }
+                } catch (eDiag) {
+                    if (eDiag.message && !eDiag.message.includes('fecha_hora_utc')) console.error('[Recordatorios] diag:', eDiag.message);
                 }
-            } catch (eDiag) {
-                if (eDiag.message && !eDiag.message.includes('zona_horaria')) console.error('[Recordatorios] diag:', eDiag.message);
+            } else {
+                try {
+                    const diag = await pool.query(`
+                        SELECT c.id,
+                          ROUND(EXTRACT(EPOCH FROM (((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW())) / 60)::int AS min_hasta
+                        FROM citas c
+                        WHERE c.estado IN ('pendiente', 'confirmada')
+                          AND c.recordatorio_enviado_at IS NULL
+                          AND ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) > NOW()
+                    `, [ZONA_HORARIA_DEFECTO]);
+                    if (diag.rows.length > 0) {
+                        console.log('[Recordatorios] candidatas (fallback zona):', diag.rows.map(r => 'id ' + r.id + ' en ' + r.min_hasta + ' min').join(', '));
+                    }
+                } catch (eDiag) {
+                    if (eDiag.message && !eDiag.message.includes('zona_horaria')) console.error('[Recordatorios] diag:', eDiag.message);
+                }
             }
         }
         for (const row of res.rows) {
@@ -1658,7 +1702,7 @@ app.get('/panel-admin', authRequired, (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'panel-admin.html'));
 });
 
-// Debug: troubleshooting de recordatorios 30 min (solo admin). Ver hora del servidor y qué citas dispararían el envío.
+// Debug: troubleshooting de recordatorios 30 min (solo admin). El job usa fecha_hora_utc.
 app.get('/api/debug/recordatorios', authRequired, async (req, res) => {
     if (req.session.usuario.rol !== 'admin') {
         return res.status(403).json({ error: 'Solo administradores' });
@@ -1670,52 +1714,83 @@ app.get('/api/debug/recordatorios', authRequired, async (req, res) => {
             : String(nowUtc.rows[0]?.servidor_utc || '');
 
         let pendientes = [];
+        let usaFechaHoraUtc = true;
         try {
             const r = await pool.query(`
-                SELECT c.id, c.fecha, c.hora, c.zona_horaria,
-                  ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) AS cita_utc,
-                  EXTRACT(EPOCH FROM (((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW())) / 60 AS minutos_desde_ahora
+                SELECT c.id, c.fecha, c.hora, c.zona_horaria, c.fecha_hora_utc,
+                  COALESCE(
+                    EXTRACT(EPOCH FROM (NULLIF(TRIM(c.fecha_hora_utc), '')::timestamptz - NOW())) / 60,
+                    EXTRACT(EPOCH FROM (((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW())) / 60
+                  ) AS minutos_desde_ahora
                 FROM citas c
                 WHERE c.estado IN ('pendiente', 'confirmada') AND c.recordatorio_enviado_at IS NULL
                 ORDER BY c.fecha, c.hora
             `, [ZONA_HORARIA_DEFECTO]);
-            pendientes = r.rows.map(row => ({
-                id: row.id,
-                fecha: row.fecha,
-                hora: row.hora,
-                zona_horaria: row.zona_horaria || '(null)',
-                cita_utc: row.cita_utc instanceof Date ? row.cita_utc.toISOString() : row.cita_utc,
-                minutos_desde_ahora: row.minutos_desde_ahora != null ? Math.round(Number(row.minutos_desde_ahora)) : null,
-                dispararia_ahora: row.minutos_desde_ahora != null && row.minutos_desde_ahora >= 25 && row.minutos_desde_ahora <= 35
-            }));
-        } catch (e) {
-            if (e.message && (e.message.includes('zona_horaria') || e.message.includes('does not exist'))) {
-                const r = await pool.query(`
-                    SELECT c.id, c.fecha, c.hora,
-                      (c.fecha + c.hora) AS cita_sin_tz,
-                      EXTRACT(EPOCH FROM ((c.fecha + c.hora) - NOW())) / 60 AS minutos_desde_ahora
-                    FROM citas c
-                    WHERE c.estado IN ('pendiente', 'confirmada') AND c.recordatorio_enviado_at IS NULL
-                    ORDER BY c.fecha, c.hora
-                `);
-                pendientes = r.rows.map(row => ({
+            pendientes = r.rows.map(row => {
+                const min = row.minutos_desde_ahora != null ? Number(row.minutos_desde_ahora) : null;
+                return {
                     id: row.id,
                     fecha: row.fecha,
                     hora: row.hora,
-                    zona_horaria: '(columna no existe)',
-                    cita_utc: row.cita_sin_tz != null ? String(row.cita_sin_tz) : null,
-                    minutos_desde_ahora: row.minutos_desde_ahora != null ? Math.round(Number(row.minutos_desde_ahora)) : null,
-                    dispararia_ahora: row.minutos_desde_ahora != null && row.minutos_desde_ahora >= 25 && row.minutos_desde_ahora <= 35
-                }));
+                    zona_horaria: row.zona_horaria || '(null)',
+                    fecha_hora_utc: row.fecha_hora_utc instanceof Date ? row.fecha_hora_utc.toISOString() : (row.fecha_hora_utc || null),
+                    minutos_desde_ahora: min != null ? Math.round(min) : null,
+                    dispararia_ahora: min != null && min >= 25 && min <= 35
+                };
+            });
+        } catch (e) {
+            if (e.message && (e.message.includes('fecha_hora_utc') || e.message.includes('zona_horaria') || e.message.includes('does not exist'))) {
+                usaFechaHoraUtc = false;
+                try {
+                    const r = await pool.query(`
+                        SELECT c.id, c.fecha, c.hora, c.zona_horaria,
+                          ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) AS cita_utc,
+                          EXTRACT(EPOCH FROM (((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW())) / 60 AS minutos_desde_ahora
+                        FROM citas c
+                        WHERE c.estado IN ('pendiente', 'confirmada') AND c.recordatorio_enviado_at IS NULL
+                        ORDER BY c.fecha, c.hora
+                    `, [ZONA_HORARIA_DEFECTO]);
+                    pendientes = r.rows.map(row => ({
+                        id: row.id,
+                        fecha: row.fecha,
+                        hora: row.hora,
+                        zona_horaria: row.zona_horaria || '(null)',
+                        fecha_hora_utc: null,
+                        cita_utc: row.cita_utc instanceof Date ? row.cita_utc.toISOString() : row.cita_utc,
+                        minutos_desde_ahora: row.minutos_desde_ahora != null ? Math.round(Number(row.minutos_desde_ahora)) : null,
+                        dispararia_ahora: row.minutos_desde_ahora != null && row.minutos_desde_ahora >= 25 && row.minutos_desde_ahora <= 35
+                    }));
+                } catch (e2) {
+                    if (e2.message && (e2.message.includes('zona_horaria') || e2.message.includes('does not exist'))) {
+                        const r = await pool.query(`
+                            SELECT c.id, c.fecha, c.hora,
+                              (c.fecha + c.hora) AS cita_sin_tz,
+                              EXTRACT(EPOCH FROM ((c.fecha + c.hora) - NOW())) / 60 AS minutos_desde_ahora
+                            FROM citas c
+                            WHERE c.estado IN ('pendiente', 'confirmada') AND c.recordatorio_enviado_at IS NULL
+                            ORDER BY c.fecha, c.hora
+                        `);
+                        pendientes = r.rows.map(row => ({
+                            id: row.id,
+                            fecha: row.fecha,
+                            hora: row.hora,
+                            zona_horaria: '(columna no existe)',
+                            fecha_hora_utc: null,
+                            cita_utc: row.cita_sin_tz != null ? String(row.cita_sin_tz) : null,
+                            minutos_desde_ahora: row.minutos_desde_ahora != null ? Math.round(Number(row.minutos_desde_ahora)) : null,
+                            dispararia_ahora: row.minutos_desde_ahora != null && row.minutos_desde_ahora >= 25 && row.minutos_desde_ahora <= 35
+                        }));
+                    } else throw e2;
+                }
             } else throw e;
         }
 
-        // Candidatas = futuras (minutos_desde_ahora > 0); si es <= 0 la cita ya "pasó" y no aparece en el log del job
         const soloFuturas = pendientes.filter(c => c.minutos_desde_ahora != null && c.minutos_desde_ahora > 0);
 
         res.json({
             servidor_utc_iso: servidorIso,
-            explicacion: 'El job envía recordatorios cuando minutos_desde_ahora está entre 25 y 35. Railway usa UTC. Candidatas en el log = solo citas con minutos_desde_ahora > 0; si una cita tiene minutos_desde_ahora <= 0 ya no aparece ahí.',
+            usa_fecha_hora_utc: usaFechaHoraUtc,
+            explicacion: 'El job usa fecha_hora_utc (ventana 25-35 min). Candidatas = citas con fecha_hora_utc NOT NULL y minutos_desde_ahora > 0.',
             citas_pendientes_sin_recordatorio: pendientes,
             candidatas_futuras_log: soloFuturas,
             citas_que_dispararian_ahora: pendientes.filter(c => c.dispararia_ahora)
@@ -2704,10 +2779,12 @@ app.post('/api/agendar-cita', authRequired, async (req, res) => {
 
         if (motivo) {
             const insertResult = await pool.query(
-                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, motivo_de_consulta, zona_horaria)
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, motivo_de_consulta, zona_horaria, fecha_hora_utc)
                  SELECT $1, $2, $3, $4, $5, $6,
                    CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
-                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
+                   (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, motivo]
@@ -2716,10 +2793,12 @@ app.post('/api/agendar-cita', authRequired, async (req, res) => {
             try { await enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora, cita_id); } catch (e) { console.error('Error enviando correos cita:', e); }
         } else {
             const insertResult = await pool.query(
-                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria)
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc)
                  SELECT $1, $2, $3, $4, $5,
                    CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
-                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
+                   (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
@@ -2815,7 +2894,9 @@ app.post('/api/reagendar-cita', authRequired, async (req, res) => {
             `UPDATE citas c
              SET fecha = $1, hora = $2, estado = 'pendiente',
                  zona_horaria = CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
-                                    ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END
+                                    ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
+                 fecha_hora_utc = (($1::date + $2::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                                    ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text
              FROM psicologos p WHERE p.id = c.psicologo_id AND c.id = $3 AND c.paciente_id = $4
                AND c.estado IN ('pendiente', 'confirmada')
                AND ($1::date + $2::time) > NOW()
