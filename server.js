@@ -60,6 +60,56 @@ function normalizarTelefonoE164(telefono) {
     return null;
 }
 
+// Cifrado de contenido de mensajes (tabla mensajes) para proteger datos de pacientes
+const MENSAJES_ENCRYPTION_PREFIX = 'ENCv1:';
+const ALGORITHM = 'aes-256-gcm';
+const IV_LEN = 12;
+const AUTH_TAG_LEN = 16;
+
+function getMensajesEncryptionKey() {
+    const raw = process.env.MENSAJES_ENCRYPTION_KEY;
+    if (!raw || typeof raw !== 'string') return null;
+    return crypto.createHash('sha256').update(raw.trim()).digest();
+}
+
+function encryptMensajeContenido(plaintext) {
+    const key = getMensajesEncryptionKey();
+    if (!key) return plaintext;
+    if (plaintext == null) return '';
+    const str = String(plaintext);
+    try {
+        const iv = crypto.randomBytes(IV_LEN);
+        const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+        const enc = Buffer.concat([cipher.update(str, 'utf8'), cipher.final()]);
+        const tag = cipher.getAuthTag();
+        const combined = Buffer.concat([iv, tag, enc]);
+        return MENSAJES_ENCRYPTION_PREFIX + combined.toString('base64');
+    } catch (e) {
+        console.error('Error cifrando mensaje:', e.message);
+        return str;
+    }
+}
+
+function decryptMensajeContenido(value) {
+    if (value == null || typeof value !== 'string') return value == null ? '' : String(value);
+    if (!value.startsWith(MENSAJES_ENCRYPTION_PREFIX)) return value;
+    const key = getMensajesEncryptionKey();
+    if (!key) return value;
+    try {
+        const raw = Buffer.from(value.slice(MENSAJES_ENCRYPTION_PREFIX.length), 'base64');
+        if (raw.length < IV_LEN + AUTH_TAG_LEN) return value;
+        const iv = raw.subarray(0, IV_LEN);
+        const tag = raw.subarray(IV_LEN, IV_LEN + AUTH_TAG_LEN);
+        const enc = raw.subarray(IV_LEN + AUTH_TAG_LEN);
+        const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+        decipher.setAuthTag(tag);
+        return decipher.update(enc) + decipher.final('utf8');
+    } catch (e) {
+        console.error('Error descifrando mensaje:', e.message);
+        return value;
+    }
+}
+
 /** Envía un mensaje WhatsApp (Twilio). Si no hay cliente configurado o teléfono, no hace nada. */
 async function enviarWhatsapp(telefono, mensaje) {
     if (!twilioClient || !mensaje) return;
@@ -3791,6 +3841,12 @@ app.get('/api/mensajes/:destinatarioId', authRequired, async (req, res) => {
             [miId, parseInt(suId)]
         );
 
+        // Descifrar contenido antes de enviar al cliente (mensajes antiguos sin cifrar se devuelven tal cual)
+        const mensajes = result.rows.map(row => ({
+            ...row,
+            contenido: decryptMensajeContenido(row.contenido)
+        }));
+
         // Marcar como leídos los mensajes que yo recibí en esta conversación
         await pool.query(
             `UPDATE mensajes SET leido = true 
@@ -3799,7 +3855,7 @@ app.get('/api/mensajes/:destinatarioId', authRequired, async (req, res) => {
         );
 
         res.json({ 
-            mensajes: result.rows, 
+            mensajes,
             miId: miId 
         });
 
@@ -4021,7 +4077,7 @@ app.post('/api/enviar-mensaje', authRequired, async (req, res) => {
 
         await pool.query(
             'INSERT INTO mensajes (remitente_id, destinatario_id, contenido) VALUES ($1, $2, $3)',
-            [remitenteId, destinatarioId, contenido]
+            [remitenteId, destinatarioId, encryptMensajeContenido(contenido)]
         );
         enviarCorreoNotificacionChatSiAplica(destinatarioId, remitenteId).catch(e => console.error('Notif chat:', e.message));
         res.json({ success: true });
@@ -4066,7 +4122,7 @@ app.post('/api/chat/adjunto', authRequired, (req, res) => {
             const rutaRelativa = path.join('chat', String(remitenteId), nombreGuardado);
             await pool.query(
                 'INSERT INTO mensajes (remitente_id, destinatario_id, contenido, ruta_adjunto, nombre_adjunto) VALUES ($1, $2, $3, $4, $5)',
-                [remitenteId, destinatarioId, '[PDF adjunto]', rutaRelativa, req.file.originalname || nombreOriginal]
+                [remitenteId, destinatarioId, encryptMensajeContenido('[PDF adjunto]'), rutaRelativa, req.file.originalname || nombreOriginal]
             );
             enviarCorreoNotificacionChatSiAplica(destinatarioId, remitenteId).catch(e => console.error('Notif chat:', e.message));
             res.json({ success: true });
@@ -4105,6 +4161,9 @@ app.get('/api/chat/archivo/:mensajeId', authRequired, async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('Servidor funcionando en puerto', PORT);
+    if (!getMensajesEncryptionKey()) {
+        console.warn('[Mensajes] MENSAJES_ENCRYPTION_KEY no está definida: el contenido de mensajes se guarda en claro. En producción define una clave segura en .env para cifrar los mensajes.');
+    }
     ejecutarRecordatoriosCitas();
     setInterval(ejecutarRecordatoriosCitas, 5 * 60 * 1000);
     asegurarSecuenciaRecordatorioPostCita().then(() => ejecutarRecordatoriosPostCita());
