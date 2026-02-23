@@ -556,19 +556,24 @@ fetch('/api/quien-soy')
                         return fechaCita;
                     }
 
-                    // Filtrar y ordenar citas futuras
+                    // Ventana para unirse: desde la hora de la cita hasta 15 min después
+                    const MINUTOS_DESPUES_PARA_UNIRSE = 15;
+                    const msVentanaUnirse = MINUTOS_DESPUES_PARA_UNIRSE * 60 * 1000;
+
+                    // Filtrar y ordenar citas futuras (incluye "hora de la cita" + 15 min para mostrar botón Unirse)
                     const citasFuturas = citas.filter(cita => {
-                        // Las canceladas las mandamos al historial
                         if (cita.estado === 'cancelada') return false;
-                        return getCitaDateTime(cita) > ahora;
+                        const inicioCita = getCitaDateTime(cita).getTime();
+                        return inicioCita + msVentanaUnirse > ahora.getTime();
                     }).sort((a, b) => {
                         return getCitaDateTime(a) - getCitaDateTime(b);
                     });
 
-                    // Filtrar y ordenar citas pasadas
+                    // Filtrar y ordenar citas pasadas (más de 15 min después de la hora de la cita)
                     const citasPasadas = citas.filter(cita => {
                         if (cita.estado === 'cancelada') return true;
-                        return getCitaDateTime(cita) <= ahora;
+                        const inicioCita = getCitaDateTime(cita).getTime();
+                        return inicioCita + msVentanaUnirse <= ahora.getTime();
                     }).sort((a, b) => {
                         return getCitaDateTime(b) - getCitaDateTime(a); // más recientes primero
                     });
