@@ -191,7 +191,7 @@
                 <div style="background:white; padding:26px; border-radius:18px; width:90%; max-width:460px; position:relative;">
                     <h3 id="modal-feedback-titulo" style="margin-top:0; color:var(--primario-rosa);">Aviso</h3>
                     <div id="modal-feedback-mensaje" style="color:#444; line-height:1.5;"></div>
-                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+                    <div id="modal-feedback-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
                         <button onclick="cerrarPopup()" class="btn-cita-secundario" type="button">OK</button>
                     </div>
                 </div>
@@ -1271,12 +1271,14 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
             }
         }
 
-        // Popup (reemplazo de alert)
+        // Popup (reemplazo de alert): solo botón OK
         function mostrarPopup(mensaje, titulo = 'Aviso') {
             const t = document.getElementById('modal-feedback-titulo');
             const m = document.getElementById('modal-feedback-mensaje');
+            const actions = document.getElementById('modal-feedback-actions');
             if (t) t.innerText = titulo;
             if (m) m.innerText = mensaje;
+            if (actions) actions.innerHTML = '<button onclick="cerrarPopup()" class="btn-cita-secundario" type="button">OK</button>';
             document.getElementById('modal-feedback').style.display = 'flex';
         }
 
@@ -1286,27 +1288,17 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
 
         function confirmarPopup(mensaje, titulo = 'Confirmar') {
             return new Promise((resolve) => {
-                const modal = document.getElementById('modal-feedback');
                 const t = document.getElementById('modal-feedback-titulo');
                 const m = document.getElementById('modal-feedback-mensaje');
+                const actions = document.getElementById('modal-feedback-actions');
                 if (t) t.innerText = titulo;
                 if (m) m.innerText = mensaje;
-
-                // Reemplazamos el footer por botones Sí/No
-                const container = modal.querySelector('div');
-                let actions = container.querySelector('.popup-actions');
-                if (!actions) {
-                    actions = document.createElement('div');
-                    actions.className = 'popup-actions';
-                    actions.style.cssText = 'display:flex; justify-content:flex-end; gap:10px; margin-top:18px;';
-                    container.appendChild(actions);
-                }
-                actions.innerHTML = `
+                if (actions) actions.innerHTML = `
                     <button id="popup-no" class="btn-cita-secundario" type="button">No</button>
                     <button id="popup-si" class="btn-cita-danger" type="button">Sí</button>
                 `;
 
-                modal.style.display = 'flex';
+                document.getElementById('modal-feedback').style.display = 'flex';
 
                 const cleanup = () => {
                     document.getElementById('popup-no')?.removeEventListener('click', onNo);
