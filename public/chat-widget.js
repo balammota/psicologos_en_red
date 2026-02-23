@@ -55,7 +55,7 @@
         var currentOrigin = typeof window !== 'undefined' && window.location && window.location.origin ? window.location.origin : '';
         for (var i = 0; i < parts.length; i++) {
             if (parts[i].match(re)) {
-                var href = parts[i];
+                var href = (parts[i] || '').replace(/[.,;:!?]+$/, '');
                 var isInternal = false;
                 var pathOnly = href;
                 try {
