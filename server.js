@@ -586,6 +586,7 @@ const ZONA_HORARIA_DEFECTO = 'America/Mexico_City';
 async function ejecutarRecordatoriosCitas() {
     try {
         let res;
+        let usoZonaHoraria = true;
         try {
             res = await pool.query(`
                 SELECT c.id, c.paciente_id, c.psicologo_id, c.fecha, c.hora
@@ -598,6 +599,7 @@ async function ejecutarRecordatoriosCitas() {
             `, [ZONA_HORARIA_DEFECTO]);
         } catch (qErr) {
             if (qErr.message && (qErr.message.includes('zona_horaria') || qErr.message.includes('does not exist'))) {
+                usoZonaHoraria = false;
                 res = await pool.query(`
                     SELECT c.id, c.paciente_id, c.psicologo_id, c.fecha, c.hora
                     FROM citas c
@@ -608,6 +610,10 @@ async function ejecutarRecordatoriosCitas() {
                       AND (c.fecha + c.hora) - NOW() >= INTERVAL '25 minutes'
                 `);
             } else throw qErr;
+        }
+        const nowIso = new Date().toISOString();
+        if (res.rows.length > 0) {
+            console.log('[Recordatorios]', nowIso, 'zona_horaria=', usoZonaHoraria, 'citas a enviar=', res.rows.length, 'ids=', res.rows.map(r => r.id));
         }
         for (const row of res.rows) {
             try {
@@ -1630,6 +1636,70 @@ app.get('/panel-admin', authRequired, (req, res) => {
         return res.status(403).send('Acceso denegado: Esta zona es solo para administradores.');
     }
     res.sendFile(path.join(__dirname, 'views', 'panel-admin.html'));
+});
+
+// Debug: troubleshooting de recordatorios 30 min (solo admin). Ver hora del servidor y qué citas dispararían el envío.
+app.get('/api/debug/recordatorios', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'Solo administradores' });
+    }
+    try {
+        const nowUtc = await pool.query('SELECT NOW() AS servidor_utc');
+        const servidorIso = nowUtc.rows[0]?.servidor_utc instanceof Date
+            ? nowUtc.rows[0].servidor_utc.toISOString()
+            : String(nowUtc.rows[0]?.servidor_utc || '');
+
+        let pendientes = [];
+        try {
+            const r = await pool.query(`
+                SELECT c.id, c.fecha, c.hora, c.zona_horaria,
+                  ((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) AS cita_utc,
+                  EXTRACT(EPOCH FROM (((c.fecha + c.hora) AT TIME ZONE COALESCE(NULLIF(TRIM(c.zona_horaria), ''), $1)) - NOW())) / 60 AS minutos_desde_ahora
+                FROM citas c
+                WHERE c.estado IN ('pendiente', 'confirmada') AND c.recordatorio_enviado_at IS NULL
+                ORDER BY c.fecha, c.hora
+            `, [ZONA_HORARIA_DEFECTO]);
+            pendientes = r.rows.map(row => ({
+                id: row.id,
+                fecha: row.fecha,
+                hora: row.hora,
+                zona_horaria: row.zona_horaria || '(null)',
+                cita_utc: row.cita_utc instanceof Date ? row.cita_utc.toISOString() : row.cita_utc,
+                minutos_desde_ahora: row.minutos_desde_ahora != null ? Math.round(Number(row.minutos_desde_ahora)) : null,
+                dispararia_ahora: row.minutos_desde_ahora != null && row.minutos_desde_ahora >= 25 && row.minutos_desde_ahora <= 35
+            }));
+        } catch (e) {
+            if (e.message && (e.message.includes('zona_horaria') || e.message.includes('does not exist'))) {
+                const r = await pool.query(`
+                    SELECT c.id, c.fecha, c.hora,
+                      (c.fecha + c.hora) AS cita_sin_tz,
+                      EXTRACT(EPOCH FROM ((c.fecha + c.hora) - NOW())) / 60 AS minutos_desde_ahora
+                    FROM citas c
+                    WHERE c.estado IN ('pendiente', 'confirmada') AND c.recordatorio_enviado_at IS NULL
+                    ORDER BY c.fecha, c.hora
+                `);
+                pendientes = r.rows.map(row => ({
+                    id: row.id,
+                    fecha: row.fecha,
+                    hora: row.hora,
+                    zona_horaria: '(columna no existe)',
+                    cita_utc: row.cita_sin_tz != null ? String(row.cita_sin_tz) : null,
+                    minutos_desde_ahora: row.minutos_desde_ahora != null ? Math.round(Number(row.minutos_desde_ahora)) : null,
+                    dispararia_ahora: row.minutos_desde_ahora != null && row.minutos_desde_ahora >= 25 && row.minutos_desde_ahora <= 35
+                }));
+            } else throw e;
+        }
+
+        res.json({
+            servidor_utc_iso: servidorIso,
+            explicacion: 'El job envía recordatorios cuando minutos_desde_ahora está entre 25 y 35. Railway usa UTC.',
+            citas_pendientes_sin_recordatorio: pendientes,
+            citas_que_dispararian_ahora: pendientes.filter(c => c.dispararia_ahora)
+        });
+    } catch (e) {
+        console.error('Debug recordatorios:', e.message);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // API: Estadísticas generales para admin
