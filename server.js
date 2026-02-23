@@ -82,7 +82,9 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
         if (paciente_id && psicologo_id && fecha && hora) {
             pool.query(
                 `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria)
-                 SELECT $1, $2, $3, $4, $5, COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City')
+                 SELECT $1, $2, $3, $4, $5,
+                   CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
@@ -1708,10 +1710,14 @@ app.get('/api/debug/recordatorios', authRequired, async (req, res) => {
             } else throw e;
         }
 
+        // Candidatas = futuras (minutos_desde_ahora > 0); si es <= 0 la cita ya "pasó" y no aparece en el log del job
+        const soloFuturas = pendientes.filter(c => c.minutos_desde_ahora != null && c.minutos_desde_ahora > 0);
+
         res.json({
             servidor_utc_iso: servidorIso,
-            explicacion: 'El job envía recordatorios cuando minutos_desde_ahora está entre 25 y 35. Railway usa UTC.',
+            explicacion: 'El job envía recordatorios cuando minutos_desde_ahora está entre 25 y 35. Railway usa UTC. Candidatas en el log = solo citas con minutos_desde_ahora > 0; si una cita tiene minutos_desde_ahora <= 0 ya no aparece ahí.',
             citas_pendientes_sin_recordatorio: pendientes,
+            candidatas_futuras_log: soloFuturas,
             citas_que_dispararian_ahora: pendientes.filter(c => c.dispararia_ahora)
         });
     } catch (e) {
@@ -2699,7 +2705,9 @@ app.post('/api/agendar-cita', authRequired, async (req, res) => {
         if (motivo) {
             const insertResult = await pool.query(
                 `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, motivo_de_consulta, zona_horaria)
-                 SELECT $1, $2, $3, $4, $5, $6, COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City')
+                 SELECT $1, $2, $3, $4, $5, $6,
+                   CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, motivo]
@@ -2709,7 +2717,9 @@ app.post('/api/agendar-cita', authRequired, async (req, res) => {
         } else {
             const insertResult = await pool.query(
                 `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria)
-                 SELECT $1, $2, $3, $4, $5, COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City')
+                 SELECT $1, $2, $3, $4, $5,
+                   CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
                 [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
@@ -2804,7 +2814,8 @@ app.post('/api/reagendar-cita', authRequired, async (req, res) => {
         const result = await pool.query(
             `UPDATE citas c
              SET fecha = $1, hora = $2, estado = 'pendiente',
-                 zona_horaria = COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City')
+                 zona_horaria = CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                                    ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END
              FROM psicologos p WHERE p.id = c.psicologo_id AND c.id = $3 AND c.paciente_id = $4
                AND c.estado IN ('pendiente', 'confirmada')
                AND ($1::date + $2::time) > NOW()
@@ -2997,6 +3008,22 @@ app.post('/api/mi-zona-horaria/detectar', authRequired, async (req, res) => {
     }
 });
 
+// Normaliza hora a hora completa: inicio = piso (12:01 -> 12:00), fin = techo (12:01 -> 13:00)
+function normalizarHoraCompleta(timeStr, tipo) {
+    if (!timeStr || typeof timeStr !== 'string') return null;
+    const parts = timeStr.trim().split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parts.length >= 2 ? parseInt(parts[1], 10) : 0;
+    if (Number.isNaN(h) || h < 0 || h > 23) return null;
+    if (tipo === 'inicio') return `${String(h).padStart(2, '0')}:00:00`;
+    if (tipo === 'fin') {
+        const nextH = (m > 0) ? h + 1 : h;
+        if (nextH >= 24) return '23:59:59';
+        return `${String(nextH).padStart(2, '0')}:00:00`;
+    }
+    return null;
+}
+
 app.get('/api/horario-laboral', authRequired, async (req, res) => {
     if (req.session.usuario.rol !== 'psicologo') return res.status(403).json({ error: 'Acceso denegado' });
     try {
@@ -3025,16 +3052,20 @@ app.post('/api/horario-laboral', authRequired, async (req, res) => {
         return res.status(400).json({ error: 'Faltan datos (dia_semana, hora_inicio, hora_fin)' });
     }
 
+    const hi = normalizarHoraCompleta(String(hora_inicio), 'inicio');
+    const hf = normalizarHoraCompleta(String(hora_fin), 'fin');
+    if (!hi || !hf) return res.status(400).json({ error: 'Horas inválidas; usa formato HH:00 (horas en punto)' });
+    if (hf <= hi) return res.status(400).json({ error: 'La hora de fin debe ser mayor que la de inicio' });
+
     try {
         const psicologoId = await getPsicologoIdFromSession(req);
         if (!psicologoId) return res.status(404).json({ error: 'Perfil de psicólogo no encontrado' });
 
-        // Insert simple (si luego quieres upsert por día/hora, lo armamos con UNIQUE)
         const result = await pool.query(
             `INSERT INTO horario_laboral (psicologo_id, dia_semana, hora_inicio, hora_fin)
              VALUES ($1, $2, $3, $4)
              RETURNING id`,
-            [psicologoId, dia_semana, hora_inicio, hora_fin]
+            [psicologoId, dia_semana, hi, hf]
         );
 
         res.json({ success: true, id: result.rows[0].id });
@@ -3054,6 +3085,11 @@ app.put('/api/horario-laboral/:id', authRequired, async (req, res) => {
         return res.status(400).json({ error: 'Faltan datos (dia_semana, hora_inicio, hora_fin)' });
     }
 
+    const hi = normalizarHoraCompleta(String(hora_inicio), 'inicio');
+    const hf = normalizarHoraCompleta(String(hora_fin), 'fin');
+    if (!hi || !hf) return res.status(400).json({ error: 'Horas inválidas; usa formato HH:00 (horas en punto)' });
+    if (hf <= hi) return res.status(400).json({ error: 'La hora de fin debe ser mayor que la de inicio' });
+
     try {
         const psicologoId = await getPsicologoIdFromSession(req);
         if (!psicologoId) return res.status(404).json({ error: 'Perfil de psicólogo no encontrado' });
@@ -3062,7 +3098,7 @@ app.put('/api/horario-laboral/:id', authRequired, async (req, res) => {
             `UPDATE horario_laboral
              SET dia_semana = $1, hora_inicio = $2, hora_fin = $3
              WHERE id = $4 AND psicologo_id = $5`,
-            [dia_semana, hora_inicio, hora_fin, id, psicologoId]
+            [dia_semana, hi, hf, id, psicologoId]
         );
 
         if (result.rowCount === 0) return res.status(404).json({ error: 'No encontrado' });
