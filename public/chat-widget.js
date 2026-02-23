@@ -52,13 +52,25 @@
         var re = /(https?:\/\/[^\s<]+)/g;
         var parts = text.split(re);
         var out = '';
+        var currentOrigin = typeof window !== 'undefined' && window.location && window.location.origin ? window.location.origin : '';
         for (var i = 0; i < parts.length; i++) {
             if (parts[i].match(re)) {
                 var href = parts[i];
+                var isInternal = false;
+                var pathOnly = href;
+                try {
+                    var u = new URL(href);
+                    isInternal = u.origin === currentOrigin || (u.hostname && u.hostname.indexOf('psicologosenred.com') !== -1);
+                    if (isInternal) pathOnly = u.pathname + (u.search || '') + (u.hash || '');
+                } catch (e) { }
                 var isProfile = href.indexOf(profileLinkDomain) !== -1 && href.indexOf('catalogo') !== -1 && href.indexOf('ver=') !== -1;
-                var label = isProfile ? 'Ver perfil' : escapeHtml(href);
+                var label = isProfile ? 'Ver perfil' : (isInternal ? pathOnly : escapeHtml(href));
                 var cls = isProfile ? 'chat-widget-msg-link chat-widget-profile-btn' : 'chat-widget-msg-link';
-                out += '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer" class="' + cls + '">' + label + '</a>';
+                if (isInternal) {
+                    out += '<a href="' + escapeHtml(pathOnly) + '" class="' + cls + '">' + escapeHtml(label) + '</a>';
+                } else {
+                    out += '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer" class="' + cls + '">' + label + '</a>';
+                }
             } else {
                 out += escapeHtml(parts[i]);
             }
