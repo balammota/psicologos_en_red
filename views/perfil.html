@@ -1173,7 +1173,18 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
                     cargarCitas();
                     mostrarPopup('Listo', 'Cita actualizada');
                 } else {
-                    // Agendar nueva cita: redirigir a Stripe Checkout para pagar (currency = misma lógica que catálogo)
+                    // Agendar nueva cita: redirigir a Stripe Checkout. Obtener región justo antes (igual que catálogo) para no depender del load.
+                    let currency = (precioCurrencyPerfil === 'MXN' || precioCurrencyPerfil === 'USD') ? precioCurrencyPerfil : '';
+                    if (!currency) {
+                        try {
+                            const regionRes = await fetch('/api/precio-region');
+                            const regionData = await regionRes.json().catch(() => ({}));
+                            if (regionData && !regionData.regionUnknown && (regionData.currency === 'MXN' || regionData.currency === 'USD')) {
+                                currency = regionData.currency;
+                                precioCurrencyPerfil = currency;
+                            }
+                        } catch (e) {}
+                    }
                     const body = {
                         psicologo_id: gestionPsicologoId,
                         fecha,
@@ -1182,7 +1193,7 @@ document.getElementById('input-chat-pdf').addEventListener('change', async funct
                         success_url: window.location.origin + '/perfil?pago=exito',
                         cancel_url: window.location.origin + '/perfil'
                     };
-                    if (precioCurrencyPerfil === 'MXN' || precioCurrencyPerfil === 'USD') body.currency = precioCurrencyPerfil;
+                    if (currency) body.currency = currency;
                     res = await fetch('/api/crear-sesion-pago', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
