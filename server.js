@@ -501,7 +501,7 @@ async function enviarCorreosCitaCancelada(paciente_id, psicologo_id, fecha, hora
             <div style="text-align: center; margin-bottom: 30px;"><h1 style="color: #c9a0dc;">Psicólogos en Red</h1></div>
             <h2 style="color: #333;">Cita cancelada</h2>
             <p style="color: #666; font-size: 16px;">Hemos registrado la cancelación de tu sesión del <strong>${fechaStr}</strong> a las <strong>${horaStr} hrs</strong> con ${psicologo.nombre || 'tu especialista'}.</p>
-            <p style="color: #666; font-size: 16px;">Esperamos que todo se encuentre bien. Se emitirá el reembolso de tu sesión según los términos acordados.</p>
+            <p style="color: #666; font-size: 16px;">Tu reembolso se emitirá en un plazo de <strong>5 a 10 días hábiles</strong> al mismo método de pago con el que realizaste el pago. Si tienes cualquier problema o duda respecto a tu reembolso, escríbenos a <strong>contacto@psicologosenred.com</strong>.</p>
             <p style="color: #666; font-size: 16px;">Te invitamos a reagendar cuando las condiciones sean óptimas para ti. Estamos aquí cuando lo necesites.</p>
             <div style="text-align: center; margin: 30px 0;">
                 <a href="${enlaceCatalogo}" style="background: linear-gradient(135deg, #c9a0dc 0%, #a0c4e8 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-size: 16px; font-weight: bold;">Agendar nueva cita</a>
