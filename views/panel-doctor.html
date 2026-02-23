@@ -1322,9 +1322,19 @@ function aplicarFiltrosYRenderizarCitasDoctor() {
 
     const ahora = new Date();
     const noCancelada = c => (c.estado || '').toLowerCase() !== 'cancelada';
-    const futuras = filtradas.filter(c => getCitaDateTimeDoctor(c) >= ahora && noCancelada(c));
-    // Historial: citas pasadas O citas canceladas
-    const pasadas = filtradas.filter(c => getCitaDateTimeDoctor(c) < ahora || !noCancelada(c));
+    // Ventana para unirse: hasta 15 min después de la hora de la cita
+    const MS_VENTANA_UNIRSE = 15 * 60 * 1000;
+    const futuras = filtradas.filter(c => {
+        if (!noCancelada(c)) return false;
+        const inicioCita = getCitaDateTimeDoctor(c).getTime();
+        return inicioCita + MS_VENTANA_UNIRSE > ahora.getTime();
+    });
+    // Historial: más de 15 min después de la cita O canceladas
+    const pasadas = filtradas.filter(c => {
+        if (!noCancelada(c)) return true;
+        const inicioCita = getCitaDateTimeDoctor(c).getTime();
+        return inicioCita + MS_VENTANA_UNIRSE <= ahora.getTime();
+    });
 
     // Render Futuras
     futurasDiv.innerHTML = futuras.length
