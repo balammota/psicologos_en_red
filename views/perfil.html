@@ -345,10 +345,10 @@
         let ultimoPayloadChat = null;
         let miIdUsuario = null;
         let configVideo15Min = true; // por defecto: botón solo 15 min antes
-
-        fetch('/api/config/video-boton-15min').then(function(r) { return r.json(); }).then(function(c) {
+        var configVideo15MinPromise = fetch('/api/config/video-boton-15min').then(function(r) { return r.json(); }).then(function(c) {
             configVideo15Min = c.activar15MinAntes !== false;
-        }).catch(function() { configVideo15Min = true; });
+            return configVideo15Min;
+        }).catch(function() { configVideo15Min = true; return true; });
 
 // Pedir mi ID al cargar la página
 fetch('/api/quien-soy')
