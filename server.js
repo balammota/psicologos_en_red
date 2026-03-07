@@ -141,33 +141,37 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
     }
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
-        const { paciente_id, psicologo_id, fecha, hora } = session.metadata || {};
+        const meta = session.metadata || {};
+        const { paciente_id, psicologo_id, fecha, hora } = meta;
+        const origenConocimiento = (meta.origen_conocimiento && String(meta.origen_conocimiento).trim().slice(0, 80)) || null;
+        const recomendadoPor = (meta.recomendado_por && String(meta.recomendado_por).trim().slice(0, 200)) || null;
         if (paciente_id && psicologo_id && fecha && hora) {
             const paymentIntentId = typeof session.payment_intent === 'string'
                 ? session.payment_intent
                 : (session.payment_intent && session.payment_intent.id) || null;
             const insertWithPaymentIntent = () => pool.query(
-                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc, stripe_payment_intent_id)
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc, stripe_payment_intent_id, origen_conocimiento, recomendado_por)
                  SELECT $1, $2, $3, $4, $5,
                    CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
                         ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
                    (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
                         ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text,
-                   $6
+                   $6, $7, $8
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
-                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, paymentIntentId || null]
+                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, paymentIntentId || null, origenConocimiento, recomendadoPor]
             );
             const insertSinStripe = () => pool.query(
-                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc)
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc, origen_conocimiento, recomendado_por)
                  SELECT $1, $2, $3, $4, $5,
                    CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
                         ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
                    (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
-                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text,
+                   $6, $7
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
-                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
+                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, origenConocimiento, recomendadoPor]
             );
             insertWithPaymentIntent()
             .then(async (result) => {
@@ -2904,6 +2908,8 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
                 hora,
                 ...(servicio_interes && { servicio_interes: String(servicio_interes) }),
                 ...(motivo_de_consulta && motivo_de_consulta.length <= 200 && { motivo_de_consulta: String(motivo_de_consulta) }),
+                ...(req.body.origen_conocimiento && req.body.origen_conocimiento.length <= 80 && { origen_conocimiento: String(req.body.origen_conocimiento) }),
+                ...(req.body.recomendado_por && req.body.recomendado_por.length <= 200 && { recomendado_por: String(req.body.recomendado_por) }),
             },
             allow_promotion_codes: true,
         });
@@ -2916,13 +2922,15 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
 });
 
 app.post('/api/agendar-cita', authRequired, async (req, res) => {
-    const { psicologo_id, fecha, hora, motivo_de_consulta } = req.body;
+    const { psicologo_id, fecha, hora, motivo_de_consulta, origen_conocimiento, recomendado_por } = req.body;
     const paciente_id = req.session.usuario.id;
 
     if (!psicologo_id || !fecha || !hora) {
         return res.status(400).json({ error: 'Faltan datos para agendar' });
     }
     const motivo = (motivo_de_consulta && String(motivo_de_consulta).trim().length > 0 && String(motivo_de_consulta).length <= 200) ? String(motivo_de_consulta).trim() : null;
+    const origen = (origen_conocimiento && String(origen_conocimiento).trim().slice(0, 80)) || null;
+    const recomendado = (recomendado_por && String(recomendado_por).trim().slice(0, 200)) || null;
 
     try {
         // Validar disponibilidad antes de agendar
@@ -2963,29 +2971,31 @@ app.post('/api/agendar-cita', authRequired, async (req, res) => {
 
         if (motivo) {
             const insertResult = await pool.query(
-                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, motivo_de_consulta, zona_horaria, fecha_hora_utc)
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, motivo_de_consulta, zona_horaria, fecha_hora_utc, origen_conocimiento, recomendado_por)
                  SELECT $1, $2, $3, $4, $5, $6,
                    CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
                         ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
                    (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
-                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text,
+                   $7, $8
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
-                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, motivo]
+                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, motivo, origen, recomendado]
             );
             const cita_id = insertResult.rows[0]?.id || null;
             try { await enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora, cita_id); } catch (e) { console.error('Error enviando correos cita:', e); }
         } else {
             const insertResult = await pool.query(
-                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc)
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc, origen_conocimiento, recomendado_por)
                  SELECT $1, $2, $3, $4, $5,
                    CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
                         ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
                    (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
-                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text,
+                   $6, $7
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
-                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`]
+                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, origen, recomendado]
             );
             const cita_id = insertResult.rows[0]?.id || null;
             try { await enviarCorreosCitaAgendada(paciente_id, psicologo_id, fecha, hora, cita_id); } catch (e) { console.error('Error enviando correos cita:', e); }
