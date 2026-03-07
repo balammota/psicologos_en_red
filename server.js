@@ -1822,6 +1822,50 @@ app.get('/panel-admin', authRequired, (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'panel-admin.html'));
 });
 
+// Config plataforma: botón de video solo 15 min antes (público para perfil y panel-doctor)
+app.get('/api/config/video-boton-15min', async (req, res) => {
+    try {
+        const r = await pool.query(
+            "SELECT valor FROM config_plataforma WHERE clave = 'video_boton_15min' LIMIT 1"
+        );
+        const val = r.rows[0] && r.rows[0].valor;
+        const activar15MinAntes = val !== 'false' && val !== '0';
+        res.json({ activar15MinAntes: !!activar15MinAntes });
+    } catch (err) {
+        res.json({ activar15MinAntes: true });
+    }
+});
+
+// Admin: leer y guardar config (video 15 min)
+app.get('/api/admin/config', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
+    try {
+        const r = await pool.query(
+            "SELECT valor FROM config_plataforma WHERE clave = 'video_boton_15min' LIMIT 1"
+        );
+        const val = r.rows[0] && r.rows[0].valor;
+        res.json({ video_boton_15min: val !== 'false' && val !== '0' });
+    } catch (err) {
+        res.json({ video_boton_15min: true });
+    }
+});
+
+app.post('/api/admin/config', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
+    const activar15Min = req.body && req.body.video_boton_15min !== false && req.body.video_boton_15min !== 'false';
+    try {
+        await pool.query(
+            `INSERT INTO config_plataforma (clave, valor) VALUES ('video_boton_15min', $1)
+             ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor`,
+            [activar15Min ? 'true' : 'false']
+        );
+        res.json({ success: true, video_boton_15min: activar15Min });
+    } catch (err) {
+        console.error('Error guardando config:', err);
+        res.status(500).json({ error: 'Error al guardar la configuración' });
+    }
+});
+
 // Debug: troubleshooting de recordatorios 30 min (solo admin). El job usa fecha_hora_utc.
 app.get('/api/debug/recordatorios', authRequired, async (req, res) => {
     if (req.session.usuario.rol !== 'admin') {
@@ -2738,6 +2782,17 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
         return res.status(503).json({ error: 'Pagos no configurados. Contacta al administrador.' });
     }
 
+    const servicio_interes_lower = (servicio_interes || '').toLowerCase();
+    const esTerapiaIndividual = servicio_interes_lower.indexOf('individual') !== -1;
+    if (esTerapiaIndividual) {
+        const countCitas = await pool.query('SELECT 1 FROM citas WHERE paciente_id = $1 LIMIT 1', [paciente_id]);
+        const esPacienteNuevo = countCitas.rows.length === 0;
+        const motivoTrim = (motivo_de_consulta && String(motivo_de_consulta).trim()) ? String(motivo_de_consulta).trim() : '';
+        if (esPacienteNuevo && (!motivoTrim || motivoTrim.length > 200)) {
+            return res.status(400).json({ error: 'Para tu primera cita de terapia individual es obligatorio indicar el motivo de consulta (máximo 200 caracteres).' });
+        }
+    }
+
     try {
         const fechaDate = new Date(fecha + 'T12:00:00');
         const diaSemana = fechaDate.getDay();
@@ -2850,6 +2905,7 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
                 ...(servicio_interes && { servicio_interes: String(servicio_interes) }),
                 ...(motivo_de_consulta && motivo_de_consulta.length <= 200 && { motivo_de_consulta: String(motivo_de_consulta) }),
             },
+            allow_promotion_codes: true,
         });
 
         res.json({ url: session.url });
