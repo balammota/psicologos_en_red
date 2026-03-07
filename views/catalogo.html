@@ -304,6 +304,25 @@
                         <small style="color: #888; font-size: 0.8rem;">Máximo 200 caracteres.</small>
                     </div>
                 </div>
+
+                <div id="wrapper-como-enteraste" class="form-group" style="margin-top: 16px; display: none;">
+                    <label for="como-enteraste" style="color: var(--texto-oscuro); font-weight: bold;">¿Cómo te enteraste de Psicólogos en Red?</label>
+                    <div class="select-wrapper">
+                        <select id="como-enteraste" style="border: 2px solid var(--suave-arena); border-radius: 10px; padding: 10px; width: 100%;">
+                            <option value="">—</option>
+                            <option value="TikTok">TikTok</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="Facebook">Facebook</option>
+                            <option value="Google">Google</option>
+                            <option value="YouTube">YouTube</option>
+                            <option value="Recomendación">Recomendación</option>
+                        </select>
+                    </div>
+                    <div id="wrapper-recomendado-por" style="display: none; margin-top: 10px;">
+                        <label for="recomendado-por-texto" style="color: var(--texto-oscuro); font-weight: 600; font-size: 0.9rem;">Nombre de quien te recomendó</label>
+                        <input type="text" id="recomendado-por-texto" maxlength="200" placeholder="Ej. María García" style="width: 100%; border: 2px solid var(--suave-arena); border-radius: 10px; padding: 10px; margin-top: 6px; font-family: inherit; font-size: 0.95rem; box-sizing: border-box;">
+                    </div>
+                </div>
                 
                 <button type="submit" class="btn-confirmar" style="background-color: var(--primario-rosa);">Confirmar Reservación</button>
                 <p class="nota-seguridad" style="color: var(--suave-arena);">🔒 Tu información está protegida por cifrado de extremo a extremo.</p>
@@ -909,6 +928,14 @@ async function abrirModal(id, nombre) {
         const motivoOtroTexto = document.getElementById('motivo-otro-texto');
         if (wrapperMotivoOtro) wrapperMotivoOtro.style.display = 'none';
         if (motivoOtroTexto) { motivoOtroTexto.value = ''; motivoOtroTexto.removeAttribute('required'); }
+        const wrapperComoEnteraste = document.getElementById('wrapper-como-enteraste');
+        const comoEnteraste = document.getElementById('como-enteraste');
+        const wrapperRecomendadoPor = document.getElementById('wrapper-recomendado-por');
+        const recomendadoPorTexto = document.getElementById('recomendado-por-texto');
+        if (wrapperComoEnteraste) wrapperComoEnteraste.style.display = 'none';
+        if (comoEnteraste) comoEnteraste.value = '';
+        if (wrapperRecomendadoPor) wrapperRecomendadoPor.style.display = 'none';
+        if (recomendadoPorTexto) recomendadoPorTexto.value = '';
         
         // Saber si es paciente nuevo (nunca ha agendado) para mostrar motivo de consulta solo a nuevos
         window.esPacienteNuevo = false;
@@ -917,6 +944,7 @@ async function abrirModal(id, nombre) {
             const dataNuevo = await resNuevo.json();
             if (dataNuevo && dataNuevo.nuevo === true) window.esPacienteNuevo = true;
         } catch (e) { window.esPacienteNuevo = false; }
+        if (wrapperComoEnteraste) wrapperComoEnteraste.style.display = window.esPacienteNuevo ? 'block' : 'none';
         
         // Rellenar Servicio de interés solo con los servicios que ofrece este psicólogo
         const psico = typeof listaPsicologosCompleta !== 'undefined' && listaPsicologosCompleta.find(p => p.id === parseInt(id, 10));
@@ -1102,6 +1130,15 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
                 }
             }
         });
+        document.getElementById('como-enteraste').addEventListener('change', function() {
+            const val = this.value;
+            const wrRec = document.getElementById('wrapper-recomendado-por');
+            const inpRec = document.getElementById('recomendado-por-texto');
+            if (wrRec && inpRec) {
+                wrRec.style.display = (val === 'Recomendación') ? 'block' : 'none';
+                if (val !== 'Recomendación') inpRec.value = '';
+            }
+        });
 
         document.getElementById('form-agendar').onsubmit = async (e) => {
             e.preventDefault();
@@ -1136,6 +1173,16 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
                 currency: precioCurrency
             };
             if (motivoVal) data.motivo_de_consulta = motivoVal;
+            const origenEl = document.getElementById('como-enteraste');
+            const origenVal = (origenEl && origenEl.value && origenEl.value.trim()) ? origenEl.value.trim() : null;
+            if (origenVal) {
+                data.origen_conocimiento = origenVal;
+                if (origenVal === 'Recomendación') {
+                    const recEl = document.getElementById('recomendado-por-texto');
+                    const recVal = (recEl && recEl.value && recEl.value.trim()) ? recEl.value.trim().slice(0, 200) : null;
+                    if (recVal) data.recomendado_por = recVal;
+                }
+            }
 
             const res = await fetch('/api/crear-sesion-pago', {
                 method: 'POST',
