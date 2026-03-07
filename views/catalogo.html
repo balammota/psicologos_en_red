@@ -281,7 +281,7 @@
                 </div>
                 
                 <div id="wrapper-motivo-consulta" class="form-group" style="margin-top: 16px; display: none;">
-                    <label for="motivo-consulta" style="color: var(--texto-oscuro); font-weight: bold;">Motivo de consulta:</label>
+                    <label for="motivo-consulta" style="color: var(--texto-oscuro); font-weight: bold;">Motivo de consulta <span style="color: var(--primario-rosa);">(obligatorio)</span>:</label>
                     <div class="select-wrapper">
                         <select id="motivo-consulta" style="border: 2px solid var(--suave-arena); border-radius: 10px; padding: 10px; width: 100%;">
                             <option value="" disabled selected>Elige el motivo más cercano a tu situación</option>
@@ -1109,6 +1109,8 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
                 alert('Por favor selecciona tu país (México u otro) para mostrar precios y poder agendar.');
                 return;
             }
+            const servicioInteres = (document.getElementById('servicio-interes') && document.getElementById('servicio-interes').value) || '';
+            const esIndividual = (servicioInteres || '').toLowerCase().indexOf('individual') !== -1;
             const motivoEl = document.getElementById('motivo-consulta');
             let motivoVal = (motivoEl && motivoEl.value && motivoEl.value.trim()) ? motivoEl.value.trim() : null;
             if (motivoVal === 'Otro motivo') {
@@ -1120,6 +1122,11 @@ async function cargarHorariosDisponibles(fecha, psicologoId) {
                     return;
                 }
                 motivoVal = textoOtro.slice(0, 200);
+            }
+            if (window.esPacienteNuevo === true && esIndividual && !motivoVal) {
+                alert('Para tu primera cita de terapia individual es obligatorio indicar el motivo de consulta.');
+                if (motivoEl) motivoEl.focus();
+                return;
             }
             const data = {
                 psicologo_id: parseInt(document.getElementById('psico-id-input').value, 10),
