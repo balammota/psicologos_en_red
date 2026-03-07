@@ -344,6 +344,11 @@
         let intervaloChat = null;
         let ultimoPayloadChat = null;
         let miIdUsuario = null;
+        let configVideo15Min = true; // por defecto: botón solo 15 min antes
+
+        fetch('/api/config/video-boton-15min').then(function(r) { return r.json(); }).then(function(c) {
+            configVideo15Min = c.activar15MinAntes !== false;
+        }).catch(function() { configVideo15Min = true; });
 
 // Pedir mi ID al cargar la página
 fetch('/api/quien-soy')
@@ -396,7 +401,7 @@ fetch('/api/quien-soy')
                 if(document.getElementById('config-tel')) document.getElementById('config-tel').value = user.telefono || '';
                 if(document.getElementById('config-contacto-emergencia')) document.getElementById('config-contacto-emergencia').value = user.contacto_emergencia || '';
                 
-                cargarCitas();
+                configVideo15MinPromise.then(function() { cargarCitas(); });
                 // Detectar región para pago (misma cadena que catálogo: ipapi.co → ip.sb → /api/precio-region)
                 obtenerPrecioRegionPerfil().then(function(data) {
                     if (data && (data.currency === 'MXN' || data.currency === 'USD')) precioCurrencyPerfil = data.currency;
@@ -671,7 +676,9 @@ fetch('/api/quien-soy')
                         const inicioCitaMs = dCita.getTime();
                         const ahoraMs = Date.now();
                         const MS_15_MIN = 15 * 60 * 1000;
-                        const puedeUnirseAhora = (ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_15_MIN);
+                        const puedeUnirseAhora = configVideo15Min
+                            ? ((ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_15_MIN))
+                            : true;
                         const botonPrincipal = esFutura
                             ? (puedeUnirseAhora
                                 ? `
