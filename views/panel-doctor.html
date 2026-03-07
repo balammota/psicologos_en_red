@@ -454,6 +454,11 @@
         let dailyCallFrame = null;
         let miIdUsuario = null;    // ID de la tabla 'usuarios' (ej. 6)
         let miIdProfesional = null; // ID de la tabla 'psicologos' (ej. 1)
+        let configVideo15Min = true; // botón video solo 15 min antes (config admin)
+        var configVideo15MinPromise = fetch('/api/config/video-boton-15min').then(function(r) { return r.json(); }).then(function(c) {
+            configVideo15Min = c.activar15MinAntes !== false;
+            return configVideo15Min;
+        }).catch(function() { configVideo15Min = true; return true; });
         let pacienteSeleccionadoId = null;
         let intervaloChat = null;
         let citasDoctorOriginales = [];
@@ -537,7 +542,7 @@ fetch('/api/quien-soy')
                 document.getElementById('avatar-doctor').innerText = data.nombre.charAt(0).toUpperCase();
                 
                 console.log("Sesión: Usuario ID", miIdUsuario, "Profesional ID", miIdProfesional);
-                cargarCitasDoctor();
+                configVideo15MinPromise.then(function() { cargarCitasDoctor(); });
             })
             .catch(err => console.error("Error cargando user-data:", err));
 
@@ -1405,7 +1410,9 @@ function generarTarjetaCita(cita, esFutura) {
     const inicioCitaMs = dCita.getTime();
     const ahoraMs = Date.now();
     const MS_15_MIN = 15 * 60 * 1000;
-    const puedeUnirseAhora = (ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_15_MIN);
+    const puedeUnirseAhora = configVideo15Min
+        ? ((ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_15_MIN))
+        : true;
     const botonVideo = esFutura
         ? (puedeUnirseAhora
             ? `<button onclick="iniciarVideo('${escJs(cita.link_sesion || '')}', '${escJs(cita.paciente_nombre || '')}', ${cita.cita_id})" class="btn-entrar">🎥 Iniciar Sesión</button>`
