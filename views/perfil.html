@@ -561,11 +561,11 @@ fetch('/api/quien-soy')
                         return fechaCita;
                     }
 
-                    // Ventana para unirse: desde la hora de la cita hasta 15 min después
-                    const MINUTOS_DESPUES_PARA_UNIRSE = 15;
+                    // Ventana para unirse: desde 15 min antes hasta 60 min después del inicio de la sesión
+                    const MINUTOS_DESPUES_PARA_UNIRSE = 60;
                     const msVentanaUnirse = MINUTOS_DESPUES_PARA_UNIRSE * 60 * 1000;
 
-                    // Filtrar y ordenar citas futuras (incluye "hora de la cita" + 15 min para mostrar botón Unirse)
+                    // Filtrar y ordenar citas futuras (incluye "hora de la cita" + 60 min para mostrar botón Unirse)
                     const citasFuturas = citas.filter(cita => {
                         if (cita.estado === 'cancelada') return false;
                         const inicioCita = getCitaDateTime(cita).getTime();
@@ -574,7 +574,7 @@ fetch('/api/quien-soy')
                         return getCitaDateTime(a) - getCitaDateTime(b);
                     });
 
-                    // Filtrar y ordenar citas pasadas (más de 15 min después de la hora de la cita)
+                    // Filtrar y ordenar citas pasadas (más de 60 min después de la hora de la cita)
                     const citasPasadas = citas.filter(cita => {
                         if (cita.estado === 'cancelada') return true;
                         const inicioCita = getCitaDateTime(cita).getTime();
@@ -676,8 +676,9 @@ fetch('/api/quien-soy')
                         const inicioCitaMs = dCita.getTime();
                         const ahoraMs = Date.now();
                         const MS_15_MIN = 15 * 60 * 1000;
+                        const MS_60_MIN = 60 * 60 * 1000;
                         const puedeUnirseAhora = configVideo15Min
-                            ? ((ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_15_MIN))
+                            ? ((ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_60_MIN))
                             : true;
                         const botonPrincipal = esFutura
                             ? (puedeUnirseAhora
@@ -687,7 +688,7 @@ fetch('/api/quien-soy')
                                 </button>
                               `
                                 : `
-                                <button type="button" onclick="mostrarPopup('Se activará 15 minutos antes de la cita.', 'Unirse'); return false;" class="btn-entrar-sesion btn-entrar-sesion-deshabilitado" title="Se activará 15 minutos antes de la cita">
+                                <button type="button" onclick="mostrarPopup('Se activará 15 minutos antes de la cita y podrás unirte hasta 60 min después del inicio.', 'Unirse'); return false;" class="btn-entrar-sesion btn-entrar-sesion-deshabilitado" title="Se activará 15 min antes; podrás unirte hasta 60 min después del inicio">
                                     🎥 Unirse
                                 </button>
                               `)
