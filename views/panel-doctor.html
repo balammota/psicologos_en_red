@@ -1327,14 +1327,14 @@ function aplicarFiltrosYRenderizarCitasDoctor() {
 
     const ahora = new Date();
     const noCancelada = c => (c.estado || '').toLowerCase() !== 'cancelada';
-    // Ventana para unirse: hasta 15 min después de la hora de la cita
-    const MS_VENTANA_UNIRSE = 15 * 60 * 1000;
+    // Ventana para unirse: hasta 60 min después de la hora de la cita
+    const MS_VENTANA_UNIRSE = 60 * 60 * 1000;
     const futuras = filtradas.filter(c => {
         if (!noCancelada(c)) return false;
         const inicioCita = getCitaDateTimeDoctor(c).getTime();
         return inicioCita + MS_VENTANA_UNIRSE > ahora.getTime();
     });
-    // Historial: más de 15 min después de la cita O canceladas
+    // Historial: más de 60 min después de la cita O canceladas
     const pasadas = filtradas.filter(c => {
         if (!noCancelada(c)) return true;
         const inicioCita = getCitaDateTimeDoctor(c).getTime();
@@ -1410,13 +1410,14 @@ function generarTarjetaCita(cita, esFutura) {
     const inicioCitaMs = dCita.getTime();
     const ahoraMs = Date.now();
     const MS_15_MIN = 15 * 60 * 1000;
+    const MS_60_MIN = 60 * 60 * 1000;
     const puedeUnirseAhora = configVideo15Min
-        ? ((ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_15_MIN))
+        ? ((ahoraMs >= inicioCitaMs - MS_15_MIN) && (ahoraMs <= inicioCitaMs + MS_60_MIN))
         : true;
     const botonVideo = esFutura
         ? (puedeUnirseAhora
             ? `<button onclick="iniciarVideo('${escJs(cita.link_sesion || '')}', '${escJs(cita.paciente_nombre || '')}', ${cita.cita_id})" class="btn-entrar">🎥 Iniciar Sesión</button>`
-            : `<button type="button" onclick="mostrarPopup('Se activará 15 minutos antes de la cita.', 'Iniciar sesión'); return false;" class="btn-entrar btn-entrar-deshabilitado" title="Se activará 15 minutos antes de la cita">🎥 Iniciar Sesión</button>`)
+            : `<button type="button" onclick="mostrarPopup('Se activará 15 minutos antes de la cita y podrás unirte hasta 60 min después del inicio.', 'Iniciar sesión'); return false;" class="btn-entrar btn-entrar-deshabilitado" title="Se activará 15 min antes; podrás unirte hasta 60 min después del inicio">🎥 Iniciar Sesión</button>`)
         : (() => { const e = (cita.estado || 'pendiente').toLowerCase(); const esCancelada = e === 'cancelada'; const esRealizada = e === 'realizada'; return `<span class="badge-${esCancelada ? 'cancelada' : esRealizada ? 'finalizada' : 'no-realizada'}">${esCancelada ? 'Cancelada' : esRealizada ? 'Realizada' : 'No realizada'}</span>`; })();
 
     return `
