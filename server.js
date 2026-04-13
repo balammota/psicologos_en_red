@@ -60,7 +60,8 @@ function normalizarTelefonoE164(telefono) {
     return null;
 }
 
-// Cifrado de contenido de mensajes (tabla mensajes) para proteger datos de pacientes
+// Cifrado de contenido de mensajes (tabla mensajes) y notas por cita (citas.notas).
+// Definir MENSAJES_ENCRYPTION_KEY en el entorno (cadena arbitraria; se deriva clave AES-256).
 const MENSAJES_ENCRYPTION_PREFIX = 'ENCv1:';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LEN = 12;
@@ -145,12 +146,25 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
         const { paciente_id, psicologo_id, fecha, hora } = meta;
         const origenConocimiento = (meta.origen_conocimiento && String(meta.origen_conocimiento).trim().slice(0, 80)) || null;
         const recomendadoPor = (meta.recomendado_por && String(meta.recomendado_por).trim().slice(0, 200)) || null;
+        const motivoDeConsulta = (meta.motivo_de_consulta && String(meta.motivo_de_consulta).trim().slice(0, 200)) || null;
         if (paciente_id && psicologo_id && fecha && hora) {
             const paymentIntentId = typeof session.payment_intent === 'string'
                 ? session.payment_intent
                 : (session.payment_intent && session.payment_intent.id) || null;
             const insertWithPaymentIntent = () => pool.query(
-                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc, stripe_payment_intent_id, origen_conocimiento, recomendado_por)
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc, stripe_payment_intent_id, motivo_de_consulta, origen_conocimiento, recomendado_por)
+                 SELECT $1, $2, $3, $4, $5,
+                   CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
+                   (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
+                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text,
+                   $6, $7, $8, $9
+                 FROM psicologos p WHERE p.id = $2
+                 RETURNING id`,
+                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, paymentIntentId || null, motivoDeConsulta, origenConocimiento, recomendadoPor]
+            );
+            const insertSinStripe = () => pool.query(
+                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc, motivo_de_consulta, origen_conocimiento, recomendado_por)
                  SELECT $1, $2, $3, $4, $5,
                    CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
                         ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
@@ -159,19 +173,7 @@ app.post('/webhook/stripe', express.raw({ type: 'application/json' }), (req, res
                    $6, $7, $8
                  FROM psicologos p WHERE p.id = $2
                  RETURNING id`,
-                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, paymentIntentId || null, origenConocimiento, recomendadoPor]
-            );
-            const insertSinStripe = () => pool.query(
-                `INSERT INTO citas (paciente_id, psicologo_id, fecha, hora, link_sesion, zona_horaria, fecha_hora_utc, origen_conocimiento, recomendado_por)
-                 SELECT $1, $2, $3, $4, $5,
-                   CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
-                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END,
-                   (($3::date + $4::time) AT TIME ZONE (CASE WHEN NULLIF(TRIM(p.zona_horaria), '') = 'UTC' THEN 'America/Mexico_City'
-                        ELSE COALESCE(NULLIF(TRIM(p.zona_horaria), ''), 'America/Mexico_City') END))::timestamptz::text,
-                   $6, $7
-                 FROM psicologos p WHERE p.id = $2
-                 RETURNING id`,
-                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, origenConocimiento, recomendadoPor]
+                [paciente_id, psicologo_id, fecha, hora, `/perfil?sala=sesion-${paciente_id}-${psicologo_id}`, motivoDeConsulta, origenConocimiento, recomendadoPor]
             );
             insertWithPaymentIntent()
             .then(async (result) => {
@@ -2886,6 +2888,8 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
             ? req.body.cancel_url
             : `${BASE_URL}/catalogo`;
 
+        const motivoMetaStripe = (motivo_de_consulta && String(motivo_de_consulta).trim().slice(0, 200)) || '';
+
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
             line_items: [{
@@ -2907,7 +2911,7 @@ app.post('/api/crear-sesion-pago', authRequired, async (req, res) => {
                 fecha,
                 hora,
                 ...(servicio_interes && { servicio_interes: String(servicio_interes) }),
-                ...(motivo_de_consulta && motivo_de_consulta.length <= 200 && { motivo_de_consulta: String(motivo_de_consulta) }),
+                ...(motivoMetaStripe ? { motivo_de_consulta: motivoMetaStripe } : {}),
                 ...(req.body.origen_conocimiento && req.body.origen_conocimiento.length <= 80 && { origen_conocimiento: String(req.body.origen_conocimiento) }),
                 ...(req.body.recomendado_por && req.body.recomendado_por.length <= 200 && { recomendado_por: String(req.body.recomendado_por) }),
             },
@@ -4009,7 +4013,7 @@ app.get('/api/citas/:citaId/notas', authRequired, async (req, res) => {
             return res.status(404).json({ error: 'Cita no encontrada' });
         }
 
-        res.json({ notas: result.rows[0].notas || '' });
+        res.json({ notas: decryptMensajeContenido(result.rows[0].notas ?? '') });
     } catch (error) {
         console.error('Error al obtener notas:', error);
         res.status(500).json({ error: 'Error al obtener notas' });
@@ -4026,6 +4030,7 @@ app.post('/api/citas/:citaId/notas', authRequired, async (req, res) => {
 
     const { notas } = req.body;
     const notasStr = (notas ?? '').toString();
+    const notasParaDb = encryptMensajeContenido(notasStr);
 
     try {
         const result = await pool.query(
@@ -4034,7 +4039,7 @@ app.post('/api/citas/:citaId/notas', authRequired, async (req, res) => {
              FROM psicologos p
              WHERE c.id = $2 AND c.psicologo_id = p.id AND p.usuario_id = $3
              RETURNING c.id`,
-            [notasStr, citaId, req.session.usuario.id]
+            [notasParaDb, citaId, req.session.usuario.id]
         );
 
         if (result.rowCount === 0) {
@@ -4129,6 +4134,7 @@ app.get('/api/mis-citas-doctor', authRequired, async (req, res) => {
         }
         const rows = result.rows.map(r => ({
             ...r,
+            notas: decryptMensajeContenido(r.notas ?? ''),
             fecha_hora_utc: r.fecha_hora_utc ? (r.fecha_hora_utc instanceof Date ? r.fecha_hora_utc.toISOString() : r.fecha_hora_utc) : null
         }));
         res.json(rows);
