@@ -7,6 +7,7 @@
     <title>Panel de Administrador - Psicólogos en Red</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="/estilos.css">
+    <link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
         
@@ -94,9 +95,6 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 100;
         }
 
         .admin-header h1 {
@@ -315,6 +313,61 @@
                 grid-template-columns: 1fr;
             }
         }
+        .blog-admin-form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .blog-admin-form-grid .full { grid-column: 1 / -1; }
+        .blog-admin-input, .blog-admin-textarea, .blog-admin-select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            font-size: 0.92rem;
+        }
+        .blog-admin-textarea { min-height: 72px; resize: vertical; }
+        #blog-editor { background: #fff; min-height: 220px; border-radius: 10px; }
+        .blog-admin-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+        .blog-admin-btn {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .blog-admin-btn.primary { background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; }
+        .blog-admin-btn.secondary { background: #eef2ff; color: #3b4789; }
+        .blog-label-help {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            margin-left: 6px;
+            border-radius: 999px;
+            border: 1px solid #c8b2bf;
+            color: #7a4b63;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            background: #fff;
+        }
+        .blog-help-popover {
+            position: fixed;
+            z-index: 2500;
+            max-width: 320px;
+            background: #fff;
+            border: 1px solid #e3ccd8;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 0.84rem;
+            line-height: 1.45;
+            color: #4b3e49;
+            display: none;
+        }
     </style>
 </head>
 <body class="perfil-body">
@@ -330,6 +383,7 @@
                     <li><button type="button" class="perfil-mobile-nav-btn" data-section="citas">📅 Citas</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-section="psicologos">👨‍⚕️ Psicólogos</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-section="pacientes">👥 Pacientes</button></li>
+                    <li><button type="button" class="perfil-mobile-nav-btn" data-section="blog">📝 Blog</button></li>
                     <li><button type="button" class="perfil-mobile-nav-btn" data-section="configuracion">⚙️ Configuración</button></li>
                     <li><a href="/" class="perfil-mobile-nav-link">🌐 Volver al Sitio</a></li>
                     <li><a href="/logout" class="perfil-mobile-nav-link perfil-mobile-logout">🚪 Cerrar Sesión</a></li>
@@ -350,6 +404,7 @@
                 <li><a href="#" data-section="citas"><span class="icon">📅</span> <span>Citas</span></a></li>
                 <li><a href="#" data-section="psicologos"><span class="icon">👨‍⚕️</span> <span>Psicólogos</span></a></li>
                 <li><a href="#" data-section="pacientes"><span class="icon">👥</span> <span>Pacientes</span></a></li>
+                <li><a href="#" data-section="blog"><span class="icon">📝</span> <span>Blog</span></a></li>
                 <li><a href="#" data-section="configuracion"><span class="icon">⚙️</span> <span>Configuración</span></a></li>
                 <li><a href="/logout"><span class="icon">🚪</span> <span>Cerrar Sesión</span></a></li>
             </ul>
@@ -617,6 +672,110 @@
                     </div>
                 </section>
 
+                <!-- Blog Section -->
+                <section id="blog" class="admin-section">
+                    <div class="admin-table-container">
+                        <div class="admin-table-header">
+                            <h2>📝 Gestor de Blog</h2>
+                        </div>
+                        <p style="margin: 0 0 14px; color: #666; font-size: 0.9rem;">Puedes usar formato enriquecido (negritas, listas, links e imágenes por URL). Guarda como borrador o publica.</p>
+                        <div class="blog-admin-form-grid">
+                            <div class="full">
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Título</label>
+                                <input id="blog-titulo" class="blog-admin-input" type="text" placeholder="Ej. Cómo construir relaciones sanas">
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">
+                                    Slug
+                                    <span class="blog-label-help" data-help="No uses espacios entre palabras. Usa guiones y que sea relacionado al tema del artículo.">?</span>
+                                </label>
+                                <input id="blog-slug" class="blog-admin-input" type="text" placeholder="como-construir-relaciones-sanas">
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Autor</label>
+                                <input id="blog-autor" class="blog-admin-input" type="text" placeholder="Nombre del autor o equipo">
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Tiempo de lectura (min)</label>
+                                <input id="blog-tiempo-lectura" class="blog-admin-input" type="number" min="1" step="1" value="5">
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Palabras clave</label>
+                                <input id="blog-palabras-clave" class="blog-admin-input" type="text" placeholder="amor, pareja, autoestima">
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Fecha de publicación</label>
+                                <input id="blog-fecha-publicacion" class="blog-admin-input" type="datetime-local">
+                            </div>
+                            <div class="full">
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Extracto (resumen para tarjetas)</label>
+                                <textarea id="blog-extracto" class="blog-admin-textarea" placeholder="Resumen breve para mostrar en bloques del blog..."></textarea>
+                            </div>
+                            <div class="full">
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">URL de imagen de portada (opcional)</label>
+                                <input id="blog-portada-url" class="blog-admin-input" type="url" placeholder="https://...">
+                                <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input id="blog-imagen-archivo" type="file" accept="image/*" style="display:none;">
+                                    <button type="button" class="blog-admin-btn secondary" id="btn-blog-subir-imagen">Subir imagen y usarla</button>
+                                    <span style="font-size:0.82rem; color:#666;">También puedes pegar URL manualmente.</span>
+                                </div>
+                            </div>
+                            <div class="full">
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">
+                                    Meta title (SEO)
+                                    <span class="blog-label-help" data-help="Título optimizado para buscadores. Es el que suele mostrarse en Google (puede ser distinto al título visible del artículo). Recomendado: 50 a 60 caracteres, con palabra clave principal.">?</span>
+                                </label>
+                                <input id="blog-meta-title" class="blog-admin-input" type="text" placeholder="Título SEO (opcional)">
+                            </div>
+                            <div class="full">
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">
+                                    Meta description (SEO)
+                                    <span class="blog-label-help" data-help="Resumen corto que aparece debajo del título en resultados de búsqueda. Recomendado: 140 a 160 caracteres, claro y natural, incluyendo la palabra clave principal.">?</span>
+                                </label>
+                                <textarea id="blog-meta-description" class="blog-admin-textarea" placeholder="Descripción SEO (opcional)"></textarea>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Estado</label>
+                                <select id="blog-publicado" class="blog-admin-select">
+                                    <option value="true">Publicar</option>
+                                    <option value="false">Borrador</option>
+                                </select>
+                            </div>
+                            <div class="full">
+                                <div class="blog-admin-actions" style="margin-top: 2px; margin-bottom: 4px;">
+                                    <button type="button" class="blog-admin-btn primary" id="btn-blog-guardar">Guardar artículo</button>
+                                    <button type="button" class="blog-admin-btn secondary" id="btn-blog-limpiar">Limpiar formulario</button>
+                                    <span id="blog-admin-msg" style="display:flex; align-items:center; color:#666;"></span>
+                                </div>
+                            </div>
+                            <div class="full">
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">Contenido del artículo</label>
+                                <div id="blog-editor"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="admin-table-container" style="margin-top: 18px;">
+                        <div class="admin-table-header">
+                            <h2>Artículos guardados</h2>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Título</th>
+                                    <th>Slug</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                    <th>Autor</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-blog-admin">
+                                <tr><td colspan="6" style="text-align:center;">Cargando artículos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
                 <!-- Configuración Section -->
                 <section id="configuracion" class="admin-section">
                     <div class="admin-table-container" style="max-width: 600px;">
@@ -678,7 +837,9 @@
             </div>
         </main>
     </div>
+    <div id="blog-help-popover" class="blog-help-popover" role="tooltip" aria-hidden="true"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const titles = {
@@ -686,6 +847,7 @@
                 citas: 'Gestión de Citas',
                 psicologos: 'Psicólogos',
                 pacientes: 'Pacientes',
+                blog: 'Gestor de Blog',
                 configuracion: 'Configuración'
             };
 
@@ -729,6 +891,7 @@
             cargarCitas();
             cargarPsicologos();
             cargarPacientes();
+            inicializarBlogAdmin();
             cargarPerfilAdmin();
             cargarGraficoCartera();
 
@@ -748,6 +911,11 @@
         let todasLasCitas = [];
         let todosLosPsicologos = [];
         let todosLosPacientes = [];
+        let todosLosArticulosBlog = [];
+        let blogArticuloEditandoId = null;
+        let quillBlog = null;
+        let blogSlugEditadoManual = false;
+        let blogHelpTarget = null;
 
         async function cargarEstadisticas() {
             try {
@@ -1017,6 +1185,361 @@
             if (!fecha) return '-';
             const d = new Date(fecha);
             return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        // ========== BLOG ADMIN ==========
+        function obtenerFechaLocalInput() {
+            const ahora = new Date();
+            ahora.setMinutes(ahora.getMinutes() - ahora.getTimezoneOffset());
+            return ahora.toISOString().slice(0, 16);
+        }
+
+        function setBlogMsg(msg, isError) {
+            const el = document.getElementById('blog-admin-msg');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.style.color = isError ? '#b42318' : '#166534';
+        }
+
+        function limpiarFormularioBlog() {
+            blogArticuloEditandoId = null;
+            blogSlugEditadoManual = false;
+            document.getElementById('blog-titulo').value = '';
+            document.getElementById('blog-slug').value = '';
+            document.getElementById('blog-autor').value = 'Equipo Psicólogos en Red';
+            document.getElementById('blog-tiempo-lectura').value = '5';
+            document.getElementById('blog-palabras-clave').value = '';
+            document.getElementById('blog-extracto').value = '';
+            document.getElementById('blog-portada-url').value = '';
+            document.getElementById('blog-meta-title').value = '';
+            document.getElementById('blog-meta-description').value = '';
+            document.getElementById('blog-publicado').value = 'true';
+            document.getElementById('blog-fecha-publicacion').value = obtenerFechaLocalInput();
+            if (quillBlog) quillBlog.setContents([]);
+            setBlogMsg('');
+        }
+
+        function normalizarSlugLocal(v) {
+            return String(v || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s-]/g, '')
+                .trim()
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        async function sugerirSlugDesdeTitulo() {
+            if (blogSlugEditadoManual) return;
+            const titulo = document.getElementById('blog-titulo').value.trim();
+            if (!titulo) {
+                document.getElementById('blog-slug').value = '';
+                return;
+            }
+            try {
+                const q = new URLSearchParams({
+                    titulo,
+                    excludeId: blogArticuloEditandoId ? String(blogArticuloEditandoId) : ''
+                });
+                const res = await fetch('/api/admin/blog/slug-sugerido?' + q.toString());
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && data.slug) document.getElementById('blog-slug').value = data.slug;
+            } catch (_) {
+                document.getElementById('blog-slug').value = normalizarSlugLocal(titulo);
+            }
+        }
+
+        function renderizarTablaBlog(articulos) {
+            const tbody = document.getElementById('tabla-blog-admin');
+            if (!tbody) return;
+            if (!articulos.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aún no hay artículos.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = articulos.map((a) => {
+                return `
+                    <tr>
+                        <td>${a.titulo || 'Sin título'}</td>
+                        <td>${a.slug || '—'}</td>
+                        <td>${a.publicado ? 'Publicado' : 'Borrador'}</td>
+                        <td>${formatearFecha(a.fecha_publicacion)}</td>
+                        <td>${a.autor || '—'}</td>
+                        <td>
+                            <button type="button" class="blog-admin-btn secondary" data-blog-editar="${a.id}" style="padding:6px 10px;">Editar</button>
+                            ${a.publicado ? '' : `<button type="button" class="blog-admin-btn secondary" data-blog-publicar="${a.id}" style="padding:6px 10px;">Publicar</button>`}
+                            <button type="button" class="blog-admin-btn secondary" data-blog-eliminar="${a.id}" style="padding:6px 10px; background:#fdecec; color:#b42318;">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            tbody.querySelectorAll('[data-blog-editar]').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-blog-editar'), 10);
+                    if (Number.isNaN(id)) return;
+                    cargarArticuloBlogParaEditar(id);
+                });
+            });
+            tbody.querySelectorAll('[data-blog-publicar]').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-blog-publicar'), 10);
+                    if (Number.isNaN(id)) return;
+                    publicarArticuloDesdeLista(id);
+                });
+            });
+            tbody.querySelectorAll('[data-blog-eliminar]').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-blog-eliminar'), 10);
+                    if (Number.isNaN(id)) return;
+                    eliminarArticuloDesdeLista(id);
+                });
+            });
+        }
+
+        async function publicarArticuloDesdeLista(id) {
+            try {
+                const res = await fetch('/api/admin/blog/' + id);
+                if (!res.ok) throw new Error('No se pudo cargar el artículo');
+                const art = await res.json();
+                const payload = {
+                    titulo: art.titulo,
+                    slug: art.slug,
+                    autor: art.autor || 'Equipo Psicólogos en Red',
+                    tiempo_lectura: art.tiempo_lectura || 5,
+                    meta_title: art.meta_title || '',
+                    meta_description: art.meta_description || '',
+                    palabras_clave: Array.isArray(art.palabras_clave) ? art.palabras_clave.join(', ') : '',
+                    extracto: art.extracto || '',
+                    portada_url: art.portada_url || '',
+                    fecha_publicacion: art.fecha_publicacion || new Date().toISOString(),
+                    publicado: true,
+                    contenido_html: art.contenido_html || ''
+                };
+                const up = await fetch('/api/admin/blog/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await up.json();
+                if (!up.ok) throw new Error(data.error || 'No se pudo publicar');
+                setBlogMsg('Artículo publicado.', false);
+                await cargarArticulosBlogAdmin();
+            } catch (e) {
+                setBlogMsg(e.message || 'Error al publicar artículo.', true);
+            }
+        }
+
+        async function eliminarArticuloDesdeLista(id) {
+            const ok = window.confirm('¿Seguro que deseas eliminar este artículo? Esta acción no se puede deshacer.');
+            if (!ok) return;
+            try {
+                const res = await fetch('/api/admin/blog/' + id, { method: 'DELETE' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'No se pudo eliminar');
+                setBlogMsg('Artículo eliminado.', false);
+                if (blogArticuloEditandoId === id) limpiarFormularioBlog();
+                await cargarArticulosBlogAdmin();
+            } catch (e) {
+                setBlogMsg(e.message || 'Error al eliminar artículo.', true);
+            }
+        }
+
+        async function cargarArticulosBlogAdmin() {
+            try {
+                const res = await fetch('/api/admin/blog');
+                if (!res.ok) throw new Error('No se pudo cargar blog admin');
+                todosLosArticulosBlog = await res.json();
+                renderizarTablaBlog(todosLosArticulosBlog);
+            } catch (e) {
+                setBlogMsg('No pudimos cargar los artículos.', true);
+            }
+        }
+
+        async function cargarArticuloBlogParaEditar(id) {
+            try {
+                const res = await fetch('/api/admin/blog/' + id);
+                if (!res.ok) throw new Error('No se pudo cargar artículo');
+                const art = await res.json();
+                blogArticuloEditandoId = art.id;
+                blogSlugEditadoManual = true;
+                document.getElementById('blog-titulo').value = art.titulo || '';
+                document.getElementById('blog-slug').value = art.slug || '';
+                document.getElementById('blog-autor').value = art.autor || 'Equipo Psicólogos en Red';
+                document.getElementById('blog-tiempo-lectura').value = String(art.tiempo_lectura || 5);
+                document.getElementById('blog-palabras-clave').value = Array.isArray(art.palabras_clave) ? art.palabras_clave.join(', ') : '';
+                document.getElementById('blog-extracto').value = art.extracto || '';
+                document.getElementById('blog-portada-url').value = art.portada_url || '';
+                document.getElementById('blog-meta-title').value = art.meta_title || '';
+                document.getElementById('blog-meta-description').value = art.meta_description || '';
+                document.getElementById('blog-publicado').value = art.publicado ? 'true' : 'false';
+                if (art.fecha_publicacion) {
+                    const d = new Date(art.fecha_publicacion);
+                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                    document.getElementById('blog-fecha-publicacion').value = d.toISOString().slice(0, 16);
+                }
+                if (quillBlog) quillBlog.root.innerHTML = art.contenido_html || '';
+                setBlogMsg('Editando artículo #' + art.id, false);
+            } catch (e) {
+                setBlogMsg('No se pudo abrir el artículo para editar.', true);
+            }
+        }
+
+        async function guardarArticuloBlog() {
+            const titulo = document.getElementById('blog-titulo').value.trim();
+            const slug = normalizarSlugLocal(document.getElementById('blog-slug').value.trim());
+            const autor = document.getElementById('blog-autor').value.trim();
+            const tiempoLectura = parseInt(document.getElementById('blog-tiempo-lectura').value, 10) || 5;
+            const palabrasClave = document.getElementById('blog-palabras-clave').value.trim();
+            const extracto = document.getElementById('blog-extracto').value.trim();
+            const portadaUrl = document.getElementById('blog-portada-url').value.trim();
+            const metaTitle = document.getElementById('blog-meta-title').value.trim();
+            const metaDescription = document.getElementById('blog-meta-description').value.trim();
+            const fechaPublicacion = document.getElementById('blog-fecha-publicacion').value;
+            const publicado = document.getElementById('blog-publicado').value === 'true';
+            const contenidoHtml = quillBlog ? quillBlog.root.innerHTML.trim() : '';
+
+            if (!titulo) return setBlogMsg('El título es obligatorio.', true);
+            if (!slug) return setBlogMsg('El slug es obligatorio y no debe tener espacios.', true);
+            if (!contenidoHtml || contenidoHtml === '<p><br></p>') return setBlogMsg('El contenido es obligatorio.', true);
+
+            const payload = {
+                titulo,
+                slug,
+                autor,
+                tiempo_lectura: tiempoLectura,
+                meta_title: metaTitle,
+                meta_description: metaDescription,
+                palabras_clave: palabrasClave,
+                extracto,
+                portada_url: portadaUrl,
+                fecha_publicacion: fechaPublicacion ? new Date(fechaPublicacion).toISOString() : new Date().toISOString(),
+                publicado,
+                contenido_html: contenidoHtml
+            };
+
+            const editando = !!blogArticuloEditandoId;
+            const url = editando ? '/api/admin/blog/' + blogArticuloEditandoId : '/api/admin/blog';
+            const method = editando ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'No se pudo guardar');
+                setBlogMsg(editando ? 'Artículo actualizado.' : 'Artículo creado.', false);
+                await cargarArticulosBlogAdmin();
+                limpiarFormularioBlog();
+            } catch (e) {
+                setBlogMsg(e.message || 'Error al guardar el artículo.', true);
+            }
+        }
+
+        async function subirImagenBlog(inputFile) {
+            const file = inputFile && inputFile.files ? inputFile.files[0] : null;
+            if (!file) return;
+            try {
+                setBlogMsg('Subiendo imagen...', false);
+                const fd = new FormData();
+                fd.append('imagen', file);
+                const res = await fetch('/api/admin/blog/upload-imagen', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'No se pudo subir');
+                document.getElementById('blog-portada-url').value = data.url;
+                if (quillBlog) {
+                    const range = quillBlog.getSelection(true);
+                    const idx = range ? range.index : quillBlog.getLength();
+                    quillBlog.insertEmbed(idx, 'image', data.url, 'user');
+                    quillBlog.setSelection(idx + 1);
+                }
+                setBlogMsg('Imagen subida correctamente.', false);
+            } catch (e) {
+                setBlogMsg(e.message || 'Error al subir imagen.', true);
+            } finally {
+                inputFile.value = '';
+            }
+        }
+
+        function inicializarBlogAdmin() {
+            if (window.Quill) {
+                quillBlog = new Quill('#blog-editor', {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            [{ header: [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'blockquote'],
+                            [{ list: 'ordered' }, { list: 'bullet' }],
+                            ['link', 'image'],
+                            ['clean']
+                        ]
+                    }
+                });
+            }
+            const inputFecha = document.getElementById('blog-fecha-publicacion');
+            if (inputFecha) inputFecha.value = obtenerFechaLocalInput();
+            document.getElementById('btn-blog-guardar').addEventListener('click', guardarArticuloBlog);
+            document.getElementById('btn-blog-limpiar').addEventListener('click', limpiarFormularioBlog);
+            const inputTitulo = document.getElementById('blog-titulo');
+            const inputSlug = document.getElementById('blog-slug');
+            inputTitulo.addEventListener('input', sugerirSlugDesdeTitulo);
+            inputSlug.addEventListener('input', function() { blogSlugEditadoManual = true; this.value = normalizarSlugLocal(this.value); });
+            document.getElementById('btn-blog-subir-imagen').addEventListener('click', function() {
+                document.getElementById('blog-imagen-archivo').click();
+            });
+            document.getElementById('blog-imagen-archivo').addEventListener('change', function() {
+                subirImagenBlog(this);
+            });
+            inicializarPopoverAyudaBlog();
+            cargarArticulosBlogAdmin();
+            sugerirSlugDesdeTitulo();
+        }
+
+        function inicializarPopoverAyudaBlog() {
+            const pop = document.getElementById('blog-help-popover');
+            if (!pop) return;
+            const helps = document.querySelectorAll('.blog-label-help[data-help]');
+            helps.forEach((el) => {
+                el.addEventListener('click', function(ev) {
+                    ev.stopPropagation();
+                    const txt = this.getAttribute('data-help') || '';
+                    if (!txt) return;
+                    const same = blogHelpTarget === this && pop.style.display === 'block';
+                    if (same) {
+                        pop.style.display = 'none';
+                        pop.setAttribute('aria-hidden', 'true');
+                        blogHelpTarget = null;
+                        return;
+                    }
+                    pop.textContent = txt;
+                    pop.style.display = 'block';
+                    pop.setAttribute('aria-hidden', 'false');
+                    const rect = this.getBoundingClientRect();
+                    const top = rect.bottom + 8;
+                    const left = Math.min(window.innerWidth - 340, Math.max(10, rect.left - 8));
+                    pop.style.top = top + 'px';
+                    pop.style.left = left + 'px';
+                    blogHelpTarget = this;
+                });
+            });
+            document.addEventListener('click', function(ev) {
+                if (pop.style.display !== 'block') return;
+                if (pop.contains(ev.target)) return;
+                if (ev.target.classList && ev.target.classList.contains('blog-label-help')) return;
+                pop.style.display = 'none';
+                pop.setAttribute('aria-hidden', 'true');
+                blogHelpTarget = null;
+            });
+            window.addEventListener('resize', function() {
+                if (pop.style.display === 'block') {
+                    pop.style.display = 'none';
+                    pop.setAttribute('aria-hidden', 'true');
+                    blogHelpTarget = null;
+                }
+            });
         }
 
         // ========== GRÁFICO DE CARTERA ==========
