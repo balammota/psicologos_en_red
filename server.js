@@ -111,6 +111,81 @@ function decryptMensajeContenido(value) {
     }
 }
 
+function quitarEtiquetasHtml(html) {
+    if (!html) return '';
+    return String(html)
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function normalizarPalabrasClave(input) {
+    const base = Array.isArray(input) ? input : String(input || '').split(',');
+    const limpias = base
+        .map((v) => String(v || '').trim().toLowerCase())
+        .filter(Boolean);
+    return [...new Set(limpias)].slice(0, 25);
+}
+
+function crearSlug(texto) {
+    return String(texto || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+async function slugUnico(baseSlug, excluirId) {
+    const base = (baseSlug && String(baseSlug).trim()) || 'articulo';
+    let intento = base;
+    let i = 1;
+    while (i < 200) {
+        const q = excluirId
+            ? await pool.query('SELECT 1 FROM blog_articulos WHERE slug = $1 AND id <> $2 LIMIT 1', [intento, excluirId])
+            : await pool.query('SELECT 1 FROM blog_articulos WHERE slug = $1 LIMIT 1', [intento]);
+        if (q.rows.length === 0) return intento;
+        i += 1;
+        intento = `${base}-${i}`;
+    }
+    return `${base}-${Date.now()}`;
+}
+
+async function asegurarTablaBlogArticulos() {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS blog_articulos (
+            id SERIAL PRIMARY KEY,
+            titulo VARCHAR(220) NOT NULL,
+            slug VARCHAR(260) UNIQUE,
+            autor VARCHAR(140) DEFAULT 'Equipo Psicólogos en Red' NOT NULL,
+            tiempo_lectura INTEGER DEFAULT 5 NOT NULL,
+            meta_title VARCHAR(260),
+            meta_description VARCHAR(320),
+            palabras_clave TEXT[] DEFAULT '{}'::text[] NOT NULL,
+            contenido_html TEXT NOT NULL,
+            extracto TEXT DEFAULT ''::text NOT NULL,
+            portada_url TEXT,
+            publicado BOOLEAN DEFAULT true NOT NULL,
+            fecha_publicacion TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+            creado_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+        )
+    `);
+    await pool.query(`ALTER TABLE blog_articulos ADD COLUMN IF NOT EXISTS slug VARCHAR(260)`);
+    await pool.query(`ALTER TABLE blog_articulos ADD COLUMN IF NOT EXISTS autor VARCHAR(140) DEFAULT 'Equipo Psicólogos en Red' NOT NULL`);
+    await pool.query(`ALTER TABLE blog_articulos ADD COLUMN IF NOT EXISTS tiempo_lectura INTEGER DEFAULT 5 NOT NULL`);
+    await pool.query(`ALTER TABLE blog_articulos ADD COLUMN IF NOT EXISTS meta_title VARCHAR(260)`);
+    await pool.query(`ALTER TABLE blog_articulos ADD COLUMN IF NOT EXISTS meta_description VARCHAR(320)`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_blog_articulos_slug ON blog_articulos (slug) WHERE slug IS NOT NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_blog_articulos_publicado_fecha ON blog_articulos (publicado, fecha_publicacion DESC)`);
+}
+
 /** Envía un mensaje WhatsApp (Twilio). Si no hay cliente configurado o teléfono, no hace nada. */
 async function enviarWhatsapp(telefono, mensaje) {
     if (!twilioClient || !mensaje) return;
@@ -1279,6 +1354,14 @@ app.get('/nosotros', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'nosotros.html'));
 });
 
+app.get('/blog', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'blog.html'));
+});
+
+app.get('/blog/:slug', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'blog.html'));
+});
+
 app.get('/terminos-condiciones', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'terminos-condiciones.html'));
 });
@@ -2193,6 +2276,221 @@ app.get('/api/admin/pacientes', authRequired, async (req, res) => {
     } catch (error) {
         console.error('Error al obtener pacientes admin:', error);
         res.status(500).json({ error: 'Error al obtener pacientes' });
+    }
+});
+
+// Blog público: artículos publicados
+app.get('/api/blog-articulos', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, titulo, slug, autor, tiempo_lectura, meta_title, meta_description,
+                   palabras_clave, contenido_html, extracto, portada_url, fecha_publicacion
+            FROM blog_articulos
+            WHERE publicado = true
+            ORDER BY fecha_publicacion DESC, id DESC
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error al obtener artículos de blog:', error);
+        res.status(500).json({ error: 'Error al obtener artículos' });
+    }
+});
+
+const uploadsBlogDir = path.join(__dirname, 'public', 'uploads', 'blog');
+if (!fs.existsSync(uploadsBlogDir)) fs.mkdirSync(uploadsBlogDir, { recursive: true });
+const uploadBlogImagen = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 8 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const mime = String(file.mimetype || '').toLowerCase();
+        if (mime.startsWith('image/')) return cb(null, true);
+        cb(new Error('Solo se permiten imágenes'));
+    }
+}).single('imagen');
+
+app.post('/api/admin/blog/upload-imagen', authRequired, (req, res) => {
+    if (req.session.usuario.rol !== 'admin') return res.status(403).json({ error: 'No autorizado' });
+    uploadBlogImagen(req, res, (err) => {
+        if (err) return res.status(400).json({ error: err.message || 'Error al subir imagen' });
+        if (!req.file || !req.file.buffer) return res.status(400).json({ error: 'No se recibió archivo' });
+        try {
+            const safeOriginal = String(req.file.originalname || 'imagen').replace(/[^a-zA-Z0-9._-]/g, '_');
+            const ext = (path.extname(safeOriginal).toLowerCase() || '.jpg').replace(/[^a-z.]/g, '');
+            const nombre = `blog-${Date.now()}-${Math.floor(Math.random() * 10000)}${ext}`;
+            const destino = path.join(uploadsBlogDir, nombre);
+            fs.writeFileSync(destino, req.file.buffer);
+            return res.json({ url: `/uploads/blog/${nombre}` });
+        } catch (e) {
+            return res.status(500).json({ error: 'No se pudo guardar la imagen' });
+        }
+    });
+});
+
+app.get('/api/admin/blog/slug-sugerido', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') return res.status(403).json({ error: 'No autorizado' });
+    try {
+        const base = crearSlug(req.query?.titulo || req.query?.slug || '') || 'articulo';
+        const excludeId = req.query?.excludeId ? parseInt(req.query.excludeId, 10) : null;
+        const sugerido = await slugUnico(base, Number.isNaN(excludeId) ? null : excludeId);
+        res.json({ slug: sugerido });
+    } catch (e) {
+        res.status(500).json({ error: 'No se pudo sugerir slug' });
+    }
+});
+
+// Admin blog: listar todos (publicados y borradores)
+app.get('/api/admin/blog', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+    try {
+        const result = await pool.query(`
+            SELECT id, titulo, slug, autor, tiempo_lectura, meta_title, meta_description,
+                   palabras_clave, extracto, portada_url, publicado, fecha_publicacion, created_at, updated_at
+            FROM blog_articulos
+            ORDER BY fecha_publicacion DESC, id DESC
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error al listar blog admin:', error);
+        res.status(500).json({ error: 'Error al obtener artículos del blog' });
+    }
+});
+
+// Admin blog: detalle por id (para editar)
+app.get('/api/admin/blog/:id', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const result = await pool.query(
+            `SELECT id, titulo, slug, autor, tiempo_lectura, meta_title, meta_description,
+                    palabras_clave, contenido_html, extracto, portada_url, publicado, fecha_publicacion
+             FROM blog_articulos WHERE id = $1`,
+            [id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Artículo no encontrado' });
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error al obtener artículo admin:', error);
+        res.status(500).json({ error: 'Error al obtener el artículo' });
+    }
+});
+
+// Admin blog: crear
+app.post('/api/admin/blog', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+    try {
+        const titulo = String(req.body?.titulo || '').trim();
+        const slugInput = crearSlug(req.body?.slug || titulo);
+        const autor = String(req.body?.autor || 'Equipo Psicólogos en Red').trim().slice(0, 140);
+        const tiempoLectura = Math.max(1, parseInt(req.body?.tiempo_lectura, 10) || 5);
+        const metaTitle = String(req.body?.meta_title || '').trim() || null;
+        const metaDescription = String(req.body?.meta_description || '').trim() || null;
+        const contenidoHtml = String(req.body?.contenido_html || '').trim();
+        const extractoEntrada = String(req.body?.extracto || '').trim();
+        const portadaUrl = String(req.body?.portada_url || '').trim() || null;
+        const publicado = req.body?.publicado !== false && req.body?.publicado !== 'false';
+        const fechaPublicacion = req.body?.fecha_publicacion ? new Date(req.body.fecha_publicacion) : new Date();
+        const palabrasClave = normalizarPalabrasClave(req.body?.palabras_clave);
+
+        if (!titulo) return res.status(400).json({ error: 'El título es obligatorio' });
+        if (!slugInput) return res.status(400).json({ error: 'El slug es obligatorio' });
+        if (!contenidoHtml) return res.status(400).json({ error: 'El contenido es obligatorio' });
+        if (Number.isNaN(fechaPublicacion.getTime())) return res.status(400).json({ error: 'Fecha inválida' });
+
+        const slug = await slugUnico(slugInput, null);
+        const textoPlano = quitarEtiquetasHtml(contenidoHtml);
+        const extracto = extractoEntrada || textoPlano.slice(0, 220);
+
+        const result = await pool.query(
+            `INSERT INTO blog_articulos (titulo, slug, autor, tiempo_lectura, meta_title, meta_description, palabras_clave, contenido_html, extracto, portada_url, publicado, fecha_publicacion, creado_por)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             RETURNING id, titulo, slug, autor, tiempo_lectura, meta_title, meta_description, palabras_clave, extracto, portada_url, publicado, fecha_publicacion`,
+            [titulo, slug, autor || 'Equipo Psicólogos en Red', tiempoLectura, metaTitle, metaDescription, palabrasClave, contenidoHtml, extracto, portadaUrl, publicado, fechaPublicacion, req.session.usuario.id]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error al crear artículo blog:', error);
+        res.status(500).json({ error: 'Error al crear artículo' });
+    }
+});
+
+// Admin blog: editar
+app.put('/api/admin/blog/:id', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const titulo = String(req.body?.titulo || '').trim();
+        const slugInput = crearSlug(req.body?.slug || titulo);
+        const autor = String(req.body?.autor || 'Equipo Psicólogos en Red').trim().slice(0, 140);
+        const tiempoLectura = Math.max(1, parseInt(req.body?.tiempo_lectura, 10) || 5);
+        const metaTitle = String(req.body?.meta_title || '').trim() || null;
+        const metaDescription = String(req.body?.meta_description || '').trim() || null;
+        const contenidoHtml = String(req.body?.contenido_html || '').trim();
+        const extractoEntrada = String(req.body?.extracto || '').trim();
+        const portadaUrl = String(req.body?.portada_url || '').trim() || null;
+        const publicado = req.body?.publicado !== false && req.body?.publicado !== 'false';
+        const fechaPublicacion = req.body?.fecha_publicacion ? new Date(req.body.fecha_publicacion) : new Date();
+        const palabrasClave = normalizarPalabrasClave(req.body?.palabras_clave);
+
+        if (!titulo) return res.status(400).json({ error: 'El título es obligatorio' });
+        if (!slugInput) return res.status(400).json({ error: 'El slug es obligatorio' });
+        if (!contenidoHtml) return res.status(400).json({ error: 'El contenido es obligatorio' });
+        if (Number.isNaN(fechaPublicacion.getTime())) return res.status(400).json({ error: 'Fecha inválida' });
+
+        const slug = await slugUnico(slugInput, id);
+        const textoPlano = quitarEtiquetasHtml(contenidoHtml);
+        const extracto = extractoEntrada || textoPlano.slice(0, 220);
+
+        const result = await pool.query(
+            `UPDATE blog_articulos
+             SET titulo = $1,
+                 slug = $2,
+                 autor = $3,
+                 tiempo_lectura = $4,
+                 meta_title = $5,
+                 meta_description = $6,
+                 palabras_clave = $7,
+                 contenido_html = $8,
+                 extracto = $9,
+                 portada_url = $10,
+                 publicado = $11,
+                 fecha_publicacion = $12,
+                 updated_at = NOW()
+             WHERE id = $13
+             RETURNING id, titulo, slug, autor, tiempo_lectura, meta_title, meta_description, palabras_clave, extracto, portada_url, publicado, fecha_publicacion`,
+            [titulo, slug, autor || 'Equipo Psicólogos en Red', tiempoLectura, metaTitle, metaDescription, palabrasClave, contenidoHtml, extracto, portadaUrl, publicado, fechaPublicacion, id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Artículo no encontrado' });
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error al actualizar artículo blog:', error);
+        res.status(500).json({ error: 'Error al actualizar artículo' });
+    }
+});
+
+// Admin blog: eliminar
+app.delete('/api/admin/blog/:id', authRequired, async (req, res) => {
+    if (req.session.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const result = await pool.query('DELETE FROM blog_articulos WHERE id = $1 RETURNING id', [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Artículo no encontrado' });
+        res.json({ success: true, id });
+    } catch (error) {
+        console.error('Error al eliminar artículo blog:', error);
+        res.status(500).json({ error: 'Error al eliminar artículo' });
     }
 });
 
@@ -4252,4 +4550,7 @@ app.listen(PORT, () => {
     setInterval(ejecutarRecordatoriosCitas, 5 * 60 * 1000);
     asegurarSecuenciaRecordatorioPostCita().then(() => ejecutarRecordatoriosPostCita());
     setInterval(ejecutarRecordatoriosPostCita, 24 * 60 * 60 * 1000);
+    asegurarTablaBlogArticulos().catch((err) => {
+        console.error('Error asegurando tabla blog_articulos:', err.message);
+    });
 });
