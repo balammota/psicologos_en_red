@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ED87AF">
+    <title>Blog - Psicólogos en Red</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/estilos.css">
+    <link rel="stylesheet" href="/chat-widget.css">
+    <style>
+        .blog-main { background: linear-gradient(180deg, #fff8fb 0%, #ffffff 45%); min-height: 100vh; }
+        .blog-wrap { max-width: 1120px; margin: 0 auto; padding: 2rem 1.2rem 4rem; }
+        .blog-hero {
+            border: 1px solid rgba(237, 135, 175, 0.22);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(6px);
+            border-radius: 26px;
+            padding: 2.2rem 1.4rem;
+            box-shadow: 0 20px 50px rgba(30, 20, 28, 0.07);
+            margin-bottom: 1.6rem;
+        }
+        .blog-kicker { display: inline-flex; gap: 8px; font-size: 0.8rem; font-weight: 700; color: #8b4b66; background: #ffeaf3; border-radius: 999px; padding: 0.45rem 0.75rem; margin-bottom: 1rem; }
+        .blog-title { font-size: clamp(2rem, 4.2vw, 3.2rem); line-height: 1.1; margin: 0 0 0.8rem; color: #2e2630; }
+        .blog-subtitle { margin: 0; font-size: clamp(1rem, 2vw, 1.15rem); color: #5f5561; max-width: 760px; }
+        .blog-filtros {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: minmax(260px, 1.6fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) auto;
+            gap: 6px;
+            align-items: center;
+        }
+        .blog-filtros input, .blog-filtros button {
+            border: 1px solid #eadbe3;
+            border-radius: 12px;
+            padding: 8px 10px;
+            font-size: 0.86rem;
+            width: 100%;
+            min-height: 36px;
+        }
+        #filtro-desde, #filtro-hasta {
+            max-width: 150px;
+            justify-self: end;
+        }
+        #filtro-desde {
+            margin-left: 0;
+            position: relative;
+            left: 60px;
+        }
+        .blog-filtros button {
+            background: #fff;
+            cursor: pointer;
+            color: #7a4761;
+            font-weight: 600;
+            width: auto;
+            padding: 8px 12px;
+            justify-self: end;
+        }
+        .blog-filtros button:hover { border-color: #d08baa; }
+        .blog-resultado { margin-top: 0.85rem; font-size: 0.88rem; color: #756975; }
+        .blog-grid { margin-top: 1.25rem; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .blog-card {
+            background: #fff;
+            border: 1px solid #efe3ea;
+            border-radius: 20px;
+            padding: 1rem;
+            box-shadow: 0 8px 22px rgba(18, 11, 19, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+        .blog-card-cover {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            border-radius: 14px;
+            margin-bottom: 0.8rem;
+            background: #f7f1f5;
+        }
+        .blog-card .tag { display: inline-block; font-size: 0.74rem; font-weight: 700; color: #7d4d65; background: #fff2f8; border-radius: 999px; padding: 0.35rem 0.62rem; margin-bottom: 0.55rem; }
+        .blog-card h2 { margin: 0 0 0.45rem; font-size: 1.08rem; line-height: 1.35; color: #2e2630; }
+        .blog-card p { margin: 0 0 0.65rem; color: #655b67; font-size: 0.92rem; line-height: 1.55; }
+        .blog-meta { font-size: 0.82rem; color: #8a7e88; margin-top: auto; }
+        .blog-card-actions { margin-top: 0.75rem; }
+        .blog-card-actions button {
+            border: none;
+            background: #fdf0f6;
+            color: #7c3f60;
+            border-radius: 999px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .blog-empty {
+            border: 1px dashed #e4ccd8;
+            background: #fff;
+            border-radius: 18px;
+            padding: 1.2rem;
+            color: #7b6d77;
+        }
+        .blog-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(18, 13, 19, 0.6);
+            z-index: 1200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .blog-modal {
+            background: #fff;
+            width: min(900px, 100%);
+            max-height: 92vh;
+            overflow: auto;
+            border-radius: 18px;
+            padding: 1.2rem 1.2rem 1.8rem;
+        }
+        .blog-modal h2 { margin-top: 0.4rem; margin-bottom: 0.6rem; color: #2e2630; }
+        .blog-modal-content { color: #3c3340; line-height: 1.7; }
+        .blog-modal-close {
+            float: right;
+            border: none;
+            background: #ffeef5;
+            border-radius: 10px;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-weight: 700;
+            color: #7c3f60;
+        }
+        @media (max-width: 820px) {
+            .blog-filtros { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <script>if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) document.body.classList.add('pwa-standalone');</script>
+    <header class="main-header">
+        <a href="/" class="logo" style="color: var(--primario-rosa); text-decoration: none; display: flex; align-items: center; gap: 10px;">
+            <img src="/images/logo.png" alt="Logo" style="height: 40px; width: auto;">
+            <span>Psicólogos en Red</span>
+        </a>
+        <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true" tabindex="-1">
+        <label for="nav-toggle" class="nav-toggle-label" aria-label="Abrir menú"><span></span><span></span><span></span></label>
+        <nav class="main-nav">
+            <ul style="display: flex; list-style: none; gap: 25px; align-items: center;">
+                <li class="nav-hide-in-pwa"><a href="/" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Inicio</a></li>
+                <li><a href="/catalogo" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Psicólogos</a></li>
+                <li class="nav-hide-in-pwa"><a href="/academia" style="text-decoration: none; color: var(--texto-oscuro); font-weight: 500;">Academia</a></li>
+                <li><a href="/blog" style="text-decoration: none; color: var(--primario-rosa); font-weight: 700;">Blog</a></li>
+                <li><a href="/perfil" class="btn-perfil" style="background: var(--primario-rosa); color: white; padding: 8px 18px; border-radius: 20px; text-decoration: none;">Mi Perfil</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="blog-main">
+        <div class="blog-wrap">
+            <section class="blog-hero">
+                <span class="blog-kicker">BLOG · SALUD MENTAL</span>
+                <h1 class="blog-title">Contenido práctico para cuidar tu bienestar.</h1>
+                <p class="blog-subtitle">Busca por título o palabra clave y filtra por fecha de publicación en tiempo real.</p>
+                <div class="blog-filtros">
+                    <input type="text" id="filtro-texto" placeholder="Buscar por título o palabra clave (ej. amor)">
+                    <input type="date" id="filtro-desde" aria-label="Fecha desde">
+                    <input type="date" id="filtro-hasta" aria-label="Fecha hasta">
+                    <button type="button" id="btn-limpiar-filtros">Limpiar</button>
+                </div>
+                <p class="blog-resultado" id="blog-resultado">Cargando artículos...</p>
+            </section>
+
+            <section class="blog-grid" id="blog-grid"></section>
+        </div>
+    </main>
+
+    <div class="blog-modal-overlay" id="blog-modal-overlay">
+        <article class="blog-modal">
+            <button type="button" class="blog-modal-close" id="blog-modal-close">Cerrar ✕</button>
+            <h2 id="blog-modal-title">Artículo</h2>
+            <p class="blog-meta" id="blog-modal-meta"></p>
+            <div class="blog-modal-content" id="blog-modal-content"></div>
+        </article>
+    </div>
+
+    <script src="/i18n.js"></script>
+    <script src="/chat-widget.js"></script>
+    <script src="/pwa-register.js"></script>
+    <script>
+        let articulos = [];
+
+        function formatearFecha(iso) {
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return 'Fecha no disponible';
+            return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function matchesFecha(art, desde, hasta) {
+            const f = new Date(art.fecha_publicacion);
+            if (Number.isNaN(f.getTime())) return true;
+            const solo = new Date(f.getFullYear(), f.getMonth(), f.getDate()).getTime();
+            if (desde) {
+                const fd = new Date(desde + 'T00:00:00').getTime();
+                if (solo < fd) return false;
+            }
+            if (hasta) {
+                const fh = new Date(hasta + 'T23:59:59').getTime();
+                if (solo > fh) return false;
+            }
+            return true;
+        }
+
+        function filtrarArticulos() {
+            const txt = (document.getElementById('filtro-texto').value || '').trim().toLowerCase();
+            const desde = document.getElementById('filtro-desde').value;
+            const hasta = document.getElementById('filtro-hasta').value;
+            const filtrados = articulos.filter((a) => {
+                const kw = Array.isArray(a.palabras_clave) ? a.palabras_clave.join(' ') : '';
+                const stack = (a.titulo + ' ' + kw).toLowerCase();
+                const coincideTexto = !txt || stack.includes(txt);
+                const coincideFecha = matchesFecha(a, desde, hasta);
+                return coincideTexto && coincideFecha;
+            });
+            renderizar(filtrados);
+        }
+
+        function abrirModal(art) {
+            document.getElementById('blog-modal-title').textContent = art.titulo || 'Artículo';
+            const autor = art.autor || 'Equipo Psicólogos en Red';
+            const lectura = art.tiempo_lectura ? (' · ' + art.tiempo_lectura + ' min de lectura') : '';
+            document.getElementById('blog-modal-meta').textContent = 'Publicado: ' + formatearFecha(art.fecha_publicacion) + ' · ' + autor + lectura;
+            document.getElementById('blog-modal-content').innerHTML = art.contenido_html || '<p>Sin contenido.</p>';
+            document.getElementById('blog-modal-overlay').style.display = 'flex';
+        }
+
+        function renderizar(items) {
+            const grid = document.getElementById('blog-grid');
+            const estado = document.getElementById('blog-resultado');
+            estado.textContent = 'Mostrando ' + items.length + ' artículo' + (items.length === 1 ? '' : 's') + '.';
+            if (!items.length) {
+                grid.innerHTML = '<div class="blog-empty">No encontramos artículos con esos filtros. Prueba con otra palabra o rango de fechas.</div>';
+                return;
+            }
+            grid.innerHTML = items.map((a) => {
+                const etiqueta = Array.isArray(a.palabras_clave) && a.palabras_clave.length ? a.palabras_clave[0] : 'Blog';
+                const extracto = a.extracto || 'Sin extracto.';
+                const img = a.portada_url ? '<img class="blog-card-cover" src="' + a.portada_url + '" alt="Portada de artículo">' : '';
+                const href = a.slug ? ('/blog/' + encodeURIComponent(a.slug)) : '#';
+                return (
+                    '<article class="blog-card">' +
+                        img +
+                        '<span class="tag">' + etiqueta + '</span>' +
+                        '<h2>' + (a.titulo || 'Sin título') + '</h2>' +
+                        '<p>' + extracto + '</p>' +
+                        '<p class="blog-meta">Publicado: ' + formatearFecha(a.fecha_publicacion) + (a.tiempo_lectura ? (' · ' + a.tiempo_lectura + ' min') : '') + '</p>' +
+                        '<div class="blog-card-actions"><button type="button" data-articulo-id="' + a.id + '" data-articulo-href="' + href + '">Leer artículo</button></div>' +
+                    '</article>'
+                );
+            }).join('');
+            grid.querySelectorAll('button[data-articulo-id]').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-articulo-id'), 10);
+                    const art = articulos.find((x) => x.id === id);
+                    if (art) {
+                        const href = this.getAttribute('data-articulo-href');
+                        if (href && href !== '#') history.replaceState(null, '', href);
+                        abrirModal(art);
+                    }
+                });
+            });
+        }
+
+        async function cargarArticulos() {
+            try {
+                const res = await fetch('/api/blog-articulos');
+                if (!res.ok) throw new Error('Error al cargar');
+                articulos = await res.json();
+                filtrarArticulos();
+                const path = window.location.pathname || '';
+                const m = path.match(/^\/blog\/([^/]+)$/);
+                if (m && m[1]) {
+                    const slug = decodeURIComponent(m[1]).toLowerCase();
+                    const art = articulos.find((x) => String(x.slug || '').toLowerCase() === slug);
+                    if (art) {
+                        abrirModal(art);
+                        if (art.meta_title) document.title = art.meta_title + ' - Psicólogos en Red';
+                        const descMeta = document.querySelector('meta[name="description"]');
+                        if (descMeta && art.meta_description) descMeta.setAttribute('content', art.meta_description);
+                    }
+                }
+            } catch (e) {
+                document.getElementById('blog-grid').innerHTML = '<div class="blog-empty">No pudimos cargar los artículos en este momento.</div>';
+                document.getElementById('blog-resultado').textContent = 'Error al cargar.';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarArticulos();
+            document.getElementById('filtro-texto').addEventListener('input', filtrarArticulos);
+            document.getElementById('filtro-desde').addEventListener('change', filtrarArticulos);
+            document.getElementById('filtro-hasta').addEventListener('change', filtrarArticulos);
+            document.getElementById('btn-limpiar-filtros').addEventListener('click', function() {
+                document.getElementById('filtro-texto').value = '';
+                document.getElementById('filtro-desde').value = '';
+                document.getElementById('filtro-hasta').value = '';
+                filtrarArticulos();
+            });
+            const overlay = document.getElementById('blog-modal-overlay');
+            document.getElementById('blog-modal-close').addEventListener('click', function() { overlay.style.display = 'none'; history.replaceState(null, '', '/blog'); });
+            overlay.addEventListener('click', function(e) { if (e.target === overlay) { overlay.style.display = 'none'; history.replaceState(null, '', '/blog'); } });
+        });
+    </script>
+</body>
+</html>
