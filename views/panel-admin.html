@@ -329,6 +329,34 @@
         }
         .blog-admin-textarea { min-height: 72px; resize: vertical; }
         #blog-editor { background: #fff; min-height: 220px; border-radius: 10px; }
+        #blog-editor .ql-editor details.blog-referencias {
+            border: 1px solid #e5d7de;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #fffafc;
+            margin-top: 16px;
+        }
+        #blog-editor .ql-editor details.blog-referencias summary {
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #blog-editor .ql-editor table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        #blog-editor .ql-editor table th,
+        #blog-editor .ql-editor table td {
+            border: 1px solid #c7c7c7;
+            padding: 6px 8px;
+        }
+        #blog-editor .ql-toolbar .ql-formats button.ql-marker::after { content: '🖍️'; font-size: 14px; }
+        #blog-editor .ql-toolbar .ql-formats button.ql-insertTable::after { content: '▦'; font-size: 15px; }
+        #blog-editor .ql-toolbar .ql-formats button.ql-toggleTableBorders::after { content: '▣'; font-size: 15px; }
+        #blog-editor .ql-toolbar .ql-formats button.ql-addTableRow::after { content: '+↕'; font-size: 12px; }
+        #blog-editor .ql-toolbar .ql-formats button.ql-removeTableRow::after { content: '-↕'; font-size: 12px; }
+        #blog-editor .ql-toolbar .ql-formats button.ql-addTableColumn::after { content: '+↔'; font-size: 12px; }
+        #blog-editor .ql-toolbar .ql-formats button.ql-removeTableColumn::after { content: '-↔'; font-size: 12px; }
         .blog-admin-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
         .blog-admin-btn {
             border: none;
@@ -712,6 +740,13 @@
                                 <textarea id="blog-extracto" class="blog-admin-textarea" placeholder="Resumen breve para mostrar en bloques del blog..."></textarea>
                             </div>
                             <div class="full">
+                                <label style="display:block; margin-bottom:6px; font-weight:600;">
+                                    Referencias (opcional)
+                                    <span class="blog-label-help" data-help="Escribe una referencia por línea. Se guardarán al final del artículo en un bloque desplegable llamado Referencias.">?</span>
+                                </label>
+                                <textarea id="blog-referencias" class="blog-admin-textarea" placeholder="Autor, título, año, URL... (una por línea)"></textarea>
+                            </div>
+                            <div class="full">
                                 <label style="display:block; margin-bottom:6px; font-weight:600;">URL de imagen de portada (opcional)</label>
                                 <input id="blog-portada-url" class="blog-admin-input" type="url" placeholder="https://...">
                                 <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -916,6 +951,7 @@
         let quillBlog = null;
         let blogSlugEditadoManual = false;
         let blogHelpTarget = null;
+        const BLOG_REFERENCIAS_CLASS = 'blog-referencias';
 
         async function cargarEstadisticas() {
             try {
@@ -1210,6 +1246,7 @@
             document.getElementById('blog-tiempo-lectura').value = '5';
             document.getElementById('blog-palabras-clave').value = '';
             document.getElementById('blog-extracto').value = '';
+            document.getElementById('blog-referencias').value = '';
             document.getElementById('blog-portada-url').value = '';
             document.getElementById('blog-meta-title').value = '';
             document.getElementById('blog-meta-description').value = '';
@@ -1217,6 +1254,76 @@
             document.getElementById('blog-fecha-publicacion').value = obtenerFechaLocalInput();
             if (quillBlog) quillBlog.setContents([]);
             setBlogMsg('');
+        }
+
+        function construirBloqueReferencias(referenciasRaw) {
+            const refs = String(referenciasRaw || '')
+                .split('\n')
+                .map(r => r.trim())
+                .filter(Boolean);
+            if (!refs.length) return '';
+            const items = refs
+                .map(r => `<li>${r.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`)
+                .join('');
+            return `<details class="${BLOG_REFERENCIAS_CLASS}"><summary>Referencias</summary><ul>${items}</ul></details>`;
+        }
+
+        function separarReferenciasDeContenido(html) {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = String(html || '');
+            const details = tmp.querySelector(`details.${BLOG_REFERENCIAS_CLASS}`);
+            let referencias = '';
+            if (details) {
+                const li = Array.from(details.querySelectorAll('li'));
+                referencias = li.map(n => (n.textContent || '').trim()).filter(Boolean).join('\n');
+                details.remove();
+            }
+            return { contenidoSinReferencias: tmp.innerHTML.trim(), referencias };
+        }
+
+        function anexarReferenciasAContenido(html, referenciasRaw) {
+            const parsed = separarReferenciasDeContenido(html);
+            const bloque = construirBloqueReferencias(referenciasRaw);
+            return bloque ? `${parsed.contenidoSinReferencias}${parsed.contenidoSinReferencias ? '\n' : ''}${bloque}` : parsed.contenidoSinReferencias;
+        }
+
+        function obtenerTablaDesdeSeleccion() {
+            if (!quillBlog) return null;
+            const range = quillBlog.getSelection();
+            if (!range) return null;
+            const leaf = quillBlog.getLeaf(range.index);
+            if (!leaf || !leaf[0] || !leaf[0].domNode) return null;
+            let node = leaf[0].domNode;
+            while (node && node !== quillBlog.root) {
+                if (node.tagName === 'TABLE') return node;
+                node = node.parentNode;
+            }
+            return null;
+        }
+
+        function obtenerCeldaDesdeSeleccion() {
+            if (!quillBlog) return null;
+            const range = quillBlog.getSelection();
+            if (!range) return null;
+            const leaf = quillBlog.getLeaf(range.index);
+            if (!leaf || !leaf[0] || !leaf[0].domNode) return null;
+            let node = leaf[0].domNode;
+            while (node && node !== quillBlog.root) {
+                if (node.tagName === 'TD' || node.tagName === 'TH') return node;
+                node = node.parentNode;
+            }
+            return null;
+        }
+
+        function aplicarBordesTabla(table, conBordes) {
+            if (!table) return;
+            table.style.borderCollapse = 'collapse';
+            const borderStyle = conBordes ? '1px solid #c7c7c7' : '0';
+            table.style.border = borderStyle;
+            table.querySelectorAll('th, td').forEach((cell) => {
+                cell.style.border = borderStyle;
+                cell.style.padding = '6px 8px';
+            });
         }
 
         function normalizarSlugLocal(v) {
@@ -1370,6 +1477,8 @@
                 document.getElementById('blog-tiempo-lectura').value = String(art.tiempo_lectura || 5);
                 document.getElementById('blog-palabras-clave').value = Array.isArray(art.palabras_clave) ? art.palabras_clave.join(', ') : '';
                 document.getElementById('blog-extracto').value = art.extracto || '';
+                const contenidoParseado = separarReferenciasDeContenido(art.contenido_html || '');
+                document.getElementById('blog-referencias').value = contenidoParseado.referencias || '';
                 document.getElementById('blog-portada-url').value = art.portada_url || '';
                 document.getElementById('blog-meta-title').value = art.meta_title || '';
                 document.getElementById('blog-meta-description').value = art.meta_description || '';
@@ -1379,7 +1488,7 @@
                     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
                     document.getElementById('blog-fecha-publicacion').value = d.toISOString().slice(0, 16);
                 }
-                if (quillBlog) quillBlog.root.innerHTML = art.contenido_html || '';
+                if (quillBlog) quillBlog.root.innerHTML = contenidoParseado.contenidoSinReferencias || '';
                 setBlogMsg('Editando artículo #' + art.id, false);
             } catch (e) {
                 setBlogMsg('No se pudo abrir el artículo para editar.', true);
@@ -1393,12 +1502,14 @@
             const tiempoLectura = parseInt(document.getElementById('blog-tiempo-lectura').value, 10) || 5;
             const palabrasClave = document.getElementById('blog-palabras-clave').value.trim();
             const extracto = document.getElementById('blog-extracto').value.trim();
+            const referencias = document.getElementById('blog-referencias').value.trim();
             const portadaUrl = document.getElementById('blog-portada-url').value.trim();
             const metaTitle = document.getElementById('blog-meta-title').value.trim();
             const metaDescription = document.getElementById('blog-meta-description').value.trim();
             const fechaPublicacion = document.getElementById('blog-fecha-publicacion').value;
             const publicado = document.getElementById('blog-publicado').value === 'true';
-            const contenidoHtml = quillBlog ? quillBlog.root.innerHTML.trim() : '';
+            const contenidoHtmlBase = quillBlog ? quillBlog.root.innerHTML.trim() : '';
+            const contenidoHtml = anexarReferenciasAContenido(contenidoHtmlBase, referencias);
 
             if (!titulo) return setBlogMsg('El título es obligatorio.', true);
             if (!slug) return setBlogMsg('El slug es obligatorio y no debe tener espacios.', true);
@@ -1471,11 +1582,99 @@
                     modules: {
                         toolbar: [
                             [{ header: [1, 2, 3, false] }],
+                            [{ size: ['small', false, 'large', 'huge'] }],
                             ['bold', 'italic', 'underline', 'blockquote'],
+                            [{ align: [] }],
+                            [{ color: [] }, { background: [] }],
                             [{ list: 'ordered' }, { list: 'bullet' }],
+                            ['marker'],
+                            ['insertTable', 'toggleTableBorders'],
+                            ['addTableRow', 'removeTableRow', 'addTableColumn', 'removeTableColumn'],
                             ['link', 'image'],
                             ['clean']
-                        ]
+                        ],
+                        handlers: {
+                            marker: function() {
+                                const current = quillBlog.getFormat().background;
+                                quillBlog.format('background', current ? false : '#fff59d');
+                            },
+                            insertTable: function() {
+                                const range = quillBlog.getSelection(true);
+                                const idx = range ? range.index : quillBlog.getLength();
+                                const tableHtml = '<table><tbody><tr><th>Columna 1</th><th>Columna 2</th></tr><tr><td>Dato 1</td><td>Dato 2</td></tr></tbody></table><p><br></p>';
+                                quillBlog.clipboard.dangerouslyPasteHTML(idx, tableHtml, 'user');
+                                quillBlog.setSelection(idx + 1);
+                            },
+                            toggleTableBorders: function() {
+                                const table = obtenerTablaDesdeSeleccion();
+                                if (!table) {
+                                    setBlogMsg('Coloca el cursor dentro de una tabla para activar/quitar bordes.', true);
+                                    return;
+                                }
+                                const conBordes = table.dataset.noBorders === '1';
+                                aplicarBordesTabla(table, conBordes);
+                                table.dataset.noBorders = conBordes ? '0' : '1';
+                            },
+                            addTableRow: function() {
+                                const cell = obtenerCeldaDesdeSeleccion();
+                                if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
+                                const row = cell.parentNode;
+                                if (!row) return;
+                                const clone = row.cloneNode(true);
+                                clone.querySelectorAll('th, td').forEach((c) => { c.innerHTML = '<br>'; });
+                                row.parentNode.insertBefore(clone, row.nextSibling);
+                                setBlogMsg('Fila agregada.', false);
+                            },
+                            removeTableRow: function() {
+                                const cell = obtenerCeldaDesdeSeleccion();
+                                if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
+                                const row = cell.parentNode;
+                                const table = obtenerTablaDesdeSeleccion();
+                                if (!row || !table) return;
+                                const totalRows = table.querySelectorAll('tr').length;
+                                if (totalRows <= 1) return setBlogMsg('No puedes eliminar la última fila.', true);
+                                row.remove();
+                                setBlogMsg('Fila eliminada.', false);
+                            },
+                            addTableColumn: function() {
+                                const cell = obtenerCeldaDesdeSeleccion();
+                                if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
+                                const row = cell.parentNode;
+                                if (!row) return;
+                                const cells = Array.from(row.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
+                                const idx = cells.indexOf(cell);
+                                if (idx < 0) return;
+                                const table = obtenerTablaDesdeSeleccion();
+                                if (!table) return;
+                                table.querySelectorAll('tr').forEach((tr) => {
+                                    const trCells = Array.from(tr.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
+                                    const ref = trCells[idx];
+                                    const isHeader = ref && ref.tagName === 'TH';
+                                    const newCell = document.createElement(isHeader ? 'th' : 'td');
+                                    newCell.innerHTML = '<br>';
+                                    if (ref && ref.nextSibling) tr.insertBefore(newCell, ref.nextSibling);
+                                    else tr.appendChild(newCell);
+                                });
+                                setBlogMsg('Columna agregada.', false);
+                            },
+                            removeTableColumn: function() {
+                                const cell = obtenerCeldaDesdeSeleccion();
+                                if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
+                                const row = cell.parentNode;
+                                if (!row) return;
+                                const cells = Array.from(row.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
+                                if (cells.length <= 1) return setBlogMsg('No puedes eliminar la última columna.', true);
+                                const idx = cells.indexOf(cell);
+                                if (idx < 0) return;
+                                const table = obtenerTablaDesdeSeleccion();
+                                if (!table) return;
+                                table.querySelectorAll('tr').forEach((tr) => {
+                                    const trCells = Array.from(tr.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
+                                    if (trCells[idx]) trCells[idx].remove();
+                                });
+                                setBlogMsg('Columna eliminada.', false);
+                            }
+                        }
                     }
                 });
             }
