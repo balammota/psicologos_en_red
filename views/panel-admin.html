@@ -1580,99 +1580,101 @@
                 quillBlog = new Quill('#blog-editor', {
                     theme: 'snow',
                     modules: {
-                        toolbar: [
-                            [{ header: [1, 2, 3, false] }],
-                            [{ size: ['small', false, 'large', 'huge'] }],
-                            ['bold', 'italic', 'underline', 'blockquote'],
-                            [{ align: [] }],
-                            [{ color: [] }, { background: [] }],
-                            [{ list: 'ordered' }, { list: 'bullet' }],
-                            ['marker'],
-                            ['insertTable', 'toggleTableBorders'],
-                            ['addTableRow', 'removeTableRow', 'addTableColumn', 'removeTableColumn'],
-                            ['link', 'image'],
-                            ['clean']
-                        ],
-                        handlers: {
-                            marker: function() {
-                                const current = quillBlog.getFormat().background;
-                                quillBlog.format('background', current ? false : '#fff59d');
-                            },
-                            insertTable: function() {
-                                const range = quillBlog.getSelection(true);
-                                const idx = range ? range.index : quillBlog.getLength();
-                                const tableHtml = '<table><tbody><tr><th>Columna 1</th><th>Columna 2</th></tr><tr><td>Dato 1</td><td>Dato 2</td></tr></tbody></table><p><br></p>';
-                                quillBlog.clipboard.dangerouslyPasteHTML(idx, tableHtml, 'user');
-                                quillBlog.setSelection(idx + 1);
-                            },
-                            toggleTableBorders: function() {
-                                const table = obtenerTablaDesdeSeleccion();
-                                if (!table) {
-                                    setBlogMsg('Coloca el cursor dentro de una tabla para activar/quitar bordes.', true);
-                                    return;
+                        toolbar: {
+                            container: [
+                                [{ header: [1, 2, 3, false] }],
+                                [{ size: ['small', false, 'large', 'huge'] }],
+                                ['bold', 'italic', 'underline', 'blockquote'],
+                                [{ align: [] }],
+                                [{ color: [] }, { background: [] }],
+                                [{ list: 'ordered' }, { list: 'bullet' }],
+                                ['marker'],
+                                ['insertTable', 'toggleTableBorders'],
+                                ['addTableRow', 'removeTableRow', 'addTableColumn', 'removeTableColumn'],
+                                ['link', 'image'],
+                                ['clean']
+                            ],
+                            handlers: {
+                                marker: function() {
+                                    const current = quillBlog.getFormat().background;
+                                    quillBlog.format('background', current ? false : '#fff59d');
+                                },
+                                insertTable: function() {
+                                    const range = quillBlog.getSelection(true);
+                                    const idx = range ? range.index : quillBlog.getLength();
+                                    const tableHtml = '<table><tbody><tr><th>Columna 1</th><th>Columna 2</th></tr><tr><td>Dato 1</td><td>Dato 2</td></tr></tbody></table><p><br></p>';
+                                    quillBlog.clipboard.dangerouslyPasteHTML(idx, tableHtml, 'user');
+                                    quillBlog.setSelection(idx + 1);
+                                },
+                                toggleTableBorders: function() {
+                                    const table = obtenerTablaDesdeSeleccion();
+                                    if (!table) {
+                                        setBlogMsg('Coloca el cursor dentro de una tabla para activar/quitar bordes.', true);
+                                        return;
+                                    }
+                                    const conBordes = table.dataset.noBorders === '1';
+                                    aplicarBordesTabla(table, conBordes);
+                                    table.dataset.noBorders = conBordes ? '0' : '1';
+                                },
+                                addTableRow: function() {
+                                    const cell = obtenerCeldaDesdeSeleccion();
+                                    if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
+                                    const row = cell.parentNode;
+                                    if (!row) return;
+                                    const clone = row.cloneNode(true);
+                                    clone.querySelectorAll('th, td').forEach((c) => { c.innerHTML = '<br>'; });
+                                    row.parentNode.insertBefore(clone, row.nextSibling);
+                                    setBlogMsg('Fila agregada.', false);
+                                },
+                                removeTableRow: function() {
+                                    const cell = obtenerCeldaDesdeSeleccion();
+                                    if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
+                                    const row = cell.parentNode;
+                                    const table = obtenerTablaDesdeSeleccion();
+                                    if (!row || !table) return;
+                                    const totalRows = table.querySelectorAll('tr').length;
+                                    if (totalRows <= 1) return setBlogMsg('No puedes eliminar la última fila.', true);
+                                    row.remove();
+                                    setBlogMsg('Fila eliminada.', false);
+                                },
+                                addTableColumn: function() {
+                                    const cell = obtenerCeldaDesdeSeleccion();
+                                    if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
+                                    const row = cell.parentNode;
+                                    if (!row) return;
+                                    const cells = Array.from(row.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
+                                    const idx = cells.indexOf(cell);
+                                    if (idx < 0) return;
+                                    const table = obtenerTablaDesdeSeleccion();
+                                    if (!table) return;
+                                    table.querySelectorAll('tr').forEach((tr) => {
+                                        const trCells = Array.from(tr.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
+                                        const ref = trCells[idx];
+                                        const isHeader = ref && ref.tagName === 'TH';
+                                        const newCell = document.createElement(isHeader ? 'th' : 'td');
+                                        newCell.innerHTML = '<br>';
+                                        if (ref && ref.nextSibling) tr.insertBefore(newCell, ref.nextSibling);
+                                        else tr.appendChild(newCell);
+                                    });
+                                    setBlogMsg('Columna agregada.', false);
+                                },
+                                removeTableColumn: function() {
+                                    const cell = obtenerCeldaDesdeSeleccion();
+                                    if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
+                                    const row = cell.parentNode;
+                                    if (!row) return;
+                                    const cells = Array.from(row.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
+                                    if (cells.length <= 1) return setBlogMsg('No puedes eliminar la última columna.', true);
+                                    const idx = cells.indexOf(cell);
+                                    if (idx < 0) return;
+                                    const table = obtenerTablaDesdeSeleccion();
+                                    if (!table) return;
+                                    table.querySelectorAll('tr').forEach((tr) => {
+                                        const trCells = Array.from(tr.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
+                                        if (trCells[idx]) trCells[idx].remove();
+                                    });
+                                    setBlogMsg('Columna eliminada.', false);
                                 }
-                                const conBordes = table.dataset.noBorders === '1';
-                                aplicarBordesTabla(table, conBordes);
-                                table.dataset.noBorders = conBordes ? '0' : '1';
-                            },
-                            addTableRow: function() {
-                                const cell = obtenerCeldaDesdeSeleccion();
-                                if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
-                                const row = cell.parentNode;
-                                if (!row) return;
-                                const clone = row.cloneNode(true);
-                                clone.querySelectorAll('th, td').forEach((c) => { c.innerHTML = '<br>'; });
-                                row.parentNode.insertBefore(clone, row.nextSibling);
-                                setBlogMsg('Fila agregada.', false);
-                            },
-                            removeTableRow: function() {
-                                const cell = obtenerCeldaDesdeSeleccion();
-                                if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
-                                const row = cell.parentNode;
-                                const table = obtenerTablaDesdeSeleccion();
-                                if (!row || !table) return;
-                                const totalRows = table.querySelectorAll('tr').length;
-                                if (totalRows <= 1) return setBlogMsg('No puedes eliminar la última fila.', true);
-                                row.remove();
-                                setBlogMsg('Fila eliminada.', false);
-                            },
-                            addTableColumn: function() {
-                                const cell = obtenerCeldaDesdeSeleccion();
-                                if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
-                                const row = cell.parentNode;
-                                if (!row) return;
-                                const cells = Array.from(row.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
-                                const idx = cells.indexOf(cell);
-                                if (idx < 0) return;
-                                const table = obtenerTablaDesdeSeleccion();
-                                if (!table) return;
-                                table.querySelectorAll('tr').forEach((tr) => {
-                                    const trCells = Array.from(tr.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
-                                    const ref = trCells[idx];
-                                    const isHeader = ref && ref.tagName === 'TH';
-                                    const newCell = document.createElement(isHeader ? 'th' : 'td');
-                                    newCell.innerHTML = '<br>';
-                                    if (ref && ref.nextSibling) tr.insertBefore(newCell, ref.nextSibling);
-                                    else tr.appendChild(newCell);
-                                });
-                                setBlogMsg('Columna agregada.', false);
-                            },
-                            removeTableColumn: function() {
-                                const cell = obtenerCeldaDesdeSeleccion();
-                                if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
-                                const row = cell.parentNode;
-                                if (!row) return;
-                                const cells = Array.from(row.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
-                                if (cells.length <= 1) return setBlogMsg('No puedes eliminar la última columna.', true);
-                                const idx = cells.indexOf(cell);
-                                if (idx < 0) return;
-                                const table = obtenerTablaDesdeSeleccion();
-                                if (!table) return;
-                                table.querySelectorAll('tr').forEach((tr) => {
-                                    const trCells = Array.from(tr.children).filter((n) => n.tagName === 'TD' || n.tagName === 'TH');
-                                    if (trCells[idx]) trCells[idx].remove();
-                                });
-                                setBlogMsg('Columna eliminada.', false);
                             }
                         }
                     }
