@@ -122,8 +122,41 @@
         .blog-articulo-content .ql-align-right { text-align: right; }
         .blog-articulo-content .ql-align-justify { text-align: justify; }
         .blog-articulo-content img { max-width: 100%; height: auto; display: block; margin: 12px 0; border-radius: 10px; }
+        .blog-articulo-content table { border-collapse: collapse; border: 2px solid #000; margin: 10px 0; }
+        .blog-articulo-content th,
+        .blog-articulo-content td { border: 2px solid #000; padding: 8px 10px; background: #f5f5f5; min-width: 90px; }
         @media (max-width: 820px) {
-            .blog-filtros { grid-template-columns: 1fr; }
+            .blog-filtros {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                align-items: stretch;
+            }
+            .blog-filtros #filtro-texto {
+                grid-column: 1 / -1;
+            }
+            .blog-filtros #filtro-desde,
+            .blog-filtros #filtro-hasta {
+                max-width: none;
+                justify-self: stretch;
+                left: 0;
+                position: static;
+            }
+            .blog-filtros #btn-limpiar-filtros {
+                grid-column: 1 / -1;
+                justify-self: stretch;
+                width: 100%;
+            }
+        }
+        @media (max-width: 500px) {
+            .blog-filtros {
+                grid-template-columns: 1fr;
+            }
+            .blog-filtros #filtro-texto,
+            .blog-filtros #filtro-desde,
+            .blog-filtros #filtro-hasta,
+            .blog-filtros #btn-limpiar-filtros {
+                grid-column: 1 / -1;
+            }
         }
     </style>
 </head>
