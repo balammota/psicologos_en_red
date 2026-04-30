@@ -1590,7 +1590,8 @@
             }
         }
 
-        async function subirArchivoImagenBlog(file) {
+        async function subirArchivoImagenBlog(file, opciones) {
+            const opts = opciones || {};
             if (!file) return null;
             try {
                 setBlogMsg('Subiendo imagen...', false);
@@ -1599,7 +1600,9 @@
                 const res = await fetch('/api/admin/blog/upload-imagen', { method: 'POST', body: fd });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'No se pudo subir');
-                document.getElementById('blog-portada-url').value = data.url;
+                if (opts.usarComoPortada) {
+                    document.getElementById('blog-portada-url').value = data.url;
+                }
                 setBlogMsg('Imagen subida correctamente.', false);
                 return data.url;
             } catch (e) {
@@ -1612,7 +1615,7 @@
             const file = inputFile && inputFile.files ? inputFile.files[0] : null;
             if (!file) return;
             try {
-                const url = await subirArchivoImagenBlog(file);
+                const url = await subirArchivoImagenBlog(file, { usarComoPortada: true });
                 if (url && quillBlog) {
                     quillBlog.insertContent('<img src="' + url + '" alt="Imagen del artículo" />');
                 }
@@ -1632,6 +1635,9 @@
                     plugins: 'table lists link image code',
                     toolbar: 'undo redo | blocks fontsize | bold italic underline | alignleft aligncenter alignright alignjustify | forecolor backcolor | bullist numlist | table | link image | code removeformat',
                     content_style: 'body { font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6; } table, td, th { border: 2px solid #000; border-collapse: collapse; background: #f5f5f5; padding: 8px 10px; min-width: 90px; } img { max-width: 100%; height: auto; }',
+                    relative_urls: false,
+                    convert_urls: false,
+                    remove_script_host: false,
                     table_default_attributes: { border: '1' },
                     table_default_styles: { width: '100%', borderCollapse: 'collapse', border: '2px solid #000' },
                     image_title: true,
@@ -1641,7 +1647,7 @@
                         if (!picker) return;
                         picker.onchange = async function() {
                             const file = picker.files && picker.files[0];
-                            const url = await subirArchivoImagenBlog(file);
+                            const url = await subirArchivoImagenBlog(file, { usarComoPortada: false });
                             if (url) callback(url, { alt: file ? file.name : 'Imagen del artículo' });
                             picker.value = '';
                         };
