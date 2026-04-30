@@ -131,15 +131,16 @@
                 max-width: 100%;
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
-                white-space: nowrap;
             }
             .blog-articulo-content table tbody {
                 display: table;
-                min-width: max-content;
+                min-width: 100%;
             }
             .blog-articulo-content th,
             .blog-articulo-content td {
-                white-space: nowrap;
+                white-space: normal;
+                word-break: break-word;
+                overflow-wrap: anywhere;
             }
         }
         @media (max-width: 820px) {
