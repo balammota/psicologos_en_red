@@ -97,36 +97,27 @@
             padding: 1.2rem;
             color: #7b6d77;
         }
-        .blog-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(18, 13, 19, 0.6);
-            z-index: 1200;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .blog-modal {
-            background: #fff;
-            width: min(900px, 100%);
-            max-height: 92vh;
-            overflow: auto;
-            border-radius: 18px;
-            padding: 1.2rem 1.2rem 1.8rem;
-        }
-        .blog-modal h2 { margin-top: 0.4rem; margin-bottom: 0.6rem; color: #2e2630; }
-        .blog-modal-content { color: #3c3340; line-height: 1.7; }
-        .blog-modal-close {
-            float: right;
+        .blog-articulo-view { display: none; margin-top: 1.2rem; }
+        .blog-articulo-view.visible { display: block; }
+        .blog-articulo-back {
             border: none;
-            background: #ffeef5;
-            border-radius: 10px;
-            padding: 8px 10px;
-            cursor: pointer;
-            font-weight: 700;
+            background: #f7ebf2;
             color: #7c3f60;
+            border-radius: 999px;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 12px;
         }
+        .blog-articulo-card {
+            background: #fff;
+            border: 1px solid #efe3ea;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 10px 24px rgba(18, 11, 19, 0.05);
+        }
+        .blog-articulo-card h2 { margin: 0.2rem 0 0.8rem; font-size: clamp(1.4rem, 3vw, 2rem); color: #2e2630; }
+        .blog-articulo-content { color: #3c3340; line-height: 1.72; }
         @media (max-width: 820px) {
             .blog-filtros { grid-template-columns: 1fr; }
         }
@@ -168,17 +159,16 @@
             </section>
 
             <section class="blog-grid" id="blog-grid"></section>
+            <section class="blog-articulo-view" id="blog-articulo-view">
+                <button type="button" class="blog-articulo-back" id="blog-articulo-volver">← Volver al blog</button>
+                <article class="blog-articulo-card">
+                    <h2 id="blog-articulo-title">Artículo</h2>
+                    <p class="blog-meta" id="blog-articulo-meta"></p>
+                    <div class="blog-articulo-content" id="blog-articulo-content"></div>
+                </article>
+            </section>
         </div>
     </main>
-
-    <div class="blog-modal-overlay" id="blog-modal-overlay">
-        <article class="blog-modal">
-            <button type="button" class="blog-modal-close" id="blog-modal-close">Cerrar ✕</button>
-            <h2 id="blog-modal-title">Artículo</h2>
-            <p class="blog-meta" id="blog-modal-meta"></p>
-            <div class="blog-modal-content" id="blog-modal-content"></div>
-        </article>
-    </div>
 
     <script src="/i18n.js"></script>
     <script src="/chat-widget.js"></script>
@@ -221,15 +211,6 @@
             renderizar(filtrados);
         }
 
-        function abrirModal(art) {
-            document.getElementById('blog-modal-title').textContent = art.titulo || 'Artículo';
-            const autor = art.autor || 'Equipo Psicólogos en Red';
-            const lectura = art.tiempo_lectura ? (' · ' + art.tiempo_lectura + ' min de lectura') : '';
-            document.getElementById('blog-modal-meta').textContent = 'Publicado: ' + formatearFecha(art.fecha_publicacion) + ' · ' + autor + lectura;
-            document.getElementById('blog-modal-content').innerHTML = art.contenido_html || '<p>Sin contenido.</p>';
-            document.getElementById('blog-modal-overlay').style.display = 'flex';
-        }
-
         function renderizar(items) {
             const grid = document.getElementById('blog-grid');
             const estado = document.getElementById('blog-resultado');
@@ -250,21 +231,10 @@
                         '<h2>' + (a.titulo || 'Sin título') + '</h2>' +
                         '<p>' + extracto + '</p>' +
                         '<p class="blog-meta">Publicado: ' + formatearFecha(a.fecha_publicacion) + (a.tiempo_lectura ? (' · ' + a.tiempo_lectura + ' min') : '') + '</p>' +
-                        '<div class="blog-card-actions"><button type="button" data-articulo-id="' + a.id + '" data-articulo-href="' + href + '">Leer artículo</button></div>' +
+                        '<div class="blog-card-actions"><a href="' + href + '" target="_blank" rel="noopener" style="display:inline-block; text-decoration:none; border:none; background:#fdf0f6; color:#7c3f60; border-radius:999px; padding:8px 12px; cursor:pointer; font-weight:600;">Leer artículo</a></div>' +
                     '</article>'
                 );
             }).join('');
-            grid.querySelectorAll('button[data-articulo-id]').forEach((btn) => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.getAttribute('data-articulo-id'), 10);
-                    const art = articulos.find((x) => x.id === id);
-                    if (art) {
-                        const href = this.getAttribute('data-articulo-href');
-                        if (href && href !== '#') history.replaceState(null, '', href);
-                        abrirModal(art);
-                    }
-                });
-            });
         }
 
         async function cargarArticulos() {
@@ -272,23 +242,38 @@
                 const res = await fetch('/api/blog-articulos');
                 if (!res.ok) throw new Error('Error al cargar');
                 articulos = await res.json();
-                filtrarArticulos();
                 const path = window.location.pathname || '';
                 const m = path.match(/^\/blog\/([^/]+)$/);
                 if (m && m[1]) {
                     const slug = decodeURIComponent(m[1]).toLowerCase();
                     const art = articulos.find((x) => String(x.slug || '').toLowerCase() === slug);
                     if (art) {
-                        abrirModal(art);
+                        abrirVistaArticulo(art);
                         if (art.meta_title) document.title = art.meta_title + ' - Psicólogos en Red';
                         const descMeta = document.querySelector('meta[name="description"]');
                         if (descMeta && art.meta_description) descMeta.setAttribute('content', art.meta_description);
+                        return;
                     }
                 }
+                filtrarArticulos();
             } catch (e) {
                 document.getElementById('blog-grid').innerHTML = '<div class="blog-empty">No pudimos cargar los artículos en este momento.</div>';
                 document.getElementById('blog-resultado').textContent = 'Error al cargar.';
             }
+        }
+
+        function abrirVistaArticulo(art) {
+            const hero = document.querySelector('.blog-hero');
+            const grid = document.getElementById('blog-grid');
+            const view = document.getElementById('blog-articulo-view');
+            if (hero) hero.style.display = 'none';
+            if (grid) grid.style.display = 'none';
+            document.getElementById('blog-articulo-title').textContent = art.titulo || 'Artículo';
+            const autor = art.autor || 'Equipo Psicólogos en Red';
+            const lectura = art.tiempo_lectura ? (' · ' + art.tiempo_lectura + ' min de lectura') : '';
+            document.getElementById('blog-articulo-meta').textContent = 'Publicado: ' + formatearFecha(art.fecha_publicacion) + ' · ' + autor + lectura;
+            document.getElementById('blog-articulo-content').innerHTML = art.contenido_html || '<p>Sin contenido.</p>';
+            view.classList.add('visible');
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -302,9 +287,12 @@
                 document.getElementById('filtro-hasta').value = '';
                 filtrarArticulos();
             });
-            const overlay = document.getElementById('blog-modal-overlay');
-            document.getElementById('blog-modal-close').addEventListener('click', function() { overlay.style.display = 'none'; history.replaceState(null, '', '/blog'); });
-            overlay.addEventListener('click', function(e) { if (e.target === overlay) { overlay.style.display = 'none'; history.replaceState(null, '', '/blog'); } });
+            const btnVolver = document.getElementById('blog-articulo-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function() {
+                    window.location.href = '/blog';
+                });
+            }
         });
     </script>
 </body>
