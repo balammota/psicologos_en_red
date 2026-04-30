@@ -125,6 +125,23 @@
         .blog-articulo-content table { border-collapse: collapse; border: 2px solid #000; margin: 10px 0; }
         .blog-articulo-content th,
         .blog-articulo-content td { border: 2px solid #000; padding: 8px 10px; background: #f5f5f5; min-width: 90px; }
+        @media (max-width: 500px) {
+            .blog-articulo-content table {
+                display: block;
+                max-width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                white-space: nowrap;
+            }
+            .blog-articulo-content table tbody {
+                display: table;
+                min-width: max-content;
+            }
+            .blog-articulo-content th,
+            .blog-articulo-content td {
+                white-space: nowrap;
+            }
+        }
         @media (max-width: 820px) {
             .blog-filtros {
                 grid-template-columns: 1fr 1fr;
