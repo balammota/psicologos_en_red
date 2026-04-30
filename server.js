@@ -965,8 +965,8 @@ async function ejecutarRecordatoriosPostCita() {
 }
 
 // 2. CONFIGURACIONES
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '12mb' }));
+app.use(express.urlencoded({ extended: true, limit: '12mb' }));
 // PWA: manifest con iconos en URL absoluta para que el icono se vea al instalar (Chrome exige URL completa en algunos casos)
 app.get('/manifest.json', (req, res) => {
     const base = (req.get('x-forwarded-proto') || req.protocol) + '://' + (req.get('x-forwarded-host') || req.get('host') || 'localhost');
