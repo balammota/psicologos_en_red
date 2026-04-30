@@ -329,6 +329,9 @@
         }
         .blog-admin-textarea { min-height: 72px; resize: vertical; }
         #blog-editor { background: #fff; min-height: 220px; border-radius: 10px; }
+        #blog-editor .ql-container { height: auto; min-height: 280px; }
+        #blog-editor .ql-editor { min-height: 260px; overflow-y: visible; }
+        #blog-editor .ql-editor img { max-width: 100%; height: auto; display: block; margin: 10px 0; border-radius: 8px; }
         #blog-editor .ql-editor details.blog-referencias {
             border: 1px solid #e5d7de;
             border-radius: 8px;
@@ -350,23 +353,41 @@
             border: 1px solid #c7c7c7;
             padding: 6px 8px;
         }
-        .blog-editor-tools {
-            margin: 8px 0 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+        #blog-editor .ql-toolbar .ql-formats .ql-table-tools {
+            display: inline-flex;
+            gap: 4px;
+            padding: 2px 6px;
+            border: 1px solid #e6d8df;
+            border-radius: 8px;
+            background: #fff6fa;
+            vertical-align: middle;
         }
-        .blog-editor-tool-btn {
-            border: 1px solid #d9c7d1;
+        #blog-editor .ql-toolbar .ql-formats .ql-table-tools button {
+            width: 30px;
+            height: 28px;
+            padding: 0;
+            border-radius: 6px;
+            border: 1px solid #d8b9c8;
             background: #fff;
-            color: #5b3b4a;
-            border-radius: 999px;
-            padding: 6px 12px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            cursor: pointer;
+            color: #6f3f58;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
-        .blog-editor-tool-btn:hover { border-color: #bd8fa5; background: #fff6fa; }
+        #blog-editor .ql-toolbar .ql-formats .ql-table-tools button:hover {
+            background: #ffeaf3;
+            border-color: #c98ea7;
+        }
+        #blog-editor .ql-toolbar .ql-formats .ql-table-tools button svg {
+            width: 16px;
+            height: 16px;
+            stroke: #6f3f58;
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            pointer-events: none;
+        }
         .blog-admin-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
         .blog-admin-btn {
             border: none;
@@ -795,15 +816,6 @@
                             </div>
                             <div class="full">
                                 <label style="display:block; margin-bottom:6px; font-weight:600;">Contenido del artículo</label>
-                                <div class="blog-editor-tools">
-                                    <button type="button" class="blog-editor-tool-btn" id="btn-blog-marker">🖍️ Resaltar</button>
-                                    <button type="button" class="blog-editor-tool-btn" id="btn-blog-insert-table">▦ Insertar tabla</button>
-                                    <button type="button" class="blog-editor-tool-btn" id="btn-blog-toggle-borders">▣ Bordes on/off</button>
-                                    <button type="button" class="blog-editor-tool-btn" id="btn-blog-add-row">+ Fila</button>
-                                    <button type="button" class="blog-editor-tool-btn" id="btn-blog-remove-row">- Fila</button>
-                                    <button type="button" class="blog-editor-tool-btn" id="btn-blog-add-col">+ Columna</button>
-                                    <button type="button" class="blog-editor-tool-btn" id="btn-blog-remove-col">- Columna</button>
-                                </div>
                                 <div id="blog-editor"></div>
                             </div>
                         </div>
@@ -1363,10 +1375,19 @@
         function insertarTablaEnEditor() {
             if (!quillBlog) return;
             const range = quillBlog.getSelection(true);
-            const idx = range ? range.index : quillBlog.getLength();
             const tableHtml = '<table><tbody><tr><th>Columna 1</th><th>Columna 2</th></tr><tr><td>Dato 1</td><td>Dato 2</td></tr></tbody></table><p><br></p>';
-            quillBlog.clipboard.dangerouslyPasteHTML(idx, tableHtml, 'user');
-            quillBlog.setSelection(idx + 1);
+            if (!range) {
+                quillBlog.root.insertAdjacentHTML('beforeend', tableHtml);
+                quillBlog.update('user');
+                return;
+            }
+            const [leaf] = quillBlog.getLeaf(range.index);
+            const node = leaf && leaf.domNode ? leaf.domNode : null;
+            let block = node;
+            while (block && block.parentNode !== quillBlog.root) block = block.parentNode;
+            if (block && block !== quillBlog.root) block.insertAdjacentHTML('afterend', tableHtml);
+            else quillBlog.root.insertAdjacentHTML('beforeend', tableHtml);
+            quillBlog.update('user');
         }
 
         function normalizarSlugLocal(v) {
@@ -1632,6 +1653,7 @@
                                 [{ align: [] }],
                                 [{ color: [] }, { background: [] }],
                                 [{ list: 'ordered' }, { list: 'bullet' }],
+                                ['marker'],
                                 ['link', 'image'],
                                 ['clean']
                             ],
@@ -1640,11 +1662,31 @@
                                     const picker = document.getElementById('blog-imagen-archivo');
                                     if (!picker) return;
                                     picker.click();
+                                },
+                                marker: function() {
+                                    if (!quillBlog) return;
+                                    const current = quillBlog.getFormat().background;
+                                    quillBlog.format('background', current ? false : '#fff59d');
                                 }
                             }
                         }
                     }
                 });
+                const toolbar = quillBlog.getModule('toolbar');
+                if (toolbar && toolbar.container) {
+                    const formats = toolbar.container.querySelector('.ql-formats:last-child') || toolbar.container;
+                    const box = document.createElement('span');
+                    box.className = 'ql-table-tools';
+                    box.innerHTML = [
+                        '<button type="button" id="btn-blog-insert-table" title="Insertar tabla" aria-label="Insertar tabla"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"></rect><line x1="3" y1="10" x2="21" y2="10"></line><line x1="3" y1="16" x2="21" y2="16"></line><line x1="9" y1="4" x2="9" y2="20"></line><line x1="15" y1="4" x2="15" y2="20"></line></svg></button>',
+                        '<button type="button" id="btn-blog-toggle-borders" title="Bordes on/off" aria-label="Bordes on off"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"></rect><line x1="12" y1="4" x2="12" y2="20"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="7" y1="8" x2="17" y2="18"></line></svg></button>',
+                        '<button type="button" id="btn-blog-add-row" title="Agregar fila" aria-label="Agregar fila"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"></rect><line x1="3" y1="12" x2="21" y2="12"></line><line x1="12" y1="2.5" x2="12" y2="7.5"></line><line x1="9.5" y1="5" x2="14.5" y2="5"></line></svg></button>',
+                        '<button type="button" id="btn-blog-remove-row" title="Eliminar fila" aria-label="Eliminar fila"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"></rect><line x1="3" y1="12" x2="21" y2="12"></line><line x1="9.5" y1="5" x2="14.5" y2="5"></line></svg></button>',
+                        '<button type="button" id="btn-blog-add-col" title="Agregar columna" aria-label="Agregar columna"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"></rect><line x1="12" y1="5" x2="12" y2="19"></line><line x1="20" y1="9.5" x2="20" y2="14.5"></line><line x1="17.5" y1="12" x2="22.5" y2="12"></line></svg></button>',
+                        '<button type="button" id="btn-blog-remove-col" title="Eliminar columna" aria-label="Eliminar columna"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"></rect><line x1="12" y1="5" x2="12" y2="19"></line><line x1="17.5" y1="12" x2="22.5" y2="12"></line></svg></button>'
+                    ].join('');
+                    formats.appendChild(box);
+                }
             }
             const inputFecha = document.getElementById('blog-fecha-publicacion');
             if (inputFecha) inputFecha.value = obtenerFechaLocalInput();
@@ -1660,22 +1702,23 @@
             document.getElementById('blog-imagen-archivo').addEventListener('change', function() {
                 subirImagenBlog(this);
             });
-            document.getElementById('btn-blog-marker').addEventListener('click', function() {
-                if (!quillBlog) return;
-                const current = quillBlog.getFormat().background;
-                quillBlog.format('background', current ? false : '#fff59d');
-            });
-            document.getElementById('btn-blog-insert-table').addEventListener('click', function() {
+            const btnInsertTable = document.getElementById('btn-blog-insert-table');
+            const btnToggleBorders = document.getElementById('btn-blog-toggle-borders');
+            const btnAddRow = document.getElementById('btn-blog-add-row');
+            const btnRemoveRow = document.getElementById('btn-blog-remove-row');
+            const btnAddCol = document.getElementById('btn-blog-add-col');
+            const btnRemoveCol = document.getElementById('btn-blog-remove-col');
+            if (btnInsertTable) btnInsertTable.addEventListener('click', function() {
                 insertarTablaEnEditor();
             });
-            document.getElementById('btn-blog-toggle-borders').addEventListener('click', function() {
+            if (btnToggleBorders) btnToggleBorders.addEventListener('click', function() {
                 const table = obtenerTablaDesdeSeleccion();
                 if (!table) return setBlogMsg('Coloca el cursor dentro de una tabla para activar/quitar bordes.', true);
                 const conBordes = table.dataset.noBorders === '1';
                 aplicarBordesTabla(table, conBordes);
                 table.dataset.noBorders = conBordes ? '0' : '1';
             });
-            document.getElementById('btn-blog-add-row').addEventListener('click', function() {
+            if (btnAddRow) btnAddRow.addEventListener('click', function() {
                 const cell = obtenerCeldaDesdeSeleccion();
                 if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
                 const row = cell.parentNode;
@@ -1685,7 +1728,7 @@
                 row.parentNode.insertBefore(clone, row.nextSibling);
                 setBlogMsg('Fila agregada.', false);
             });
-            document.getElementById('btn-blog-remove-row').addEventListener('click', function() {
+            if (btnRemoveRow) btnRemoveRow.addEventListener('click', function() {
                 const cell = obtenerCeldaDesdeSeleccion();
                 if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
                 const row = cell.parentNode;
@@ -1696,7 +1739,7 @@
                 row.remove();
                 setBlogMsg('Fila eliminada.', false);
             });
-            document.getElementById('btn-blog-add-col').addEventListener('click', function() {
+            if (btnAddCol) btnAddCol.addEventListener('click', function() {
                 const cell = obtenerCeldaDesdeSeleccion();
                 if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
                 const row = cell.parentNode;
@@ -1717,7 +1760,7 @@
                 });
                 setBlogMsg('Columna agregada.', false);
             });
-            document.getElementById('btn-blog-remove-col').addEventListener('click', function() {
+            if (btnRemoveCol) btnRemoveCol.addEventListener('click', function() {
                 const cell = obtenerCeldaDesdeSeleccion();
                 if (!cell) return setBlogMsg('Coloca el cursor dentro de la tabla.', true);
                 const row = cell.parentNode;
